@@ -1,0 +1,18 @@
+{
+  "codeowners": ["@houthacker"],
+  "config_flow": true,
+  "dependencies": ["modbus"],
+  "documentation": "https://github.com/houthacker/remeha_modbus/blob/main/README.md",
+  "domain": "remeha_modbus",
+  "integration_type": "hub",
+  "iot_class": "local_polling",
+  "issue_tracker": "https://github.com/houthacker/remeha_modbus/issues",
+  "loggers": ["remeha_modbus"],
+  "name": "Remeha Modbus",
+  "quality_scale": "bronze",
+  "requirements": [
+    "pymodbus==3.8.3",
+    "pydantic==2.10.6"
+  ],
+  "version": "0.0.1"
+}

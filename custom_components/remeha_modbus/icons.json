@@ -1,0 +1,19 @@
+{
+  "entity": {
+    "climate": {
+      "remeha_modbus": {
+        "state_attributes": {
+          "preset_mode": {
+            "state": {
+              "schedule_1": "mdi:calendar-month-outline",
+              "schedule_2": "mdi:calendar-month-outline",
+              "schedule_3": "mdi:calendar-month-outline",
+              "manual": "mdi:gesture-tap",
+              "anti_frost": "mdi:snowflake-melt"
+            }
+          }
+        }
+      }
+    }
+  }
+}

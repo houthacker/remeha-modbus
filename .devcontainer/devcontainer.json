@@ -1,0 +1,54 @@
+// See https://aka.ms/vscode-remote/devcontainer.json for format details.
+{
+	"image": "mcr.microsoft.com/devcontainers/python:3.13-bookworm",
+	"name": "Remeha Modbus integration development",
+	"postCreateCommand": "scripts/setup",
+	"containerEnv": {
+		"PYTHONASYNCIODEBUG": "1"
+	},
+	"forwardPorts": [
+		8123
+	],
+	"portsAttributes": {
+		"8123": {
+			"label": "Home Assistant",
+			"onAutoForward": "notify"
+		}
+	},
+	"customizations": {
+		"vscode": {
+			"extensions": [
+				"charliermarsh.ruff",
+				"donjayamanne.python-extension-pack",
+				"ms-python.pylint",
+				"ms-python.vscode-python-envs",
+				"redhat.vscode-yaml",
+				"esbenp.prettier-vscode",
+				"gitHub.vscode-pull-request-github"
+			],
+			"settings": {
+				"files.eol": "\n",
+				"editor.tabSize": 2,
+				"terminal.integrated.shell.linux": "/bin/bash",
+				"python.defaultInterpreterPath": "/usr/local/bin/python",
+				"python.analysis.autoSearchPaths": false,
+				"editor.defaultFormatter": "charliermarsh.ruff",
+				"editor.formatOnPaste": false,
+				"editor.formatOnSave": true,
+				"editor.formatOnType": true,
+				"files.trimTrailingWhitespace": true,
+				"[python]": {
+					"editor.codeActionsOnSave": {
+						"source.organizeImports": "explicit"
+					},
+					"linting.pylintEnabled": true,
+					"linting.enabled": true
+				}
+			}
+		}
+	},
+	"remoteUser": "vscode",
+	"features": {
+		"ghcr.io/devcontainers/features/github-cli:1": {}
+	}
+}

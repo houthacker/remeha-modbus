@@ -1,0 +1,83 @@
+{
+    "config": {
+        "abort": {
+            "already_configured": "Dit apparaat is al geconfigureerd"
+        },
+        "error": {
+            "cannot_connect": "Kan geen verbinding maken",
+            "unknown": "Onverwachte fout"
+        },
+        "step": {
+            "user": {
+                "data": {
+                    "name": "Naam",
+                    "type": "Type verbinding",
+                    "slave": "Modbus adres"
+                },
+                "data_description": {
+                    "name": "De unieke naam van de modbus hub.",
+                    "type": "Het type modbus verbinding.",
+                    "slave": "Het GTW-08 modbus adres."
+                }
+            },
+            "modbus_serial": {
+                "data": {
+                    "baudrate": "baudrate",
+                    "bytesize": "bytesize",
+                    "method": "methode",
+                    "parity": "pariteit",
+                    "port": "poort",
+                    "stopbits": "stopbits"
+                },
+                "data_description": {
+                    "baudrate": "Snelheid van de seriële verbinding. Hogere snelheid geeft betere performance.",
+                    "bytesize": "Aantal bits per byte.",
+                    "method": "De modbus verbindingsmethode.",
+                    "parity": "Pariteit van de databits.",
+                    "port": "Seriële poort die, of USB apparaat dat is verbonden met de Home Assistant host.",
+                    "stopbits": "Aantal stopbits."
+                }
+            },
+            "modbus_socket": {
+                "data": {
+                    "host": "host",
+                    "port": "poort"
+                },
+                "data_description": {
+                    "host": "IP-adres of hostnaam van het modbus apparaat, bijvoorbeeld `192.168.1.1`.",
+                    "port": "Netwerkpoort voor communicatie."
+                }
+            }
+        }
+    },
+    "entity": {
+      "climate": {
+        "remeha_modbus": {
+          "state_attributes": {
+            "preset_mode": {
+              "state": {
+                "schedule_1": "Schema 1",
+                "schedule_2": "Schema 2",
+                "schedule_3": "Schema 3",
+                "manual": "Handmatig",
+                "anti_frost": "Antivries",
+                "comfort": "Comfort",
+                "eco": "Eco"
+              }
+            }
+          }
+        }
+      }
+    },
+    "exceptions": {
+      "climate_invalid_operation_ctx": {
+        "message": "Aangevraagde actie '{operation}' is ongeldig in voorkeuzemodus {preset_mode}."
+      },
+      "climate_invalid_operation_ctx_hvac": {
+        "message": "Zone modus {hvac_mode} is ongeldig in zone {zone_name}."
+      },
+      "climate_unsupported_preset_mode": {
+        "message": "Aanvraagde voorkeuzemodus {preset_mode} wordt niet ondersteund."
+      }
+    }
+}
