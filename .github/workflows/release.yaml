@@ -1,0 +1,35 @@
+name: "Release"
+
+on:
+  release:
+    types:
+      - "published"
+
+permissions: {}
+
+jobs:
+  release:
+    name: "Release"
+    runs-on: "ubuntu-latest"
+    permissions:
+      contents: write
+    steps:
+    - uses: actions/checkout@v4
+      name: "Checkout the repository"
+
+    - name: "Adjust version number"
+      shell: bash
+      run: |
+        yq -i -o json '.version="${{ github.event.release.tag_name }}"' \
+          "${{ github.workspace }}/custom_components/remeha_modbus/manifest.json"
+
+    - name: "Compress the integration directory"
+      shell: bash
+      run: |
+        cd "${{ github.workspace }}/custom_components/remeha_modbus"
+        zip remeha_modbus.zip -r ./
+
+    - name: "Upload the zip file to the releases"
+      uses: softprops/action-gh-release@v2
+      with:
+        files: ${{ github.workspace }}/custom_components/remeha_modbus/remeha_modbus.zip
