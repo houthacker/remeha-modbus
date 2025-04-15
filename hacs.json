@@ -1,4 +1,9 @@
 {
   "name": "Remeha Modbus",
-  "render_readme": true
+  "render_readme": true,
+  "zip_release": true,
+  "filename": "remeha_modbus.zip",
+  "country": "NL",
+  "homeassistant": "2025.4.1",
+  "hacs": "2.0.5"
 }
