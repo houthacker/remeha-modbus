@@ -8,7 +8,7 @@ from typing import Final
 from pymodbus.client.mixin import ModbusClientMixin
 from pymodbus.pdu import ModbusPDU
 
-from ..const import DataType, ModbusVariableDescription
+from custom_components.remeha_modbus.const import DataType, ModbusVariableDescription
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -34,77 +34,87 @@ def _to_gtw08_null_value(data_type: DataType) -> int:
     return b"nan\x00"
 
 
-def serialize(
-    variable: ModbusVariableDescription,
-    value: str
-    | float
-    | bool
-    | tuple[int, int]
-    | bytes
-    | Callable[[], bytes | None]
-    | None,
+def _deserialize_bytes(
+    variable: ModbusVariableDescription, raw_data: bytes
+) -> str | int | float | bytes | None:
+    match variable.data_type:
+        case DataType.STRING:
+            return raw_data.decode()
+        case (
+            DataType.INT16
+            | DataType.INT32
+            | DataType.INT64
+            | DataType.UINT16
+            | DataType.UINT32
+            | DataType.UINT64
+        ):
+            val = int.from_bytes(
+                raw_data,
+                signed=variable.data_type
+                in [DataType.INT16, DataType.INT32, DataType.INT64],
+            )
+
+            if _is_gtw08_null_value(variable=variable, val=val):
+                _LOGGER.debug(
+                    "Register (reg=%d, name=%s) contains NULL value. This might indicate unlinked modbus addresses or an out-of-reach device.",
+                    variable.start_address,
+                    variable.name,
+                )
+                return None
+
+            if variable.scale is not None:
+                # Conversion to float
+                return val * variable.scale
+
+            return val
+        case DataType.FLOAT16 | DataType.FLOAT32 | DataType.FLOAT64:
+            [x] = struct.unpack("f", raw_data)
+
+            if variable.scale is not None:
+                return x * variable.scale
+
+            return x
+        case DataType.CUSTOM:
+            return raw_data
+
+
+def _serialize_callable(
+    variable: ModbusVariableDescription, value: Callable[[], bytes | None]
 ) -> list[int]:
-    """Serialize `value` to a list of modbus register values.
+    register_count: int = variable.count
+    callable_result = value()
 
-    ### Notes:
-        * All numeric values will be serialized to big endian, only the result of the `Callable` will keep its endianness.
-        * The type of `value` is assumed to equal or be convertible to `variable.data_type`.
-        * If `value == None` or the callable result is `None`, the appropriate GTW-08 `null` value is returned if the GTW-08 parameter list specifies it.
-        * If `value` is a tuple, the whole tuple must fit in a single register, contain exactly two elements that are both treated as unsigned bytes.
-                Therefore the individual values cannot exceed 2^8.
+    if callable_result is None:
+        return _to_gtw08_null_value(variable.data_type)
 
-    Args:
-        variable (ModbusVariableDescription): The description of the variable to serialize.
-        value (str|float|bool|tuple[int,int]|bytes| (() -> (bytes | None))]): The actual value to serialize or a `Callable` that returns the serialized value as a `bytes` object.
+    if not isinstance(callable_result, bytes):
+        raise TypeError(
+            f"Callable result type is expected to be `bytes`, but got `{type(callable_result).__name__}`"
+        )
 
-    Returns:
-        `list[int]`: The list of modbus register values. `list[0]` corresponds to `variable.start_address`.
+    data: list[int] = list(callable_result)
 
-    Raises:
-        ValueError:
-            * If no conversion path exists between `variable.data_type` and `value`
-            * If conversion to a numeric type fails.
-            * If `value` is a `tuple` which does not contain exactly two elements.
+    # len(data) must be even in order to be writable to a register.
+    if len(data) % 2 != 0:
+        raise ValueError(
+            f"Cannot serialize value to variable {variable.name}: we need an even amount of bytes, but it yields {len(data)} bytes."
+        )
 
-    """
+    # Create tuples of two bytes per element
+    data = list(zip(data[0::2], data[1::2], strict=True))
+    if len(data) != register_count:
+        raise ValueError(
+            f"Length of serialized bytes ({len(data)}) exceeds register count of {register_count} required by variable {variable.name}"
+        )
 
-    # Convert the HA data type to a modbus data type.
-    if isinstance(value, Callable):
-        register_count: int = variable.count
-        callable_result = value()
+    # Convert each tuple of two bytes to an int, since a single register contains 16 bits.
+    return [element[0] << 8 | element[1] for element in data]
 
-        if callable_result is None:
-            return _to_gtw08_null_value(variable.data_type)
 
-        if not isinstance(callable_result, bytes):
-            raise TypeError(
-                f"Callable result type is expected to be `bytes`, but got `{type(callable_result).__name__}`"
-            )
-
-        data: list[int] = list(callable_result)
-
-        # len(data) must be even in order to be writable to a register.
-        if len(data) % 2 != 0:
-            raise ValueError(
-                f"Cannot serialize value to variable {variable.name}: we need an even amount of bytes, but it yields {len(data)} bytes."
-            )
-
-        # Create tuples of two bytes per element
-        data = list(zip(data[0::2], data[1::2], strict=True))
-        if len(data) != register_count:
-            raise ValueError(
-                f"Length of serialized bytes ({len(data)}) exceeds register count of {register_count} required by variable {variable.name}"
-            )
-
-        # Convert each tuple of two bytes to an int, since a single register contains 16 bits.
-        return [element[0] << 8 | element[1] for element in data]
-
-    if isinstance(value, tuple):
-        if len(value) != 2:
-            raise ValueError("tuple must contain exactly two elements.")
-
-        value = value[0] << 8 | value[1]
-
+def _serialize_primitive(  # noqa: C901
+    variable: ModbusVariableDescription,
+    value: str | float | bool | tuple[int, int] | bytes | None,
+) -> list[int]:
     mixin_data_type: ModbusClientMixin.DATATYPE = None
     match variable.data_type:
         case DataType.INT16:
@@ -146,6 +156,53 @@ def serialize(
     return ModbusClientMixin.convert_to_registers(
         value=value, data_type=mixin_data_type
     )
+
+
+def serialize(
+    variable: ModbusVariableDescription,
+    value: str
+    | float
+    | bool
+    | tuple[int, int]
+    | bytes
+    | Callable[[], bytes | None]
+    | None,
+) -> list[int]:
+    """Serialize `value` to a list of modbus register values.
+
+    ### Notes:
+        * All numeric values will be serialized to big endian, only the result of the `Callable` will keep its endianness.
+        * The type of `value` is assumed to equal or be convertible to `variable.data_type`.
+        * If `value == None` or the callable result is `None`, the appropriate GTW-08 `null` value is returned if the GTW-08 parameter list specifies it.
+        * If `value` is a tuple, the whole tuple must fit in a single register, contain exactly two elements that are both treated as unsigned bytes.
+                Therefore the individual values cannot exceed 2^8.
+
+    Args:
+        variable (ModbusVariableDescription): The description of the variable to serialize.
+        value (str|float|bool|tuple[int,int]|bytes| (() -> (bytes | None))]): The actual value to serialize or a `Callable` that returns the serialized value as a `bytes` object.
+
+    Returns:
+        `list[int]`: The list of modbus register values. `list[0]` corresponds to `variable.start_address`.
+
+    Raises:
+        ValueError:
+            * If no conversion path exists between `variable.data_type` and `value`
+            * If conversion to a numeric type fails.
+            * If `value` is a `tuple` which does not contain exactly two elements.
+
+    """
+
+    # Convert the HA data type to a modbus data type.
+    if isinstance(value, Callable):
+        return _serialize_callable(variable=variable, value=value)
+
+    if isinstance(value, tuple):
+        if len(value) != 2:
+            raise ValueError("tuple must contain exactly two elements.")
+
+        value = value[0] << 8 | value[1]
+
+    return _serialize_primitive(variable=variable, value=value)
 
 
 def deserialize(
@@ -206,42 +263,4 @@ def deserialize(
         raw_data = unpack_raw_bytes()
 
     # Only then deserialize, filter out illegal (null) values and and apply scale
-    match variable.data_type:
-        case DataType.STRING:
-            return raw_data.decode()
-        case (
-            DataType.INT16
-            | DataType.INT32
-            | DataType.INT64
-            | DataType.UINT16
-            | DataType.UINT32
-            | DataType.UINT64
-        ):
-            val = int.from_bytes(
-                raw_data,
-                signed=variable.data_type
-                in [DataType.INT16, DataType.INT32, DataType.INT64],
-            )
-
-            if _is_gtw08_null_value(variable=variable, val=val):
-                _LOGGER.debug(
-                    "Register (reg=%d, name=%s) contains NULL value. This might indicate unlinked modbus addresses or an out-of-reach device.",
-                    variable.start_address,
-                    variable.name,
-                )
-                return None
-
-            if variable.scale is not None:
-                # Conversion to float
-                return val * variable.scale
-
-            return val
-        case DataType.FLOAT16 | DataType.FLOAT32 | DataType.FLOAT64:
-            [x] = struct.unpack("f", raw_data)
-
-            if variable.scale is not None:
-                return x * variable.scale
-
-            return x
-        case DataType.CUSTOM:
-            return raw_data
+    return _deserialize_bytes(variable=variable, raw_data=raw_data)
