@@ -1,6 +1,11 @@
 # Remeha Modbus Gateway integration for Home Assistant
 ![Remeha logo](logos/remeha-small.png)
 
+[![Hassfest](https://github.com/houthacker/remeha-modbus/actions/workflows/hassfest.yaml/badge.svg)](https://github.com/houthacker/remeha-modbus/actions/workflows/hassfest.yaml)
+[![Validate HACS](https://github.com/houthacker/remeha-modbus/actions/workflows/hacs.yaml/badge.svg)](https://github.com/houthacker/remeha-modbus/actions/workflows/hacs.yaml)
+
+
+
 This integration allows you to manage your Remeha heating/cooling appliance locally from Home Assistant.
 
 ### Supported appliances
