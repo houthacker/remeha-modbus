@@ -57,4 +57,4 @@ jobs:
         uses: actions-js/push@master
         with:
           message: Update coverage in README
-          github_token: ${{ secrets.GITHUB_TOKEN }}
+          github_token: ${{ secrets.COVERAGE_WRITER_TOKEN }}
