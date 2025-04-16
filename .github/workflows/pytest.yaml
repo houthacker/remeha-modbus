@@ -5,6 +5,8 @@ on: [push]
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     strategy:
       max-parallel: 4
       matrix:
@@ -26,12 +28,13 @@ jobs:
           pip install -r ${{ github.workspace }}/requirements.test.txt
       - name: Run pytest
         run: |
-          pytest --cov-report=term-missing --junitxml=${{ github.workspace }}/junit-coverage.xml --cov= tests/ | tee pytest-coverage.txt
+          pytest --cov-report=term-missing --junitxml=${{ github.workspace }}/junit-coverage.xml --cov= tests/ | tee ${{ github.workspace}}/pytest-coverage.txt
 
       - name: Upload coverage reports
         uses: actions/upload-artifact@v4
         with:
-          name: coverage
+          name: reports
           path: |
             ${{ github.workspace }}/junit-coverage.xml
             ${{ github.workspace }}/pytest-coverage.txt
+          if-no-files-found: error

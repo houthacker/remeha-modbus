@@ -12,8 +12,7 @@ jobs:
       - name: Download coverage reports
         uses: actions/download-artifact@v4
         with:
-          name: coverage
-          path: ${{ github.workspace }}
+          name: reports
 
       - name: Pytest coverage comment
         uses: MishaKav/pytest-coverage-comment@main
