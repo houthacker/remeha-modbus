@@ -28,13 +28,18 @@ jobs:
           pip install -r ${{ github.workspace }}/requirements.test.txt
       - name: Run pytest
         run: |
-          pytest --cov-report=term-missing --junitxml=${{ github.workspace }}/junit-coverage.xml --cov= tests/ | tee ${{ github.workspace}}/pytest-coverage.txt
+          pytest --cov-report=term-missing --junitxml=${{ github.workspace }}/junit-coverage.xml --cov= tests/ | tee ${{ github.workspace }}/pytest-coverage.txt
 
-      - name: Upload coverage reports
+      - name: Upload junit coverage report
         uses: actions/upload-artifact@v4
         with:
-          name: reports
-          path: |
-            ${{ github.workspace }}/junit-coverage.xml
-            ${{ github.workspace }}/pytest-coverage.txt
+          name: junit-report
+          path: ${{ github.workspace }}/junit-coverage.xml
           if-no-files-found: error
+
+      - name: Upload pytest coverage report
+        uses: actions/upload-artifact@v4
+        with:
+         name: pytest-report
+         path: ${{ github.workspace }}/pytest-coverage.txt
+         if-no-files-found: error
