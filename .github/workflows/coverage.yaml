@@ -18,5 +18,17 @@ jobs:
           github-token: ${{ github.token }}
           run-id: ${{ github.event.workflow_run.id }}
 
-      - name: Display structure of downloaded files.
-        run: ls -lahR
+      - name: Coverage comment
+        id: coverageComment
+        uses: MishaKav/pytest-coverage-comment@main
+        with:
+          pytest-coverage-path: ${{ github.workspace }}/pytest-coverage.txt
+          title: Coverage report
+          badge-title: Coverage
+          hide-badge: false
+          hide-report: false
+          create-new-comment: false
+          hide-comment: false
+          report-only-changed-files: false
+          remove-link-from-badge: true
+          junitxml-path: ${{ github.workspace }}/junit-coverage.xml
