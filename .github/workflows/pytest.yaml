@@ -42,19 +42,7 @@ jobs:
           hide-badge: false
           hide-report: false
           create-new-comment: false
-          hide-comment: true
+          hide-comment: false
           report-only-changed-files: false
-          remove-link-from-badge: false
+          remove-link-from-badge: true
           junitxml-path: ${{ github.workspace }}/junit-coverage.xml
-
-      - name: Update README with coverage badge
-        if: ${{ github.ref == 'refs/heads/main' }}
-        run: |
-          sed -i '/<!-- Pytest Coverage Comment:Begin -->/,/<!-- Pytest Coverage Comment:End -->/c\<!-- Pytest Coverage Comment:Begin -->\n\${{ steps.coverageComment.outputs.coverageHtml }}\n<!-- Pytest Coverage Comment:End -->' ./README.md
-
-      - name: Commit & Push changes to Readme
-        if: ${{ github.ref == 'refs/heads/main' }}
-        uses: actions-js/push@master
-        with:
-          message: Update coverage in README
-          github_token: ${{ secrets.COVERAGE_WRITER_TOKEN }}
