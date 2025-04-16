@@ -30,16 +30,17 @@ jobs:
         run: |
           pytest --cov-report=term-missing --junitxml=${{ github.workspace }}/junit-coverage.xml --cov= tests/ | tee ${{ github.workspace }}/pytest-coverage.txt
 
-      - name: Upload junit coverage report
-        uses: actions/upload-artifact@v4
+      - name: Pytest coverage comment
+        uses: MishaKav/pytest-coverage-comment@main
         with:
-          name: junit-report
-          path: ${{ github.workspace }}/junit-coverage.xml
-          if-no-files-found: error
-
-      - name: Upload pytest coverage report
-        uses: actions/upload-artifact@v4
-        with:
-         name: pytest-report
-         path: ${{ github.workspace }}/pytest-coverage.txt
-         if-no-files-found: error
+          pytest-coverage-path: ${{ github.workspace }}/pytest-coverage.txt
+          title: Code coverage
+          badge-title: Code Coverage
+          hide-badge: false
+          hide-report: false
+          create-new-comment: false
+          hide-comment: false
+          report-only-changed-files: false
+          remove-link-from-badge: false
+          junitxml-path: ${{ github.workspace }}/junit-coverage.xml
+          junitxml-title: Summary
