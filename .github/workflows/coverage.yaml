@@ -1,0 +1,25 @@
+name: coverage
+on:
+  workflow_run:
+    workflows: ["pytest"]
+    types:
+      - completed
+
+jobs:
+  on-success:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Pytest coverage comment
+        uses: MishaKav/pytest-coverage-comment@main
+        with:
+          pytest-coverage-path: ${{ github.workspace }}/pytest-coverage.txt
+          title: Code coverage
+          badge-title: Code Coverage
+          hide-badge: false
+          hide-report: false
+          create-new-comment: false
+          hide-comment: false
+          report-only-changed-files: false
+          remove-link-from-badge: false
+          junitxml-path: ${{ github.workspace }}/junit-coverage.xml
+          junitxml-title: Summary
