@@ -11,7 +11,7 @@ jobs:
     steps:
       - name: Download coverage reports
         uses: actions/download-artifact@v4
-      - name: Display downloaded files
+      - name: Display downloaded files``
         run: ls -R
 
       - name: Pytest coverage comment
