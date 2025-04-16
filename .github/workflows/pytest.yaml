@@ -27,3 +27,11 @@ jobs:
       - name: Run pytest
         run: |
           pytest --cov-report=term-missing --junitxml=${{ github.workspace }}/junit-coverage.xml --cov= tests/ | tee pytest-coverage.txt
+
+      - name: Upload coverage reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-reports
+          path: |
+            ${{ github.workspace }}/junit-coverage.xml
+            ${{ github.workspace }}/pytest-coverage.txt

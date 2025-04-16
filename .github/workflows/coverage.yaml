@@ -9,6 +9,12 @@ jobs:
   on-success:
     runs-on: ubuntu-latest
     steps:
+      - name: Download coverage reports
+        uses: actions/download-artifact@v4
+        with:
+          name: coverage-reports
+          path: ${{ github.workspace }}
+
       - name: Pytest coverage comment
         uses: MishaKav/pytest-coverage-comment@main
         with:
