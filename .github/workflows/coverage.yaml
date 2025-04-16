@@ -1,0 +1,20 @@
+name: coverage
+
+on:
+  workflow_run:
+    workflows: [pytest]
+    types:
+      - completed
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download coverage artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: coverage-reports
+          merge-multiple: true
+
+      - name: Display structure of downloaded files.
+        run: ls -lahR
