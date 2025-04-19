@@ -16,7 +16,5 @@ jobs:
               # uses: hacs/action@d556e736723344f83838d08488c983a15381059a
               uses: hacs/action@22.5.0
               with:
-                # A space separated list of ignored checks, for valid entries see README.md
-                ignore: "brands"
                 # The category of repository
                 category: "integration"
