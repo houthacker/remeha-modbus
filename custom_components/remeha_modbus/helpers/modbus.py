@@ -1,185 +1,127 @@
 """Modbus helper functions."""
 
 import logging
-import struct
-from collections.abc import Callable
 from typing import Final
 
 from pymodbus.client.mixin import ModbusClientMixin
-from pymodbus.pdu import ModbusPDU
 
 from custom_components.remeha_modbus.const import DataType, ModbusVariableDescription
 
 _LOGGER = logging.getLogger(__name__)
 
 NULL_VALUES: Final[dict[DataType, int]] = {
-    DataType.UINT16: int.from_bytes(bytes.fromhex("00ff"), signed=False),
-    DataType.UINT32: int.from_bytes(bytes.fromhex("0000ffff"), signed=False),
-    DataType.INT16: int.from_bytes(bytes.fromhex("ff80"), signed=True),
-    DataType.INT32: int.from_bytes(bytes.fromhex("ffff8000"), signed=True),
+    DataType.UINT8: int.from_bytes(b"\xff"),
+    DataType.UINT16: int.from_bytes(b"\x00\xff", byteorder="little"),
+    DataType.UINT32: int.from_bytes(b"\x00\x00\xff\xff", byteorder="little"),
+    DataType.INT16: int.from_bytes(b"\x80\x00", signed=True, byteorder="little"),
+    DataType.INT32: int.from_bytes(
+        b"\x80\x00\x00\x00", signed=True, byteorder="little"
+    ),
+}
+
+
+HA_TO_PYMODBUS_TYPE: Final[dict[DataType, ModbusClientMixin.DATATYPE]] = {
+    DataType.INT16: ModbusClientMixin.DATATYPE.INT16,
+    DataType.INT32: ModbusClientMixin.DATATYPE.INT32,
+    DataType.INT64: ModbusClientMixin.DATATYPE.INT64,
+    DataType.UINT8: ModbusClientMixin.DATATYPE.UINT16,
+    DataType.UINT16: ModbusClientMixin.DATATYPE.UINT16,
+    DataType.UINT32: ModbusClientMixin.DATATYPE.UINT32,
+    DataType.UINT64: ModbusClientMixin.DATATYPE.UINT64,
+    DataType.FLOAT32: ModbusClientMixin.DATATYPE.FLOAT32,
+    DataType.FLOAT64: ModbusClientMixin.DATATYPE.FLOAT64,
+    DataType.STRING: ModbusClientMixin.DATATYPE.STRING,
+    DataType.TUPLE16: ModbusClientMixin.DATATYPE.UINT16,
 }
 
 
 def _is_gtw08_null_value(variable: ModbusVariableDescription, val: int) -> bool:
-    if NULL_VALUES[variable.data_type]:
+    if variable.data_type in NULL_VALUES:
         return val == NULL_VALUES[variable.data_type]
 
-    return val is None or val == b"nan\x00"
+    return val is None
 
 
 def _to_gtw08_null_value(data_type: DataType) -> int:
-    if NULL_VALUES[data_type]:
+    if data_type in NULL_VALUES:
         return NULL_VALUES[data_type]
 
-    return b"nan\x00"
+    return None
 
 
-def _deserialize_bytes(
-    variable: ModbusVariableDescription, raw_data: bytes
-) -> str | int | float | bytes | None:
-    match variable.data_type:
-        case DataType.STRING:
-            return raw_data.decode()
-        case (
-            DataType.INT16
-            | DataType.INT32
-            | DataType.INT64
-            | DataType.UINT16
-            | DataType.UINT32
-            | DataType.UINT64
-        ):
-            val = int.from_bytes(
-                raw_data,
-                signed=variable.data_type
-                in [DataType.INT16, DataType.INT32, DataType.INT64],
-            )
+def _from_registers(
+    variable: ModbusVariableDescription, registers: list[int]
+) -> str | int | float | tuple[int, int] | None:
+    val = ModbusClientMixin.convert_from_registers(
+        registers=registers, data_type=HA_TO_PYMODBUS_TYPE[variable.data_type]
+    )
 
-            if _is_gtw08_null_value(variable=variable, val=val):
-                _LOGGER.debug(
-                    "Register (reg=%d, name=%s) contains NULL value. This might indicate unlinked modbus addresses or an out-of-reach device.",
-                    variable.start_address,
-                    variable.name,
-                )
-                return None
+    # Post-process
+    if _is_gtw08_null_value(variable=variable, val=val):
+        return None
+    if variable.data_type == DataType.TUPLE16:
+        return tuple(int(val).to_bytes(2))
+    if variable.data_type == DataType.UINT8:
+        # Ignore the first byte to get a clean uint8
+        val = val & int("00ff", 16)
 
-            if variable.scale is not None:
-                # Conversion to float
-                return val * variable.scale
+    # Apply scale
+    if variable.scale is not None:
+        # Always round to 3 decimals when scaling.
+        # HA frontend can always choose to show a less precies value.
+        val = round(val * variable.scale, 3)
 
-            return val
-        case DataType.FLOAT16 | DataType.FLOAT32 | DataType.FLOAT64:
-            [x] = struct.unpack("f", raw_data)
-
-            if variable.scale is not None:
-                return x * variable.scale
-
-            return x
-        case DataType.CUSTOM:
-            return raw_data
+    return val
 
 
-def _serialize_callable(
-    variable: ModbusVariableDescription, value: Callable[[], bytes | None]
+def _to_registers(
+    source_variable: ModbusVariableDescription,
+    value: str | float | None,
 ) -> list[int]:
-    register_count: int = variable.count
-    callable_result = value()
-
-    if callable_result is None:
-        return _to_gtw08_null_value(variable.data_type)
-
-    if not isinstance(callable_result, bytes):
-        raise TypeError(
-            f"Callable result type is expected to be `bytes`, but got `{type(callable_result).__name__}`"
-        )
-
-    data: list[int] = list(callable_result)
-
-    # len(data) must be even in order to be writable to a register.
-    if len(data) % 2 != 0:
-        raise ValueError(
-            f"Cannot serialize value to variable {variable.name}: we need an even amount of bytes, but it yields {len(data)} bytes."
-        )
-
-    # Create tuples of two bytes per element
-    data = list(zip(data[0::2], data[1::2], strict=True))
-    if len(data) != register_count:
-        raise ValueError(
-            f"Length of serialized bytes ({len(data)}) exceeds register count of {register_count} required by variable {variable.name}"
-        )
-
-    # Convert each tuple of two bytes to an int, since a single register contains 16 bits.
-    return [element[0] << 8 | element[1] for element in data]
-
-
-def _serialize_primitive(  # noqa: C901
-    variable: ModbusVariableDescription,
-    value: str | float | bool | tuple[int, int] | bytes | None,
-) -> list[int]:
-    mixin_data_type: ModbusClientMixin.DATATYPE = None
-    match variable.data_type:
-        case DataType.INT16:
-            mixin_data_type = ModbusClientMixin.DATATYPE.INT16
-        case DataType.UINT16:
-            mixin_data_type = ModbusClientMixin.DATATYPE.UINT16
-        case DataType.INT32:
-            mixin_data_type = ModbusClientMixin.DATATYPE.INT32
-        case DataType.UINT32:
-            mixin_data_type = ModbusClientMixin.DATATYPE.UINT32
-        case DataType.FLOAT32:
-            mixin_data_type = ModbusClientMixin.DATATYPE.FLOAT32
-        case DataType.INT64:
-            mixin_data_type = ModbusClientMixin.DATATYPE.INT64
-        case DataType.UINT64:
-            mixin_data_type = ModbusClientMixin.DATATYPE.UINT64
-        case DataType.FLOAT64:
-            mixin_data_type = ModbusClientMixin.DATATYPE.FLOAT64
-        case DataType.STRING:
-            mixin_data_type = ModbusClientMixin.DATATYPE.STRING
+    mixin_data_type: ModbusClientMixin.DATATYPE = HA_TO_PYMODBUS_TYPE.get(
+        source_variable.data_type, None
+    )
 
     if mixin_data_type is None:
         raise ValueError(
-            f"No conversion path from {variable.data_type.name} to a modbus data type."
+            f"No conversion path from {source_variable.data_type.name} to a modbus data type."
         )
 
     # de-scale non-null values
-    if value is not None and variable.scale is not None:
-        value: float = float(value) / variable.scale
+    if value is not None and source_variable.scale is not None:
+        # Do not round the value here, but let pymodbus do that if necessary.
+        value: float = float(value) / source_variable.scale
 
-        # Convert to int if integer value. Assume
+        # Convert to int if integer value.
         if value.is_integer():
             value = int(value)
 
     # None-values might have to be GTW-08 null values.
     if value is None:
-        value = _to_gtw08_null_value(variable.data_type)
+        value = _to_gtw08_null_value(source_variable.data_type)
 
     return ModbusClientMixin.convert_to_registers(
         value=value, data_type=mixin_data_type
     )
 
 
-def serialize(
-    variable: ModbusVariableDescription,
-    value: str
-    | float
-    | bool
-    | tuple[int, int]
-    | bytes
-    | Callable[[], bytes | None]
-    | None,
+def to_registers(
+    source_variable: ModbusVariableDescription,
+    value: str | float | tuple[int, int] | None,
 ) -> list[int]:
     """Serialize `value` to a list of modbus register values.
 
     ### Notes:
-        * All numeric values will be serialized to big endian, only the result of the `Callable` will keep its endianness.
         * The type of `value` is assumed to equal or be convertible to `variable.data_type`.
-        * If `value == None` or the callable result is `None`, the appropriate GTW-08 `null` value is returned if the GTW-08 parameter list specifies it.
-        * If `value` is a tuple, the whole tuple must fit in a single register, contain exactly two elements that are both treated as unsigned bytes.
+        * If `value == None`, the appropriate GTW-08 `null` value is returned if the GTW-08 parameter list specifies it.
+            If no `null`-value is defined for `variable.data_type`, `None` is returned.
+        * If `value` is a tuple, the whole tuple must fit in a single register, contain exactly two elements that both have a
+                value that fits in a single byte.
                 Therefore the individual values cannot exceed 2^8.
 
     Args:
-        variable (ModbusVariableDescription): The description of the variable to serialize.
-        value (str|float|bool|tuple[int,int]|bytes| (() -> (bytes | None))]): The actual value to serialize or a `Callable` that returns the serialized value as a `bytes` object.
+        source_variable (ModbusVariableDescription): The description of the variable to serialize.
+        value (str|float|bool|tuple[int,int]| None))]): The value to serialize.
 
     Returns:
         `list[int]`: The list of modbus register values. `list[0]` corresponds to `variable.start_address`.
@@ -193,74 +135,49 @@ def serialize(
     """
 
     # Convert the HA data type to a modbus data type.
-    if isinstance(value, Callable):
-        return _serialize_callable(variable=variable, value=value)
-
     if isinstance(value, tuple):
         if len(value) != 2:
-            raise ValueError("tuple must contain exactly two elements.")
+            raise ValueError("tuple must exist of exactly two elements.")
 
         value = value[0] << 8 | value[1]
 
-    return _serialize_primitive(variable=variable, value=value)
+    return _to_registers(source_variable=source_variable, value=value)
 
 
-def deserialize(
-    response: ModbusPDU, variable: ModbusVariableDescription
-) -> str | int | float | bytes | None:
+def from_registers(
+    registers: list[int],
+    destination_variable: ModbusVariableDescription,
+) -> str | int | float | tuple[int, int] | None:
     """Deserializes `response` into a value of type `data_type`.
 
-    #### Custom deserialization:
-        If the response contains a custom struct, set `data_type` to the desired type and provide `struct_format`.
-        For example, to read the least significant byte from a register and deserialize it to an `int`,
-        set `data_type` to  `DataType.INT16` and set `struct_format` to `=xB`.
-
     #### Scaling response values
-        Response values can be scaled by providing `scale`.
+        Response values can be scaled by providing `destination_variable.scale`.
         For example, reading the manual setpoint from register 664 (`parZoneRoomManualSetpoint`) returns
-        the setpoint as an integer (the value is multiplied by 10). So a setpoint of `21.5 'C` will be returned as `215`.
-        In this case, set `scale` to `0.1` to retrieve the value.
+        the setpoint as an integer (the value has a scale of 0.1). So a setpoint of `21.5 'C` will be returned as `215`.
+        In that case, set `scale` to the corresponding `0.1` to retrieve the scaled value.
 
     Args:
-        response (ModbusPDU): The modbus response.
-        variable (ModbusVariableDescription): Meta information about the variable value to deserialize into.
+        registers (list[int]): The modbus registers (2 bytes per register). The modbus protocol describes a big-endian representation
+            of addresses and data items. Therefore, this method assumes big-endian ordering of the registers and their values.
+        destination_variable (ModbusVariableDescription): A computer readable description of the variable to deserialize into.
 
     Returns:
         The response, deserialized to the requested data type, or `None` if the response
-        contains a null value.
+        contains a GTW-08 null value.
 
     Raises:
-        ValueError: If the response cannot be decoded as the requested data type or if `data_type` does not fit in the returned register count.
+        ValueError: If the response cannot be decoded as the requested data type or if `destination_variable.count` does
+            not exactly match the register count.
 
     """
 
-    def unpack_raw_bytes() -> bytes:
-        try:
-            return bytes(struct.unpack(variable.struct_format, raw_data))
-        except struct.error as err:
-            msg: str = f"Error unpacking [{raw_data}] to struct format [{variable.struct_format}]"
-            raise ValueError(msg) from err
+    # Ensure the required amount of registers.
+    if len(registers) != destination_variable.count:
+        raise ValueError(
+            "Got %i registers, but deserializing to %s requires %i.",
+            len(registers),
+            destination_variable.data_type.name,
+            destination_variable.count,
+        )
 
-    def ensure_required_registers() -> list[int]:
-        if len(response.registers) < variable.count:
-            raise ValueError(
-                "Response contains %i registers, but deserializing to %s requires %i.",
-                len(response.registers),
-                variable.data_type.name,
-                variable.count,
-            )
-
-        return response.registers[0 : variable.count]
-
-    # Only use the required registers
-    registers: list[int] = ensure_required_registers()
-    raw_data: bytes = b"".join([x.to_bytes(2, byteorder="big") for x in registers])
-    if raw_data == b"nan\x00":
-        return None
-
-    # Unpack first, if struct_format is provided.
-    if variable.struct_format is not None:
-        raw_data = unpack_raw_bytes()
-
-    # Only then deserialize, filter out illegal (null) values and and apply scale
-    return _deserialize_bytes(variable=variable, raw_data=raw_data)
+    return _from_registers(variable=destination_variable, registers=registers)

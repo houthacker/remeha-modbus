@@ -1,11 +1,9 @@
 """Constants for the Remeha Modbus integration."""
 
-import struct
-from enum import Enum
+from enum import Enum, StrEnum
 from typing import Final, Self
 
 from homeassistant.components.climate.const import PRESET_COMFORT, PRESET_ECO
-from homeassistant.components.modbus import DataType
 from pydantic import Field, model_validator
 from pydantic.dataclasses import dataclass
 
@@ -61,6 +59,35 @@ CLIMATE_DEFAULT_PRESETS: Final[list[str]] = [
 CLIMATE_DHW_EXTRA_PRESETS: Final[list[str]] = [PRESET_COMFORT, PRESET_ECO]
 
 
+class DataType(StrEnum):
+    """Data types for GTW-08 modbus.
+
+    #### Notes
+    The HA modbus component also provides a `DataType` enum, but it has a deprecated
+    `UINT8` variant, which is used extensively by the GTW-08 parameter list.
+    Not providing an `UINT8` variant would require a more generic approach
+    while reading/writing registers, that is more complex than adding a new
+    variant and handling it specifically.
+    """
+
+    UINT8 = "uint8"
+    """A single byte, read from a 2-byte register with struct format of `xB`.
+    Also used for ENUM8"""
+
+    INT16 = "int16"
+    INT32 = "int32"
+    INT64 = "int64"
+    UINT16 = "uint16"
+    UINT32 = "uint32"
+    UINT64 = "uint64"
+    FLOAT32 = "float32"
+    FLOAT64 = "float64"
+    STRING = "string"
+
+    TUPLE16 = "tuple16"
+    """A `tuple[int, int]` read from a single register."""
+
+
 class Limits(float, Enum):
     """Forced limits users must not exceed."""
 
@@ -104,7 +131,6 @@ class ModbusVariableDescription:
     start_address: ModbusVariableRef
     name: str
     data_type: DataType
-    struct_format: str | None = Field(default=None)
     scale: float | None = Field(default=None)
     count: int | None = Field(default=None)
     friendly_name: str | None = Field(default=None)
@@ -113,26 +139,18 @@ class ModbusVariableDescription:
     def ensure_mandatory_fields(self) -> Self:
         """Ensure the fields `count` and `struct_format` have a value when they are required.
 
-        Additionally, if `count` has no value, it is calculated and set for data types other than `DataType.STRING`.
+        Additionally, if `count` has no value, it is calculated for data types other than `DataType.STRING`.
 
         * `count` is required if `data_type == DataType.STRING`
-        * `struct_format` is required if `data_type == DataType.CUSTOM`
+        * `scale` must be `None` if `data_type == DataType.TUPLE16`
 
         """
 
         def ensure_register_count() -> int:
             match self.data_type:
-                case DataType.CUSTOM:
-                    # struct_format must result in an even amount of bytes
-                    # for it to be accepted by a modbus register.
-                    sz: int = struct.calcsize(self.struct_format)
-                    if sz % 2 == 0:
-                        return int(sz / 2)
-
-                    raise ValueError(
-                        f"struct_format of register (start_address={self.start_address}, struct_format={self.struct_format}) must be an even amount of bytes."
-                    )
-                case DataType.UINT16 | DataType.INT16 | DataType.FLOAT16:
+                case (
+                    DataType.UINT8 | DataType.UINT16 | DataType.INT16 | DataType.TUPLE16
+                ):
                     return 1
                 case DataType.UINT32 | DataType.INT32 | DataType.FLOAT32:
                     return 2
@@ -149,13 +167,12 @@ class ModbusVariableDescription:
                 "Attribute self.count has no value, but it is required because data_type is DataType.STRING"
             )
 
-        if self.data_type == DataType.CUSTOM and self.struct_format is None:
+        if self.data_type == DataType.TUPLE16 and self.scale is not None:
             raise ValueError(
-                "Attribute self.count has no value, but it is required because data_type is DataType.CUSTOM"
+                "self.scale has a value, but self.data_type is DataType.TUPLE16, which cannot be scaled."
             )
 
-        if self.count is None:
-            self.count = ensure_register_count()
+        self.count = ensure_register_count() if self.count is None else self.count
 
 
 class MetaRegisters:
@@ -164,14 +181,12 @@ class MetaRegisters:
     NUMBER_OF_DEVICES: Final[ModbusVariableDescription] = ModbusVariableDescription(
         start_address=128,
         name="numberOfDevices",
-        data_type=DataType.UINT16,
-        struct_format=MODBUS_UINT8,
+        data_type=DataType.UINT8,
     )
     NUMBER_OF_ZONES: Final[ModbusVariableDescription] = ModbusVariableDescription(
         start_address=189,
         name="NumberOfZones",
-        data_type=DataType.UINT16,
-        struct_format=MODBUS_UINT8,
+        data_type=DataType.UINT8,
     )
 
 
@@ -181,20 +196,17 @@ class DeviceInstanceRegisters:
     TYPE_BOARD: Final[ModbusVariableDescription] = ModbusVariableDescription(
         start_address=129,
         name="DeviceTypeBoard",
-        data_type=DataType.CUSTOM,
-        struct_format=MODBUS_DEVICE_CATEGORY,
+        data_type=DataType.TUPLE16,
     )
     SW_VERSION: Final[ModbusVariableDescription] = ModbusVariableDescription(
         start_address=130,
         name="sw_version",
-        data_type=DataType.CUSTOM,
-        struct_format=MODBUS_UINT16_BYTES,
+        data_type=DataType.TUPLE16,
     )
     HW_VERSION: Final[ModbusVariableDescription] = ModbusVariableDescription(
         start_address=132,
         name="hw_version",
-        data_type=DataType.CUSTOM,
-        struct_format=MODBUS_UINT16_BYTES,
+        data_type=DataType.TUPLE16,
     )
     ARTICLE_NUMBER: Final[ModbusVariableDescription] = ModbusVariableDescription(
         start_address=133, name="ArticleNumber", data_type=DataType.UINT32
@@ -207,14 +219,12 @@ class ZoneRegisters:
     TYPE: Final[ModbusVariableDescription] = ModbusVariableDescription(
         start_address=640,
         name="varZoneType",
-        data_type=DataType.UINT16,
-        struct_format=MODBUS_ENUM8,
+        data_type=DataType.UINT8,
     )
     FUNCTION: Final[ModbusVariableDescription] = ModbusVariableDescription(
         start_address=641,
         name="parZoneFunction",
-        data_type=DataType.UINT16,
-        struct_format=MODBUS_ENUM8,
+        data_type=DataType.UINT8,
         friendly_name="CP020",
     )
     SHORT_NAME: Final[ModbusVariableDescription] = ModbusVariableDescription(
@@ -226,14 +236,12 @@ class ZoneRegisters:
     OWNING_DEVICE: Final[ModbusVariableDescription] = ModbusVariableDescription(
         start_address=646,
         name="instance",
-        data_type=DataType.UINT16,
-        struct_format=MODBUS_UINT8,
+        data_type=DataType.UINT8,
     )
     MODE: Final[ModbusVariableDescription] = ModbusVariableDescription(
         start_address=649,
         name="parZoneMode",
-        data_type=DataType.UINT16,
-        struct_format=MODBUS_ENUM8,
+        data_type=DataType.UINT8,
         friendly_name="CP320",
     )
     ROOM_MANUAL_SETPOINT: Final[ModbusVariableDescription] = ModbusVariableDescription(
@@ -269,8 +277,7 @@ class ZoneRegisters:
     SELECTED_TIME_PROGRAM: Final[ModbusVariableDescription] = ModbusVariableDescription(
         start_address=688,
         name="parZoneTimeProgramSelected",
-        data_type=DataType.UINT16,
-        struct_format=MODBUS_ENUM8,
+        data_type=DataType.UINT8,
         friendly_name="CP570",
     )
     CURRENT_ROOM_TEMPERATURE: Final[ModbusVariableDescription] = (
@@ -285,15 +292,13 @@ class ZoneRegisters:
     CURRENT_HEATING_MODE: Final[ModbusVariableDescription] = ModbusVariableDescription(
         start_address=1109,
         name="varZoneCurrentHeatingMode",
-        data_type=DataType.UINT16,
-        struct_format=MODBUS_ENUM8,
+        data_type=DataType.UINT8,
         friendly_name="CM200",
     )
     PUMP_RUNNING: Final[ModbusVariableDescription] = ModbusVariableDescription(
         start_address=1110,
         name="varZonePumpRunning",
-        data_type=DataType.UINT16,
-        struct_format=MODBUS_ENUM8,
+        data_type=DataType.UINT8,
         friendly_name="CM050",
     )
     DHW_TANK_TEMPERATURE: Final[ModbusVariableDescription] = ModbusVariableDescription(

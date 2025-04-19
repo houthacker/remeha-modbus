@@ -2,7 +2,6 @@
 
 import asyncio
 import logging
-from collections.abc import Callable
 from dataclasses import dataclass
 from enum import Enum, StrEnum, auto
 
@@ -19,7 +18,7 @@ from .const import (
     ModbusVariableDescription,
     ZoneRegisters,
 )
-from .helpers.modbus import deserialize, serialize
+from .helpers.modbus import from_registers, to_registers
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -456,10 +455,10 @@ class RemehaApi:
 
                 _LOGGER.info("Modbus connection closed.")
 
-    async def _read_variable(
+    async def _read_registers(
         self, variable: ModbusVariableDescription, offset: int = 0
-    ) -> ModbusPDU:
-        """Read the requested variable from the modbus device.
+    ) -> list[int]:
+        """Read the registers representing the requested variable from the modbus device.
 
         The actual amount of registers to read is calculated based on `variable.data_type`.
 
@@ -468,7 +467,7 @@ class RemehaApi:
             offset (int): The offset for `variable.start_address`, in registers. Used for zone and device info registers.
 
         Returns:
-            ModbusPDU: The resulting PDU.
+            list[int]: The requested registers.
 
         Raises:
             ModbusException: If the connection to the modbus device is lost or if the request fails.
@@ -477,6 +476,7 @@ class RemehaApi:
         """
 
         async def _ensure_connected() -> None:
+            """Ensure that we're connected or raise an exception."""
             if not self._client.connected and not await self._client.connect():
                 raise ModbusException("Connection to modbus device lost.")
 
@@ -484,7 +484,6 @@ class RemehaApi:
             # Let the modbus device catch its breath.
             await asyncio.sleep(self._message_delay_seconds)
 
-        # After this, we're either we're connected or an exception is raised.
         await _ensure_connected()
         response: ModbusPDU = await self._client.read_holding_registers(
             address=variable.start_address + offset,
@@ -496,7 +495,7 @@ class RemehaApi:
                 "Modbus device returned an error while reading holding registers."
             )
 
-        return response
+        return response.registers
 
     async def _write_registers(
         self, variable: ModbusVariableDescription, registers: list[int], offset: int = 0
@@ -590,11 +589,11 @@ class RemehaApi:
 
         """
 
-        return deserialize(
-            response=await self._read_variable(
+        return from_registers(
+            registers=await self._read_registers(
                 variable=MetaRegisters.NUMBER_OF_DEVICES
             ),
-            variable=MetaRegisters.NUMBER_OF_DEVICES,
+            destination_variable=MetaRegisters.NUMBER_OF_DEVICES,
         )
 
     async def read_device_instance(self, id: int) -> DeviceInstance:
@@ -623,33 +622,33 @@ class RemehaApi:
 
         """
         device_register_offset: int = self.get_device_register_offset(id)
-        board_category = deserialize(
-            response=await self._read_variable(
+        board_category = from_registers(
+            registers=await self._read_registers(
                 variable=DeviceInstanceRegisters.TYPE_BOARD,
                 offset=device_register_offset,
             ),
-            variable=DeviceInstanceRegisters.TYPE_BOARD,
+            destination_variable=DeviceInstanceRegisters.TYPE_BOARD,
         )
-        sw_version = deserialize(
-            response=await self._read_variable(
+        sw_version = from_registers(
+            registers=await self._read_registers(
                 variable=DeviceInstanceRegisters.SW_VERSION,
                 offset=device_register_offset,
             ),
-            variable=DeviceInstanceRegisters.SW_VERSION,
+            destination_variable=DeviceInstanceRegisters.SW_VERSION,
         )
-        hw_version = deserialize(
-            response=await self._read_variable(
+        hw_version = from_registers(
+            registers=await self._read_registers(
                 variable=DeviceInstanceRegisters.HW_VERSION,
                 offset=device_register_offset,
             ),
-            variable=DeviceInstanceRegisters.HW_VERSION,
+            destination_variable=DeviceInstanceRegisters.HW_VERSION,
         )
-        article_number = deserialize(
-            response=await self._read_variable(
+        article_number = from_registers(
+            registers=await self._read_registers(
                 variable=DeviceInstanceRegisters.ARTICLE_NUMBER,
                 offset=device_register_offset,
             ),
-            variable=DeviceInstanceRegisters.ARTICLE_NUMBER,
+            destination_variable=DeviceInstanceRegisters.ARTICLE_NUMBER,
         )
 
         return DeviceInstance(
@@ -698,9 +697,11 @@ class RemehaApi:
             `ValueError`: If the retrieved modbus data cannot be deserialized successfully.
 
         """
-        return deserialize(
-            response=await self._read_variable(variable=MetaRegisters.NUMBER_OF_ZONES),
-            variable=MetaRegisters.NUMBER_OF_ZONES,
+        return from_registers(
+            registers=await self._read_registers(
+                variable=MetaRegisters.NUMBER_OF_ZONES
+            ),
+            destination_variable=MetaRegisters.NUMBER_OF_ZONES,
         )
 
     async def read_zone(self, id: int) -> ClimateZone | None:
@@ -740,86 +741,86 @@ class RemehaApi:
 
         zone_register_offset: int = self.get_zone_register_offset(id)
 
-        zone_type = deserialize(
-            response=await self._read_variable(
+        zone_type = from_registers(
+            registers=await self._read_registers(
                 variable=ZoneRegisters.TYPE, offset=zone_register_offset
             ),
-            variable=ZoneRegisters.TYPE,
+            destination_variable=ZoneRegisters.TYPE,
         )
-        zone_function = deserialize(
-            response=await self._read_variable(
+        zone_function = from_registers(
+            registers=await self._read_registers(
                 variable=ZoneRegisters.FUNCTION, offset=zone_register_offset
             ),
-            variable=ZoneRegisters.FUNCTION,
+            destination_variable=ZoneRegisters.FUNCTION,
         )
-        zone_short_name = deserialize(
-            response=await self._read_variable(
+        zone_short_name = from_registers(
+            registers=await self._read_registers(
                 variable=ZoneRegisters.SHORT_NAME, offset=zone_register_offset
             ),
-            variable=ZoneRegisters.SHORT_NAME,
+            destination_variable=ZoneRegisters.SHORT_NAME,
         )
-        owning_device = deserialize(
-            response=await self._read_variable(
+        owning_device = from_registers(
+            registers=await self._read_registers(
                 variable=ZoneRegisters.OWNING_DEVICE, offset=zone_register_offset
             ),
-            variable=ZoneRegisters.OWNING_DEVICE,
+            destination_variable=ZoneRegisters.OWNING_DEVICE,
         )
-        zone_mode = deserialize(
-            response=await self._read_variable(
+        zone_mode = from_registers(
+            registers=await self._read_registers(
                 variable=ZoneRegisters.MODE, offset=zone_register_offset
             ),
-            variable=ZoneRegisters.MODE,
+            destination_variable=ZoneRegisters.MODE,
         )
-        room_setpoint = deserialize(
-            response=await self._read_variable(
+        room_setpoint = from_registers(
+            registers=await self._read_registers(
                 variable=ZoneRegisters.ROOM_MANUAL_SETPOINT, offset=zone_register_offset
             ),
-            variable=ZoneRegisters.ROOM_MANUAL_SETPOINT,
+            destination_variable=ZoneRegisters.ROOM_MANUAL_SETPOINT,
         )
-        dhw_comfort_setpoint = deserialize(
-            response=await self._read_variable(
+        dhw_comfort_setpoint = from_registers(
+            registers=await self._read_registers(
                 variable=ZoneRegisters.DHW_COMFORT_SETPOINT, offset=zone_register_offset
             ),
-            variable=ZoneRegisters.DHW_COMFORT_SETPOINT,
+            destination_variable=ZoneRegisters.DHW_COMFORT_SETPOINT,
         )
-        dhw_calorifier_hysterisis = deserialize(
-            response=await self._read_variable(
+        dhw_calorifier_hysterisis = from_registers(
+            registers=await self._read_registers(
                 variable=ZoneRegisters.DHW_CALORIFIER_HYSTERISIS,
                 offset=zone_register_offset,
             ),
-            variable=ZoneRegisters.DHW_CALORIFIER_HYSTERISIS,
+            destination_variable=ZoneRegisters.DHW_CALORIFIER_HYSTERISIS,
         )
-        selected_schedule = deserialize(
-            response=await self._read_variable(
+        selected_schedule = from_registers(
+            registers=await self._read_registers(
                 variable=ZoneRegisters.SELECTED_TIME_PROGRAM,
                 offset=zone_register_offset,
             ),
-            variable=ZoneRegisters.SELECTED_TIME_PROGRAM,
+            destination_variable=ZoneRegisters.SELECTED_TIME_PROGRAM,
         )
-        room_temperature = deserialize(
-            response=await self._read_variable(
+        room_temperature = from_registers(
+            registers=await self._read_registers(
                 variable=ZoneRegisters.CURRENT_ROOM_TEMPERATURE,
                 offset=zone_register_offset,
             ),
-            variable=ZoneRegisters.CURRENT_ROOM_TEMPERATURE,
+            destination_variable=ZoneRegisters.CURRENT_ROOM_TEMPERATURE,
         )
-        heating_mode = deserialize(
-            response=await self._read_variable(
+        heating_mode = from_registers(
+            registers=await self._read_registers(
                 variable=ZoneRegisters.CURRENT_HEATING_MODE, offset=zone_register_offset
             ),
-            variable=ZoneRegisters.CURRENT_HEATING_MODE,
+            destination_variable=ZoneRegisters.CURRENT_HEATING_MODE,
         )
-        pump_running = deserialize(
-            response=await self._read_variable(
+        pump_running = from_registers(
+            registers=await self._read_registers(
                 variable=ZoneRegisters.PUMP_RUNNING, offset=zone_register_offset
             ),
-            variable=ZoneRegisters.PUMP_RUNNING,
+            destination_variable=ZoneRegisters.PUMP_RUNNING,
         )
-        dhw_tank_temperature = deserialize(
-            response=await self._read_variable(
+        dhw_tank_temperature = from_registers(
+            registers=await self._read_registers(
                 variable=ZoneRegisters.DHW_TANK_TEMPERATURE, offset=zone_register_offset
             ),
-            variable=ZoneRegisters.DHW_TANK_TEMPERATURE,
+            destination_variable=ZoneRegisters.DHW_TANK_TEMPERATURE,
         )
 
         if zone_type == ClimateZoneType.NOT_PRESENT.value:
@@ -884,62 +885,62 @@ class RemehaApi:
 
         zone_register_offset: int = self.get_zone_register_offset(zone)
 
-        zone_mode = deserialize(
-            response=await self._read_variable(
+        zone_mode = from_registers(
+            registers=await self._read_registers(
                 variable=ZoneRegisters.MODE, offset=zone_register_offset
             ),
-            variable=ZoneRegisters.MODE,
+            destination_variable=ZoneRegisters.MODE,
         )
-        room_setpoint = deserialize(
-            response=await self._read_variable(
+        room_setpoint = from_registers(
+            registers=await self._read_registers(
                 variable=ZoneRegisters.ROOM_MANUAL_SETPOINT, offset=zone_register_offset
             ),
-            variable=ZoneRegisters.ROOM_MANUAL_SETPOINT,
+            destination_variable=ZoneRegisters.ROOM_MANUAL_SETPOINT,
         )
-        dhw_comfort_setpoint = deserialize(
-            response=await self._read_variable(
+        dhw_comfort_setpoint = from_registers(
+            registers=await self._read_registers(
                 variable=ZoneRegisters.DHW_COMFORT_SETPOINT, offset=zone_register_offset
             ),
-            variable=ZoneRegisters.DHW_COMFORT_SETPOINT,
+            destination_variable=ZoneRegisters.DHW_COMFORT_SETPOINT,
         )
-        dhw_calorifier_hysterisis = deserialize(
-            response=await self._read_variable(
+        dhw_calorifier_hysterisis = from_registers(
+            registers=await self._read_registers(
                 variable=ZoneRegisters.DHW_CALORIFIER_HYSTERISIS,
                 offset=zone_register_offset,
             ),
-            variable=ZoneRegisters.DHW_CALORIFIER_HYSTERISIS,
+            destination_variable=ZoneRegisters.DHW_CALORIFIER_HYSTERISIS,
         )
-        selected_schedule = deserialize(
-            response=await self._read_variable(
+        selected_schedule = from_registers(
+            registers=await self._read_registers(
                 variable=ZoneRegisters.SELECTED_TIME_PROGRAM,
                 offset=zone_register_offset,
             ),
-            variable=ZoneRegisters.SELECTED_TIME_PROGRAM,
+            destination_variable=ZoneRegisters.SELECTED_TIME_PROGRAM,
         )
-        room_temperature = deserialize(
-            response=await self._read_variable(
+        room_temperature = from_registers(
+            registers=await self._read_registers(
                 variable=ZoneRegisters.CURRENT_ROOM_TEMPERATURE,
                 offset=zone_register_offset,
             ),
-            variable=ZoneRegisters.CURRENT_ROOM_TEMPERATURE,
+            destination_variable=ZoneRegisters.CURRENT_ROOM_TEMPERATURE,
         )
-        heating_mode = deserialize(
-            response=await self._read_variable(
+        heating_mode = from_registers(
+            registers=await self._read_registers(
                 variable=ZoneRegisters.CURRENT_HEATING_MODE, offset=zone_register_offset
             ),
-            variable=ZoneRegisters.CURRENT_HEATING_MODE,
+            destination_variable=ZoneRegisters.CURRENT_HEATING_MODE,
         )
-        pump_running = deserialize(
-            response=await self._read_variable(
+        pump_running = from_registers(
+            registers=await self._read_registers(
                 variable=ZoneRegisters.PUMP_RUNNING, offset=zone_register_offset
             ),
-            variable=ZoneRegisters.PUMP_RUNNING,
+            destination_variable=ZoneRegisters.PUMP_RUNNING,
         )
-        dhw_tank_temperature = deserialize(
-            response=await self._read_variable(
+        dhw_tank_temperature = from_registers(
+            registers=await self._read_registers(
                 variable=ZoneRegisters.DHW_TANK_TEMPERATURE, offset=zone_register_offset
             ),
-            variable=ZoneRegisters.DHW_TANK_TEMPERATURE,
+            destination_variable=ZoneRegisters.DHW_TANK_TEMPERATURE,
         )
 
         # Merge old and new zone.
@@ -971,7 +972,7 @@ class RemehaApi:
 
         Args:
             variable (ModbusVariableDescription): The description of the variable to write.
-            value (Enum | None): The value to write. If `None`, the modbus NULL value is written instead, if the spec allows it.
+            value (Enum | None): The value to write. If `None`, the GTW-08 NULL value is written instead.
             offset (int): The offset in registers of `variable.start_address`. Used for zone- and device objects.
 
         Raises:
@@ -999,13 +1000,7 @@ class RemehaApi:
     async def async_write_primitive(
         self,
         variable: ModbusVariableDescription,
-        value: str
-        | float
-        | bool
-        | tuple[int, int]
-        | bytes
-        | Callable[[], bytes]
-        | None,
+        value: str | float | bool | tuple[int, int] | None,
         offset: int = 0,
     ) -> None:
         """Write a single primitive value to the modbus device.
@@ -1016,7 +1011,7 @@ class RemehaApi:
 
         Args:
             variable (ModbusVariableDescription): The description of the variable to write.
-            value (str|float|bool|tuple[int,int]|bytes|(() -> bytes)|None): The value to write. If `None`, the modbus NULL value is written instead, if the spec allows it.
+            value (str|float|bool|tuple[int,int]|None): The value to write. If `None`, the GTW-08 NULL value is written instead.
             offset (int): The offset in registers of `variable.start_address`. Used for zone- and device objects.
 
         Raises:
@@ -1030,7 +1025,7 @@ class RemehaApi:
 
         await self._write_registers(
             variable=variable,
-            registers=serialize(variable=variable, value=value),
+            registers=to_registers(source_variable=variable, value=value),
             offset=offset,
         )
 

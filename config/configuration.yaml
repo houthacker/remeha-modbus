@@ -12,6 +12,8 @@ scene: !include scenes.yaml
 homeassistant:
   debug: true
 
+debugpy:
+
 logger:
   default: info
   logs:
