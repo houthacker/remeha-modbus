@@ -5,7 +5,31 @@ from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 from homeassistant.util.json import JsonObjectType
+from pymodbus.client import ModbusBaseClient
 from pytest_homeassistant_custom_component.common import load_json_object_fixture
+
+from custom_components.remeha_modbus.api import ConnectionType, RemehaApi
+
+
+def get_api(
+    mock_modbus_client: ModbusBaseClient,
+    name: str = "test_api",
+    device_address: int = 100,
+) -> RemehaApi:
+    """Create a new RemehaApi instance with a mocked modbus client."""
+
+    # mock_modbus_client MUST be a mock, otherwise a real connection might be made and mess up the appliance.
+    if not isinstance(mock_modbus_client, Mock):
+        pytest.fail(
+            f"Trying to create RemehaApi with non-mock type {type(mock_modbus_client).__qualname__}."
+        )
+
+    return RemehaApi(
+        name=name,
+        connection_type=ConnectionType.RTU_OVER_TCP,
+        client=mock_modbus_client,
+        device_address=device_address,
+    )
 
 
 @pytest.fixture(autouse=True)

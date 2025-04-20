@@ -39,16 +39,16 @@ class DeviceBoardType(Enum):
     EHC = 2
     """Motherboard for (hybrid) heat pumps like Mercuria Ace"""
 
-    MK = int("0x14", 0)
+    MK = int("14", 16)
     """Appliance control panel like eTwist"""
 
-    SCB = int("0x19", 0)
+    SCB = int("19", 16)
     """Circuit control board"""
 
-    EEC = int("0x1b", 0)
+    EEC = int("1b", 16)
     """Mainboard for gas boilers like GAS 120 Ace"""
 
-    GATEWAY = int("0x1e", 0)
+    GATEWAY = int("1e", 16)
     """A gateway, for example GTW-08 (modbus gateway)"""
 
 
