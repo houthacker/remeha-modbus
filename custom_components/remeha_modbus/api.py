@@ -5,7 +5,7 @@ import logging
 from dataclasses import dataclass
 from enum import Enum, StrEnum, auto
 
-from pymodbus import FramerType, ModbusException
+from pymodbus import ModbusException
 from pymodbus import client as ModbusClient
 from pymodbus.pdu import ModbusPDU
 
@@ -409,10 +409,14 @@ class RemehaApi:
     """Use instances of this class to interact with the Remeha device through Modbus."""
 
     def __init__(
-        self, name: str, connection_type: ConnectionType, device_address: int = 1
+        self,
+        name: str,
+        connection_type: ConnectionType,
+        client: ModbusClient.ModbusBaseClient,
+        device_address: int = 1,
     ):
         """Create a new API instance."""
-        self._client: ModbusClient.ModbusBaseClient = None
+        self._client: ModbusClient.ModbusBaseClient = client
 
         self._name = name
         self._connection_type = connection_type
@@ -1028,129 +1032,3 @@ class RemehaApi:
             registers=to_registers(source_variable=variable, value=value),
             offset=offset,
         )
-
-
-class RemehaModbusSocketApi(RemehaApi):
-    """Implementation of the Remeha modbus API that connects to the modbus device through a socket."""
-
-    def __init__(
-        self,
-        name: str,
-        host: str,
-        port: int = 502,
-        connection_type: ConnectionType = ConnectionType.RTU_OVER_TCP,
-        device_address: int = 100,
-    ):
-        """Create a new API with a socket connection to the modbus device."""
-
-        super().__init__(
-            name=name, connection_type=connection_type, device_address=device_address
-        )
-
-        if connection_type in [
-            ConnectionType.TCP,
-            ConnectionType.UDP,
-            ConnectionType.RTU_OVER_TCP,
-        ]:
-            self._host: str = host
-            self._port: int = port
-
-            # Create the appropriate client type, but do not yet connect.
-            match self._connection_type:
-                case ConnectionType.TCP:
-                    self._client = ModbusClient.AsyncModbusTcpClient(
-                        host=self._host,
-                        port=self._port,
-                        framer=FramerType.SOCKET,
-                        timeout=5,
-                    )
-                case ConnectionType.UDP:
-                    self._client = ModbusClient.AsyncModbusUdpClient(
-                        host=self._host,
-                        port=self._port,
-                        framer=FramerType.SOCKET,
-                        timeout=5,
-                    )
-                case ConnectionType.RTU_OVER_TCP:
-                    self._client = ModbusClient.AsyncModbusTcpClient(
-                        host=self._host,
-                        port=self._port,
-                        framer=FramerType.RTU,
-                        timeout=5,
-                    )
-        else:
-            raise ModbusException(
-                f"Connection type [{connection_type}] is unsupported within a socket-based API."
-            )
-
-    def host(self) -> str:
-        """Return the hostname or IP address of the modbus device."""
-        return self._host
-
-    def port(self) -> int:
-        """Return the port number at which the modbus device listens."""
-        return self._port
-
-
-class RemehaModbusSerialApi(RemehaApi):
-    """Implementation of the Remeha modbus API that connects to the modbus device through a serial or USB port."""
-
-    def __init__(
-        self,
-        name: str,
-        port: str,
-        baudrate: int = 19200,
-        bytesize: int = 8,
-        method: SerialConnectionMethod = SerialConnectionMethod.RTU,
-        parity: str = "N",
-        stopbits: int = 2,
-        device_address: int = 1,
-    ):
-        """Create a new API with a serial connection to the modbus device."""
-
-        super().__init__(
-            name=name,
-            connection_type=ConnectionType.SERIAL,
-            device_address=device_address,
-        )
-
-        # Assume self._connection_type is SERIAL
-        self._client = ModbusClient.AsyncModbusSerialClient(
-            port=port,
-            baudrate=baudrate,
-            bytesize=bytesize,
-            framer=method,
-            parity=parity,
-            stopbits=stopbits,
-        )
-
-        self._port: str = port
-        self._baudrate: int = baudrate
-        self._bytesize: int = bytesize
-        self._method: SerialConnectionMethod = method
-        self._parity: str = parity
-        self._stopbits: int = stopbits
-
-    def port(self) -> int:
-        """Return the serial port or USB device where the modbus device is connected to the Home Assistant host."""
-        return self._port
-
-    def baudrate(self) -> int:
-        """Return the speed of the serial connection."""
-        return self._baudrate
-
-    def bytesize(self) -> int:
-        """Return the data size in bits of each byte."""
-        return self._bytesize
-
-    def method(self) -> SerialConnectionMethod:
-        """Return the serial connection method."""
-        return self._method
-
-    def parity(self) -> str:
-        """Return the parity of the data bytes."""
-        return self._parity
-
-    def stopbits(self) -> int:
-        """Return the stopbits of the data bytes."""
-        return self._stopbits

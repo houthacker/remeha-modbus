@@ -1,7 +1,6 @@
-[tool.ruff]
 required-version = ">=0.11.0"
-
-[tool.ruff.lint]
+target-version = "py313"
+[lint]
 select = [
   "A001",   # Variable {name} is shadowing a Python builtin
   "ASYNC",  # flake8-async

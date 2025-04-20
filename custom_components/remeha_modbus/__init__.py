@@ -1,5 +1,8 @@
 """The Remeha Modbus integration."""
 
+from types import MappingProxyType
+from typing import Any
+
 from homeassistant.config_entries import (
     ConfigEntry,
     ConfigEntryError,
@@ -7,9 +10,18 @@ from homeassistant.config_entries import (
 )
 from homeassistant.const import CONF_HOST, CONF_NAME, CONF_PORT, CONF_TYPE, Platform
 from homeassistant.core import HomeAssistant
-from pymodbus import ModbusException
+from pymodbus import FramerType, ModbusException
+from pymodbus.client import (
+    AsyncModbusSerialClient,
+    AsyncModbusTcpClient,
+    AsyncModbusUdpClient,
+    ModbusBaseClient,
+)
 
-from .api import ConnectionType, RemehaApi, RemehaModbusSerialApi, RemehaModbusSocketApi
+from .api import (
+    ConnectionType,
+    RemehaApi,
+)
 from .const import (
     MODBUS_DEVICE_ADDRESS,
     MODBUS_SERIAL_BAUDRATE,
@@ -23,27 +35,47 @@ from .coordinator import RemehaUpdateCoordinator
 PLATFORMS: list[Platform] = [Platform.CLIMATE]
 
 
-async def _create_api(name: str, type: ConnectionType, entry: ConfigEntry) -> RemehaApi:
-    match type:
+async def _create_api(name: str, config: MappingProxyType[str, Any]) -> RemehaApi:
+    connection_type: ConnectionType = config[CONF_TYPE]
+    client: ModbusBaseClient
+    match connection_type:
         case ConnectionType.SERIAL:
-            return RemehaModbusSerialApi(
-                name=name,
-                port=entry.data[CONF_PORT],
-                baudrate=entry.data[MODBUS_SERIAL_BAUDRATE],
-                bytesize=entry.data[MODBUS_SERIAL_BYTESIZE],
-                method=entry.data[MODBUS_SERIAL_METHOD],
-                parity=entry.data[MODBUS_SERIAL_PARITY],
-                stopbits=entry.data[MODBUS_SERIAL_STOPBITS],
-                device_address=entry.data[MODBUS_DEVICE_ADDRESS],
+            client = AsyncModbusSerialClient(
+                port=config[CONF_PORT],
+                baudrate=config[MODBUS_SERIAL_BAUDRATE],
+                bytesize=config[MODBUS_SERIAL_BYTESIZE],
+                framer=config[MODBUS_SERIAL_METHOD],
+                parity=config[MODBUS_SERIAL_PARITY],
+                stopbits=config[MODBUS_SERIAL_STOPBITS],
             )
-        case _:
-            return RemehaModbusSocketApi(
-                name=name,
-                host=entry.data[CONF_HOST],
-                port=entry.data[CONF_PORT],
-                connection_type=entry.data[CONF_TYPE],
-                device_address=entry.data[MODBUS_DEVICE_ADDRESS],
+        case ConnectionType.TCP:
+            client = AsyncModbusTcpClient(
+                host=config[CONF_HOST],
+                port=int(config[CONF_PORT]),
+                framer=FramerType.SOCKET,
+                timeout=5,
             )
+        case ConnectionType.UDP:
+            client = AsyncModbusUdpClient(
+                host=config[CONF_HOST],
+                port=int(config[CONF_PORT]),
+                framer=FramerType.SOCKET,
+                timeout=5,
+            )
+        case ConnectionType.RTU_OVER_TCP:
+            client = AsyncModbusTcpClient(
+                host=config[CONF_HOST],
+                port=int(config[CONF_PORT]),
+                framer=FramerType.RTU,
+                timeout=5,
+            )
+
+    return RemehaApi(
+        name=name,
+        connection_type=connection_type,
+        client=client,
+        device_address=config[MODBUS_DEVICE_ADDRESS],
+    )
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
@@ -58,7 +90,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             f"{modbus_type} is not a valid connection type. Use one of [{connection_types}]"
         )
 
-    api: RemehaApi = await _create_api(modbus_hub_name, modbus_type, entry)
+    api: RemehaApi = await _create_api(name=modbus_hub_name, config=entry.data)
 
     # Ensure the modbus device is reachable and actually talking Modbus
     # before forwarding setup to other platforms.
