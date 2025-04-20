@@ -304,7 +304,7 @@ class ZoneRegisters:
     DHW_TANK_TEMPERATURE: Final[ModbusVariableDescription] = ModbusVariableDescription(
         start_address=1119,
         name="varDhwTankTemperature",
-        data_type=DataType.UINT16,
+        data_type=DataType.INT16,
         scale=0.01,
         friendly_name="CM040",
     )

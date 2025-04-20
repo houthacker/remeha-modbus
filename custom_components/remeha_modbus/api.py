@@ -240,7 +240,7 @@ class ClimateZone:
     selected_schedule: ClimateZoneScheduleId | None
     """The currently selected schedule.
 
-    ALthough this property is optional, it needn't be `None` if `mode != ClimateZoneMode.SCHEDULING`.
+    Although this property is optional, it needn't be `None` if `mode != ClimateZoneMode.SCHEDULING`.
     """
 
     heating_mode: ClimateZoneHeatingMode

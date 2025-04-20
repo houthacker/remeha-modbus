@@ -2,7 +2,15 @@
 
 import pytest
 
-from custom_components.remeha_modbus.api import DeviceInstance
+from custom_components.remeha_modbus.api import (
+    ClimateZone,
+    ClimateZoneFunction,
+    ClimateZoneHeatingMode,
+    ClimateZoneMode,
+    ClimateZoneScheduleId,
+    ClimateZoneType,
+    DeviceInstance,
+)
 from custom_components.remeha_modbus.const import ZoneRegisters
 
 from .conftest import get_api
@@ -38,6 +46,35 @@ async def test_read_device_instances(mock_modbus_client):
     devices: list[DeviceInstance] = await api.read_device_instances()
 
     assert len(devices) == 2
+
+
+@pytest.mark.parametrize("mock_modbus_client", ["modbus_store.json"], indirect=True)
+async def test_read_zone(mock_modbus_client):
+    """Read a single zone."""
+
+    api = get_api(mock_modbus_client=mock_modbus_client)
+    zone: ClimateZone = await api.read_zone(id=1)
+
+    assert zone is not None
+    assert zone.current_setpoint == 20.0
+    assert zone.current_temparature == 23.2
+    assert zone.dhw_calorifier_hysterisis is None
+    assert zone.dhw_comfort_setpoint is None
+    assert zone.dhw_tank_temperature is None
+    assert zone.function == ClimateZoneFunction.MIXING_CIRCUIT
+    assert zone.heating_mode == ClimateZoneHeatingMode.COOLING
+    assert zone.id == 1
+    assert zone.mode == ClimateZoneMode.MANUAL
+    assert zone.owning_device == 1
+    assert zone.pump_running is True
+    assert zone.room_setpoint == 20.0
+    assert zone.room_temperature == 23.2
+    assert zone.selected_schedule == ClimateZoneScheduleId.SCHEDULE_1
+    assert zone.short_name == "CIRCA1"
+    assert zone.type == ClimateZoneType.OTHER
+
+    assert zone.is_central_heating() is True
+    assert zone.is_domestic_hot_water() is False
 
 
 @pytest.mark.parametrize("mock_modbus_client", ["modbus_store.json"], indirect=True)
