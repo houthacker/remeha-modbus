@@ -95,8 +95,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # Ensure the modbus device is reachable and actually talking Modbus
     # before forwarding setup to other platforms.
     try:
-        await api.connect()
-        await api.health_check()
+        await api.async_connect()
+        await api.async_health_check()
     except ModbusException as ex:
         raise ConfigEntryNotReady(
             f"Error while executing modbus health check: {ex}"

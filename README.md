@@ -27,10 +27,10 @@ According to Remeha, the following appliances can be extended with a GTW-08 (mod
 | miTerra           | &check;                       | &cross;   |
 | miTerra plus      | &check;                       | &cross;   |
 
-This integration is known to be working with the checked devices, but since the modbus interface is the same for all others, it is very likely that it will work for those too. This list is also available on the Remeha site (Dutch &#x1f1f3;&#x1f1f1;): [Remeha modbus support](https://kennisbank.remeha.nl/welke-remeha-toestellen-hebben-een-modbus-interface/).
+This integration is known to be working with the tested devices, but since the modbus interface is the same for all others, it is very likely that it will work for those too. This list is also available on the Remeha site (Dutch &#x1f1f3;&#x1f1f1;): [Remeha modbus support](https://kennisbank.remeha.nl/welke-remeha-toestellen-hebben-een-modbus-interface/).
 
 ### Supported modbus proxies
-The following proxies are known to be working with this integration. If you use another device that works too, please submit a PR.
+The following proxies are known to be working with this integration. Other gateways or proxies probably work as well, but haven't been tested.
 
 | Device type | URL |
 |-------------|-----|

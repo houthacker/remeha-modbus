@@ -35,7 +35,7 @@ class RemehaUpdateCoordinator(DataUpdateCoordinator):
 
     async def _async_setup(self):
         try:
-            self._device_instances = await self._api.read_device_instances()
+            self._device_instances = await self._api.async_read_device_instances()
         except ModbusException as ex:
             raise UpdateFailed("Error while communicating with modbus device.") from ex
 
@@ -43,10 +43,10 @@ class RemehaUpdateCoordinator(DataUpdateCoordinator):
         try:
             zones: list[ClimateZone] = []
             if self.data is None:
-                zones = await self._api.read_zones()
+                zones = await self._api.async_read_zones()
             else:
                 zones = [
-                    await self._api.read_zone_update(zone)
+                    await self._api.async_read_zone_update(zone)
                     for zone in list(self.data["climates"].values())
                 ]
         except ModbusException as ex:

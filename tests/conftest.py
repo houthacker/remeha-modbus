@@ -1,7 +1,7 @@
 """Fixtures for testing."""
 
 from collections.abc import Generator
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import pytest
 from homeassistant.util.json import JsonObjectType
@@ -80,6 +80,9 @@ def mock_modbus_client(request) -> AsyncMock:
 
             return read_pdu
 
+        async def close():
+            return AsyncMock()
+
         async def write_to_store(address: int, values: list[int], **kwargs):
             for idx, r in enumerate(values):
                 store["server"]["registers"][str(address + idx)] = (
@@ -92,7 +95,9 @@ def mock_modbus_client(request) -> AsyncMock:
 
             return write_pdu
 
+        mock.connected = MagicMock(return_value=True)
         mock.read_holding_registers.side_effect = get_from_store
         mock.write_registers = write_to_store
+        mock.close = close
 
         return mock
