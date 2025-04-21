@@ -1,14 +1,27 @@
 """Fixtures for testing."""
 
+import uuid
 from collections.abc import Generator
 from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import pytest
+from homeassistant.config_entries import ConfigEntryState
+from homeassistant.const import CONF_HOST, CONF_NAME, CONF_PORT, CONF_TYPE, Platform
+from homeassistant.core import HomeAssistant
 from homeassistant.util.json import JsonObjectType
 from pymodbus.client import ModbusBaseClient
-from pytest_homeassistant_custom_component.common import load_json_object_fixture
+from pytest_homeassistant_custom_component.common import (
+    MockConfigEntry,
+    load_json_object_fixture,
+)
 
 from custom_components.remeha_modbus.api import ConnectionType, RemehaApi
+from custom_components.remeha_modbus.const import (
+    CONNECTION_RTU_OVER_TCP,
+    DOMAIN,
+    MODBUS_DEVICE_ADDRESS,
+)
+from custom_components.remeha_modbus.coordinator import RemehaUpdateCoordinator
 
 
 def get_api(
@@ -101,3 +114,45 @@ def mock_modbus_client(request) -> AsyncMock:
         mock.close = close
 
         return mock
+
+
+async def setup_platform(hass: HomeAssistant, api: RemehaApi):
+    """Set up the platform."""
+
+    hass.config.components.add(DOMAIN)
+    config_entry = create_config_entry(api=api)
+    coordinator = RemehaUpdateCoordinator(hass=hass, config_entry=config_entry, api=api)
+
+    # Do not update, since that causes a lingering timer after the tests are finished.
+    coordinator.update_interval = 0
+
+    config_entry.add_to_hass(hass=hass)
+
+    config_entry.mock_state(hass, ConfigEntryState.SETUP_IN_PROGRESS)
+    await coordinator.async_config_entry_first_refresh()
+
+    config_entry.runtime_data = {"api": api, "coordinator": coordinator}
+
+    config_entry.mock_state(hass, ConfigEntryState.LOADED)
+    await hass.config_entries.async_forward_entry_setups(
+        entry=config_entry, platforms=[Platform.CLIMATE]
+    )
+
+    await hass.async_block_till_done()
+
+
+def create_config_entry(api: RemehaApi) -> MockConfigEntry:
+    """Mock a config entry for Remeha Modbus integration."""
+
+    return MockConfigEntry(
+        domain=DOMAIN,
+        title=f"Remeha Modbus {api.name}",
+        unique_id=str(uuid.uuid4()),
+        data={
+            CONF_NAME: api.name,
+            CONF_TYPE: CONNECTION_RTU_OVER_TCP,
+            MODBUS_DEVICE_ADDRESS: 100,
+            CONF_HOST: "does.not.matter",
+            CONF_PORT: 8899,
+        },
+    )

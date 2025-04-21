@@ -117,7 +117,7 @@ async def test_config_modbus_socket(
     await hass.async_block_till_done()
 
     # We should have been presented with the 2nd form, to fill in the
-    # serial connection details.
+    # socket connection details.
     assert result["type"] is FlowResultType.FORM
 
     # Fill in the details, check the result.

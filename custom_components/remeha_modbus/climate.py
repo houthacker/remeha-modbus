@@ -85,7 +85,7 @@ class RemehaClimateEntity(CoordinatorEntity, ClimateEntity):
     )
     _attr_has_entity_name = True
     _attr_precision = PRECISION_TENTHS
-    _attr_should_poll: bool = True
+    _attr_should_poll: bool = False
     _attr_target_temperature_step: float = CLIMATE_TEMPERATURE_STEP
     _attr_temperature_unit = UnitOfTemperature.CELSIUS
     _attr_translation_key = DOMAIN
