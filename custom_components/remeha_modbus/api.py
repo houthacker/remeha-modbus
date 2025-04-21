@@ -2,11 +2,10 @@
 
 import asyncio
 import logging
-from collections.abc import Callable
 from dataclasses import dataclass
 from enum import Enum, StrEnum, auto
 
-from pymodbus import FramerType, ModbusException
+from pymodbus import ModbusException
 from pymodbus import client as ModbusClient
 from pymodbus.pdu import ModbusPDU
 
@@ -19,7 +18,7 @@ from .const import (
     ModbusVariableDescription,
     ZoneRegisters,
 )
-from .helpers.modbus import deserialize, serialize
+from .helpers.modbus import from_registers, to_registers
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -40,20 +39,20 @@ class DeviceBoardType(Enum):
     EHC = 2
     """Motherboard for (hybrid) heat pumps like Mercuria Ace"""
 
-    MK = int("0x14", 0)
+    MK = int("14", 16)
     """Appliance control panel like eTwist"""
 
-    SCB = int("0x19", 0)
+    SCB = int("19", 16)
     """Circuit control board"""
 
-    EEC = int("0x1b", 0)
+    EEC = int("1b", 16)
     """Mainboard for gas boilers like GAS 120 Ace"""
 
-    GATEWAY = int("0x1e", 0)
+    GATEWAY = int("1e", 16)
     """A gateway, for example GTW-08 (modbus gateway)"""
 
 
-@dataclass
+@dataclass(eq=False)
 class DeviceBoardCategory:
     """The category of the device located on the appliance."""
 
@@ -79,6 +78,21 @@ class DeviceBoardCategory:
 
         return f"{name}-{self.generation}"
 
+    def __eq__(self, other) -> bool:
+        """Compare this `DeviceBoardCategory` to another for equality.
+
+        Only `type` is used to determine equality, since the generation might change.
+
+        Returns:
+            `bool`: `True` if the objects are considered equal, `False` otherwise.
+
+        """
+
+        if isinstance(other, self.__class__):
+            return self.type == other.type
+
+        return False
+
 
 @dataclass(eq=False)
 class DeviceInstance:
@@ -102,14 +116,15 @@ class DeviceInstance:
     def __eq__(self, other) -> bool:
         """Compare this `DeviceInstance` with another for equality.
 
-        For equality, only the property `id` is considered.
+        Only `id` and `board_category` are considered, to allow HA to update
+        the device info after it gets a software upgrade for example.
 
         Returns:
             `bool`: `True` if the objects are considered equal, `False` otherwise.
 
         """
         if isinstance(other, self.__class__):
-            return self.id == other.id
+            return self.id == other.id and self.board_category == other.board_category
 
         return False
 
@@ -241,45 +256,63 @@ class ClimateZone:
     selected_schedule: ClimateZoneScheduleId | None
     """The currently selected schedule.
 
-    ALthough this property is optional, it needn't be `None` if `mode != ClimateZoneMode.SCHEDULING`.
+    Although this property is optional, it needn't be `None` if `mode != ClimateZoneMode.SCHEDULING`.
     """
 
     heating_mode: ClimateZoneHeatingMode
     """The current heating mode of the climate zone"""
 
-    room_setpoint: float
+    room_setpoint: float | None
     """The current room temperature setpoint"""
 
-    dhw_comfort_setpoint: float
+    dhw_comfort_setpoint: float | None
     """The setpoint for DHW in comfort mode"""
+
+    dhw_reduced_setpoint: float | None
+    """The setpoint for DHW in reduced (eco) mode"""
 
     dhw_calorifier_hysterisis: float | None
     """Hysterisis to start DHW tank load"""
 
-    room_temperature: float
+    room_temperature: float | None
     """The current room temperature"""
 
-    dhw_tank_temperature: float
+    dhw_tank_temperature: float | None
     """The current DHW tank temperature"""
 
     pump_running: bool
     """Whether the zone pump is currently running"""
 
-    dhw_tank_temperature: float
+    dhw_tank_temperature: float | None
     """The current DHW tank temperature"""
 
     @property
-    def current_setpoint(self) -> float:
+    def current_setpoint(self) -> float | None:
         """Return the current setpoint of this zone.
 
-        The actual returned setpoint field depends on the type of zone.
+        The actual returned setpoint field depends on the type of zone and
+        the current zone mode.
+
+        Returns:
+            `float`: The current zone setpoint, or `-1` zone type or mode does not support a current setpoint.
+
         """
 
         if self.is_central_heating():
             return self.room_setpoint
 
         if self.is_domestic_hot_water():
-            return self.dhw_comfort_setpoint
+            match self.mode:
+                case ClimateZoneMode.SCHEDULING:
+                    # TODO get setpoint from schedule
+                    _LOGGER.warning(
+                        "Current setpoint not supported for DHW zones in SCHEDULING mode."
+                    )
+                    return -1
+                case ClimateZoneMode.MANUAL:
+                    return self.dhw_comfort_setpoint
+                case ClimateZoneMode.ANTI_FROST:
+                    return self.dhw_reduced_setpoint
 
         _LOGGER.warning(
             "Current setpoint not supported for climate zones of type %s", self.type
@@ -290,10 +323,30 @@ class ClimateZone:
     def current_setpoint(self, value: float):
         """Set the current setpoint of this zone."""
 
+        # Check requested setpoint against min/max
+        if value < self.min_temp or value > self.max_temp:
+            _LOGGER.warning(
+                "Ignoring requested setpoint of %f.2 since it is outside allowed range (%f.2, %f.2)",
+                value,
+                self.min_temp,
+                self.max_temp,
+            )
+            return
+
         if self.is_central_heating():
             self.room_setpoint = value
         elif self.is_domestic_hot_water():
-            self.dhw_comfort_setpoint = value
+            match self.mode:
+                case ClimateZoneMode.SCHEDULING:
+                    # Ignore, user must adjust schedule.
+                    # TODO implement temporary setpoint override
+                    _LOGGER.warning(
+                        "Ignoring requested DHW setpoint, adjust schedule to do this."
+                    )
+                case ClimateZoneMode.MANUAL:
+                    self.dhw_comfort_setpoint = value
+                case ClimateZoneMode.ANTI_FROST:
+                    self.dhw_reduced_setpoint = value
         else:
             _LOGGER.warning(
                 "Setting setpoint not supported for climate zones of type %s", self.type
@@ -410,10 +463,14 @@ class RemehaApi:
     """Use instances of this class to interact with the Remeha device through Modbus."""
 
     def __init__(
-        self, name: str, connection_type: ConnectionType, device_address: int = 1
+        self,
+        name: str,
+        connection_type: ConnectionType,
+        client: ModbusClient.ModbusBaseClient,
+        device_address: int = 1,
     ):
         """Create a new API instance."""
-        self._client: ModbusClient.ModbusBaseClient = None
+        self._client: ModbusClient.ModbusBaseClient = client
 
         self._name = name
         self._connection_type = connection_type
@@ -421,21 +478,23 @@ class RemehaApi:
         self._lock = asyncio.Lock()
         self._message_delay_seconds: int | None = 10 / 1000  # 10ms
 
+    @property
     def name(self) -> str:
         """Return the modbus hub name."""
         return self._name
 
+    @property
     def connection_type(self) -> ConnectionType:
         """Return the modbus connection type."""
         return self._connection_type
 
     @property
-    async def connected(self) -> bool:
+    async def async_is_connected(self) -> bool:
         """Return whether we're connected to the modbus device."""
         async with self._lock:
             return self._client.connected
 
-    async def connect(self) -> bool:
+    async def async_connect(self) -> bool:
         """Connect to the configured modbus device."""
 
         async with self._lock:
@@ -444,7 +503,7 @@ class RemehaApi:
 
             return True
 
-    async def close(self) -> None:
+    async def async_close(self) -> None:
         """Close the connection to the configured modbus device."""
 
         async with self._lock:
@@ -456,10 +515,10 @@ class RemehaApi:
 
                 _LOGGER.info("Modbus connection closed.")
 
-    async def _read_variable(
+    async def _async_read_registers(
         self, variable: ModbusVariableDescription, offset: int = 0
-    ) -> ModbusPDU:
-        """Read the requested variable from the modbus device.
+    ) -> list[int]:
+        """Read the registers representing the requested variable from the modbus device.
 
         The actual amount of registers to read is calculated based on `variable.data_type`.
 
@@ -468,7 +527,7 @@ class RemehaApi:
             offset (int): The offset for `variable.start_address`, in registers. Used for zone and device info registers.
 
         Returns:
-            ModbusPDU: The resulting PDU.
+            list[int]: The requested registers.
 
         Raises:
             ModbusException: If the connection to the modbus device is lost or if the request fails.
@@ -476,7 +535,8 @@ class RemehaApi:
 
         """
 
-        async def _ensure_connected() -> None:
+        async def _async_ensure_connected() -> None:
+            """Ensure that we're connected or raise an exception."""
             if not self._client.connected and not await self._client.connect():
                 raise ModbusException("Connection to modbus device lost.")
 
@@ -484,8 +544,7 @@ class RemehaApi:
             # Let the modbus device catch its breath.
             await asyncio.sleep(self._message_delay_seconds)
 
-        # After this, we're either we're connected or an exception is raised.
-        await _ensure_connected()
+        await _async_ensure_connected()
         response: ModbusPDU = await self._client.read_holding_registers(
             address=variable.start_address + offset,
             count=variable.count,
@@ -496,9 +555,9 @@ class RemehaApi:
                 "Modbus device returned an error while reading holding registers."
             )
 
-        return response
+        return response.registers
 
-    async def _write_registers(
+    async def _async_write_registers(
         self, variable: ModbusVariableDescription, registers: list[int], offset: int = 0
     ) -> None:
         """Write the `value` to the given modbus variable.
@@ -515,12 +574,12 @@ class RemehaApi:
 
         """
 
-        async def _ensure_connected() -> None:
+        async def _async_ensure_connected() -> None:
             if not self._client.connected and not await self._client.connect():
                 raise ModbusException("Connection to modbus device lost.")
 
         async with self._lock:
-            await _ensure_connected()
+            await _async_ensure_connected()
             response: ModbusPDU = await self._client.write_registers(
                 address=variable.start_address + offset,
                 values=registers,
@@ -542,7 +601,7 @@ class RemehaApi:
         device_id: int = device.id if isinstance(device, DeviceInstance) else device
         return (device_id - 1) * REMEHA_DEVICE_INSTANCE_RESERVED_REGISTERS
 
-    async def health_check(self) -> None:
+    async def async_health_check(self) -> None:
         """Attempt to check the system health by reading a single register (128 - numberOfDevices).
 
         Raises
@@ -551,13 +610,13 @@ class RemehaApi:
 
         """
         try:
-            await self.read_number_of_device_instances()
+            await self.async_read_number_of_device_instances()
         except ValueError as ex:
             raise ModbusException from ex
 
         _LOGGER.debug("Modbus health check successful")
 
-    async def read_device_instances(self) -> list[DeviceInstance]:
+    async def async_read_device_instances(self) -> list[DeviceInstance]:
         """Retrieve the available devices instances of the Remeha appliance.
 
         Returns
@@ -568,17 +627,17 @@ class RemehaApi:
 
         """
 
-        number_of_instances: int = await self.read_number_of_device_instances()
+        number_of_instances: int = await self.async_read_number_of_device_instances()
         return [
             instance
             for instance in [
-                await self.read_device_instance(instance_id)
+                await self.async_read_device_instance(instance_id)
                 for instance_id in range(1, number_of_instances + 1)
             ]
             if instance is not None
         ]
 
-    async def read_number_of_device_instances(self) -> int:
+    async def async_read_number_of_device_instances(self) -> int:
         """Retrieve the number of available  device instances in the appliance.
 
         Returns
@@ -590,14 +649,14 @@ class RemehaApi:
 
         """
 
-        return deserialize(
-            response=await self._read_variable(
+        return from_registers(
+            registers=await self._async_read_registers(
                 variable=MetaRegisters.NUMBER_OF_DEVICES
             ),
-            variable=MetaRegisters.NUMBER_OF_DEVICES,
+            destination_variable=MetaRegisters.NUMBER_OF_DEVICES,
         )
 
-    async def read_device_instance(self, id: int) -> DeviceInstance:
+    async def async_read_device_instance(self, id: int) -> DeviceInstance:
         """Read a single device instance from the modbus interface.
 
         This reads the registers as described in the table below. Only the base zone registers
@@ -623,33 +682,33 @@ class RemehaApi:
 
         """
         device_register_offset: int = self.get_device_register_offset(id)
-        board_category = deserialize(
-            response=await self._read_variable(
+        board_category = from_registers(
+            registers=await self._async_read_registers(
                 variable=DeviceInstanceRegisters.TYPE_BOARD,
                 offset=device_register_offset,
             ),
-            variable=DeviceInstanceRegisters.TYPE_BOARD,
+            destination_variable=DeviceInstanceRegisters.TYPE_BOARD,
         )
-        sw_version = deserialize(
-            response=await self._read_variable(
+        sw_version = from_registers(
+            registers=await self._async_read_registers(
                 variable=DeviceInstanceRegisters.SW_VERSION,
                 offset=device_register_offset,
             ),
-            variable=DeviceInstanceRegisters.SW_VERSION,
+            destination_variable=DeviceInstanceRegisters.SW_VERSION,
         )
-        hw_version = deserialize(
-            response=await self._read_variable(
+        hw_version = from_registers(
+            registers=await self._async_read_registers(
                 variable=DeviceInstanceRegisters.HW_VERSION,
                 offset=device_register_offset,
             ),
-            variable=DeviceInstanceRegisters.HW_VERSION,
+            destination_variable=DeviceInstanceRegisters.HW_VERSION,
         )
-        article_number = deserialize(
-            response=await self._read_variable(
+        article_number = from_registers(
+            registers=await self._async_read_registers(
                 variable=DeviceInstanceRegisters.ARTICLE_NUMBER,
                 offset=device_register_offset,
             ),
-            variable=DeviceInstanceRegisters.ARTICLE_NUMBER,
+            destination_variable=DeviceInstanceRegisters.ARTICLE_NUMBER,
         )
 
         return DeviceInstance(
@@ -662,7 +721,7 @@ class RemehaApi:
             article_number=article_number,
         )
 
-    async def read_zones(self) -> list[ClimateZone]:
+    async def async_read_zones(self) -> list[ClimateZone]:
         """Retrieve the available zones of the modbus device.
 
         This method returns the all zones having a supported `ClimateZoneFunction`.
@@ -677,17 +736,17 @@ class RemehaApi:
 
         """
 
-        number_of_zones: int = await self.read_number_of_zones()
+        number_of_zones: int = await self.async_read_number_of_zones()
         return [
             zone
             for zone in [
-                await self.read_zone(zone_id)
+                await self.async_read_zone(zone_id)
                 for zone_id in range(1, number_of_zones + 1)
             ]
             if zone is not None
         ]
 
-    async def read_number_of_zones(self) -> int:
+    async def async_read_number_of_zones(self) -> int:
         """Retrieve the number of zones defined in the appliance.
 
         Returns
@@ -698,12 +757,14 @@ class RemehaApi:
             `ValueError`: If the retrieved modbus data cannot be deserialized successfully.
 
         """
-        return deserialize(
-            response=await self._read_variable(variable=MetaRegisters.NUMBER_OF_ZONES),
-            variable=MetaRegisters.NUMBER_OF_ZONES,
+        return from_registers(
+            registers=await self._async_read_registers(
+                variable=MetaRegisters.NUMBER_OF_ZONES
+            ),
+            destination_variable=MetaRegisters.NUMBER_OF_ZONES,
         )
 
-    async def read_zone(self, id: int) -> ClimateZone | None:
+    async def async_read_zone(self, id: int) -> ClimateZone | None:
         """Read a single climate zone from the modbus interface.
 
         This reads the registers as described in the table below. Only the base zone registers
@@ -714,12 +775,13 @@ class RemehaApi:
         |---------------|-----------------------------------|-------------------------------------------------------|---------------|---------------------------|
         |       640     | `varZoneType`                     | Zone type.                                            |   `ENUM8`     | `ClimateZoneType`         |
         |       641     | `parZoneFunction`                 | Zone function.                                        |   `ENUM8`     | `ClimateZoneFunction`     |
-        |       642     | `parZoneFriendlyNameShort         | Zone short name.                                      |   `STRING`    | `str`                     |
+        |       642     | `parZoneFriendlyNameShort`        | Zone short name.                                      |   `STRING`    | `str`                     |
         |       646     | `instance`                        | Device instance owning the zone.                      |   `UINT8`     | `int`                     |
         |       649     | `parZoneMode`                     | Mode zone working.                                    |   `ENUM8`     | `ClimateZoneMode`         |
         |       664     | `parZoneRoomManualSetpoint`       | Manually set wished room temperature of the zone.     |   `UINT16`    | `float`                   |
         |       665     | `parZoneDhwComfortSetpoint`       | Wished comfort domestic hot water temperature.        |   `UINT16`    | `float`                   |
-        |       686     | `parZoneDhwCalorifierHysterisis   | Hysterisis to start DHW tank load                     |   `UINT16`    | `float`                   |
+        |       666     | `parZoneDhwReducedSetpoint`       | Wished reduced domestic hot water temperature.        |   `UINT16`    | `float`                   |
+        |       686     | `parZoneDhwCalorifierHysterisis`  | Hysterisis to start DHW tank load                     |   `UINT16`    | `float`                   |
         |       688     | `parZoneTimeProgramSelected`      | Time program selected by the user.                    |   `ENUM8`     | `ClimateZoneScheduleId`   |
         |      1104     | `varZoneTRoom`                    | Current room temperature for zone.                    |   `INT16`     | `float`                   |
         |      1109     | `varZoneCurrentHeatingMode`       | Current mode the zone is functioning in.              |   `ENUM8`     | `ClimateZoneHeatingMode`  |
@@ -740,93 +802,101 @@ class RemehaApi:
 
         zone_register_offset: int = self.get_zone_register_offset(id)
 
-        zone_type = deserialize(
-            response=await self._read_variable(
+        zone_type = from_registers(
+            registers=await self._async_read_registers(
                 variable=ZoneRegisters.TYPE, offset=zone_register_offset
             ),
-            variable=ZoneRegisters.TYPE,
-        )
-        zone_function = deserialize(
-            response=await self._read_variable(
-                variable=ZoneRegisters.FUNCTION, offset=zone_register_offset
-            ),
-            variable=ZoneRegisters.FUNCTION,
-        )
-        zone_short_name = deserialize(
-            response=await self._read_variable(
-                variable=ZoneRegisters.SHORT_NAME, offset=zone_register_offset
-            ),
-            variable=ZoneRegisters.SHORT_NAME,
-        )
-        owning_device = deserialize(
-            response=await self._read_variable(
-                variable=ZoneRegisters.OWNING_DEVICE, offset=zone_register_offset
-            ),
-            variable=ZoneRegisters.OWNING_DEVICE,
-        )
-        zone_mode = deserialize(
-            response=await self._read_variable(
-                variable=ZoneRegisters.MODE, offset=zone_register_offset
-            ),
-            variable=ZoneRegisters.MODE,
-        )
-        room_setpoint = deserialize(
-            response=await self._read_variable(
-                variable=ZoneRegisters.ROOM_MANUAL_SETPOINT, offset=zone_register_offset
-            ),
-            variable=ZoneRegisters.ROOM_MANUAL_SETPOINT,
-        )
-        dhw_comfort_setpoint = deserialize(
-            response=await self._read_variable(
-                variable=ZoneRegisters.DHW_COMFORT_SETPOINT, offset=zone_register_offset
-            ),
-            variable=ZoneRegisters.DHW_COMFORT_SETPOINT,
-        )
-        dhw_calorifier_hysterisis = deserialize(
-            response=await self._read_variable(
-                variable=ZoneRegisters.DHW_CALORIFIER_HYSTERISIS,
-                offset=zone_register_offset,
-            ),
-            variable=ZoneRegisters.DHW_CALORIFIER_HYSTERISIS,
-        )
-        selected_schedule = deserialize(
-            response=await self._read_variable(
-                variable=ZoneRegisters.SELECTED_TIME_PROGRAM,
-                offset=zone_register_offset,
-            ),
-            variable=ZoneRegisters.SELECTED_TIME_PROGRAM,
-        )
-        room_temperature = deserialize(
-            response=await self._read_variable(
-                variable=ZoneRegisters.CURRENT_ROOM_TEMPERATURE,
-                offset=zone_register_offset,
-            ),
-            variable=ZoneRegisters.CURRENT_ROOM_TEMPERATURE,
-        )
-        heating_mode = deserialize(
-            response=await self._read_variable(
-                variable=ZoneRegisters.CURRENT_HEATING_MODE, offset=zone_register_offset
-            ),
-            variable=ZoneRegisters.CURRENT_HEATING_MODE,
-        )
-        pump_running = deserialize(
-            response=await self._read_variable(
-                variable=ZoneRegisters.PUMP_RUNNING, offset=zone_register_offset
-            ),
-            variable=ZoneRegisters.PUMP_RUNNING,
-        )
-        dhw_tank_temperature = deserialize(
-            response=await self._read_variable(
-                variable=ZoneRegisters.DHW_TANK_TEMPERATURE, offset=zone_register_offset
-            ),
-            variable=ZoneRegisters.DHW_TANK_TEMPERATURE,
+            destination_variable=ZoneRegisters.TYPE,
         )
 
+        # Bail out if the zone is not present.
         if zone_type == ClimateZoneType.NOT_PRESENT.value:
             _LOGGER.info(
                 "Ignoring zone(zone_id=%d), because its type is NOT_PRESENT.", id
             )
             return None
+
+        zone_function = from_registers(
+            registers=await self._async_read_registers(
+                variable=ZoneRegisters.FUNCTION, offset=zone_register_offset
+            ),
+            destination_variable=ZoneRegisters.FUNCTION,
+        )
+        zone_short_name = from_registers(
+            registers=await self._async_read_registers(
+                variable=ZoneRegisters.SHORT_NAME, offset=zone_register_offset
+            ),
+            destination_variable=ZoneRegisters.SHORT_NAME,
+        )
+        owning_device = from_registers(
+            registers=await self._async_read_registers(
+                variable=ZoneRegisters.OWNING_DEVICE, offset=zone_register_offset
+            ),
+            destination_variable=ZoneRegisters.OWNING_DEVICE,
+        )
+        zone_mode = from_registers(
+            registers=await self._async_read_registers(
+                variable=ZoneRegisters.MODE, offset=zone_register_offset
+            ),
+            destination_variable=ZoneRegisters.MODE,
+        )
+        room_setpoint = from_registers(
+            registers=await self._async_read_registers(
+                variable=ZoneRegisters.ROOM_MANUAL_SETPOINT, offset=zone_register_offset
+            ),
+            destination_variable=ZoneRegisters.ROOM_MANUAL_SETPOINT,
+        )
+        dhw_comfort_setpoint = from_registers(
+            registers=await self._async_read_registers(
+                variable=ZoneRegisters.DHW_COMFORT_SETPOINT, offset=zone_register_offset
+            ),
+            destination_variable=ZoneRegisters.DHW_COMFORT_SETPOINT,
+        )
+        dhw_reduced_setpoint = from_registers(
+            registers=await self._async_read_registers(
+                variable=ZoneRegisters.DHW_REDUCED_SETPOINT, offset=zone_register_offset
+            ),
+            destination_variable=ZoneRegisters.DHW_REDUCED_SETPOINT,
+        )
+        dhw_calorifier_hysterisis = from_registers(
+            registers=await self._async_read_registers(
+                variable=ZoneRegisters.DHW_CALORIFIER_HYSTERISIS,
+                offset=zone_register_offset,
+            ),
+            destination_variable=ZoneRegisters.DHW_CALORIFIER_HYSTERISIS,
+        )
+        selected_schedule = from_registers(
+            registers=await self._async_read_registers(
+                variable=ZoneRegisters.SELECTED_TIME_PROGRAM,
+                offset=zone_register_offset,
+            ),
+            destination_variable=ZoneRegisters.SELECTED_TIME_PROGRAM,
+        )
+        room_temperature = from_registers(
+            registers=await self._async_read_registers(
+                variable=ZoneRegisters.CURRENT_ROOM_TEMPERATURE,
+                offset=zone_register_offset,
+            ),
+            destination_variable=ZoneRegisters.CURRENT_ROOM_TEMPERATURE,
+        )
+        heating_mode = from_registers(
+            registers=await self._async_read_registers(
+                variable=ZoneRegisters.CURRENT_HEATING_MODE, offset=zone_register_offset
+            ),
+            destination_variable=ZoneRegisters.CURRENT_HEATING_MODE,
+        )
+        pump_running = from_registers(
+            registers=await self._async_read_registers(
+                variable=ZoneRegisters.PUMP_RUNNING, offset=zone_register_offset
+            ),
+            destination_variable=ZoneRegisters.PUMP_RUNNING,
+        )
+        dhw_tank_temperature = from_registers(
+            registers=await self._async_read_registers(
+                variable=ZoneRegisters.DHW_TANK_TEMPERATURE, offset=zone_register_offset
+            ),
+            destination_variable=ZoneRegisters.DHW_TANK_TEMPERATURE,
+        )
 
         return ClimateZone(
             id=id,
@@ -843,13 +913,14 @@ class RemehaApi:
             else ClimateZoneHeatingMode(heating_mode),
             room_setpoint=room_setpoint,
             dhw_comfort_setpoint=dhw_comfort_setpoint,
+            dhw_reduced_setpoint=dhw_reduced_setpoint,
             dhw_calorifier_hysterisis=dhw_calorifier_hysterisis,
             room_temperature=room_temperature,
             pump_running=bool(pump_running),
             dhw_tank_temperature=dhw_tank_temperature,
         )
 
-    async def read_zone_update(self, zone: ClimateZone) -> ClimateZone:
+    async def async_read_zone_update(self, zone: ClimateZone) -> ClimateZone:
         """Retrieve updates for a single ClimateZone.
 
         In attempt to reduce the amount of calls over the network, this only reads updatable fields from modbus and
@@ -862,6 +933,7 @@ class RemehaApi:
         |       649     | `parZoneMode`                     | Mode zone working.                                    |   `ENUM8`     | `ClimateZoneMode`         |
         |       664     | `parZoneRoomManualSetpoint`       | Manually set wished room temperature of the zone.     |   `UINT16`    | `float`                   |
         |       665     | `parZoneDhwComfortSetpoint`       | Wished comfort domestic hot water temperature.        |   `UINT16`    | `float`                   |
+        |       666     | `parZoneDhwReducedSetpoint`       | Wished reduced domestic hot water temperature.        |   `UINT16`    | `float`                   |
         |       686     | `parZoneDhwCalorifierHysterisis   | Hysterisis to start DHW tank load                     |   `UINT16`    | `float`                   |
         |       688     | `parZoneTimeProgramSelected`      | Time program selected by the user.                    |   `ENUM8`     | `ClimateZoneScheduleId`   |
         |      1104     | `varZoneTRoom`                    | Current room temperature for zone.                    |   `INT16`     | `float`                   |
@@ -884,62 +956,68 @@ class RemehaApi:
 
         zone_register_offset: int = self.get_zone_register_offset(zone)
 
-        zone_mode = deserialize(
-            response=await self._read_variable(
+        zone_mode = from_registers(
+            registers=await self._async_read_registers(
                 variable=ZoneRegisters.MODE, offset=zone_register_offset
             ),
-            variable=ZoneRegisters.MODE,
+            destination_variable=ZoneRegisters.MODE,
         )
-        room_setpoint = deserialize(
-            response=await self._read_variable(
+        room_setpoint = from_registers(
+            registers=await self._async_read_registers(
                 variable=ZoneRegisters.ROOM_MANUAL_SETPOINT, offset=zone_register_offset
             ),
-            variable=ZoneRegisters.ROOM_MANUAL_SETPOINT,
+            destination_variable=ZoneRegisters.ROOM_MANUAL_SETPOINT,
         )
-        dhw_comfort_setpoint = deserialize(
-            response=await self._read_variable(
+        dhw_comfort_setpoint = from_registers(
+            registers=await self._async_read_registers(
                 variable=ZoneRegisters.DHW_COMFORT_SETPOINT, offset=zone_register_offset
             ),
-            variable=ZoneRegisters.DHW_COMFORT_SETPOINT,
+            destination_variable=ZoneRegisters.DHW_COMFORT_SETPOINT,
         )
-        dhw_calorifier_hysterisis = deserialize(
-            response=await self._read_variable(
+        dhw_reduced_setpoint = from_registers(
+            registers=await self._async_read_registers(
+                variable=ZoneRegisters.DHW_REDUCED_SETPOINT, offset=zone_register_offset
+            ),
+            destination_variable=ZoneRegisters.DHW_REDUCED_SETPOINT,
+        )
+        dhw_calorifier_hysterisis = from_registers(
+            registers=await self._async_read_registers(
                 variable=ZoneRegisters.DHW_CALORIFIER_HYSTERISIS,
                 offset=zone_register_offset,
             ),
-            variable=ZoneRegisters.DHW_CALORIFIER_HYSTERISIS,
+            destination_variable=ZoneRegisters.DHW_CALORIFIER_HYSTERISIS,
         )
-        selected_schedule = deserialize(
-            response=await self._read_variable(
+        selected_schedule = from_registers(
+            registers=await self._async_read_registers(
                 variable=ZoneRegisters.SELECTED_TIME_PROGRAM,
                 offset=zone_register_offset,
             ),
-            variable=ZoneRegisters.SELECTED_TIME_PROGRAM,
+            destination_variable=ZoneRegisters.SELECTED_TIME_PROGRAM,
         )
-        room_temperature = deserialize(
-            response=await self._read_variable(
+        room_temperature = from_registers(
+            registers=await self._async_read_registers(
                 variable=ZoneRegisters.CURRENT_ROOM_TEMPERATURE,
                 offset=zone_register_offset,
             ),
-            variable=ZoneRegisters.CURRENT_ROOM_TEMPERATURE,
+            destination_variable=ZoneRegisters.CURRENT_ROOM_TEMPERATURE,
         )
-        heating_mode = deserialize(
-            response=await self._read_variable(
+        heating_mode = from_registers(
+            registers=await self._async_read_registers(
                 variable=ZoneRegisters.CURRENT_HEATING_MODE, offset=zone_register_offset
             ),
-            variable=ZoneRegisters.CURRENT_HEATING_MODE,
+            destination_variable=ZoneRegisters.CURRENT_HEATING_MODE,
         )
-        pump_running = deserialize(
-            response=await self._read_variable(
+        pump_running = from_registers(
+            registers=await self._async_read_registers(
                 variable=ZoneRegisters.PUMP_RUNNING, offset=zone_register_offset
             ),
-            variable=ZoneRegisters.PUMP_RUNNING,
+            destination_variable=ZoneRegisters.PUMP_RUNNING,
         )
-        dhw_tank_temperature = deserialize(
-            response=await self._read_variable(
+        dhw_tank_temperature = from_registers(
+            registers=await self._async_read_registers(
                 variable=ZoneRegisters.DHW_TANK_TEMPERATURE, offset=zone_register_offset
             ),
-            variable=ZoneRegisters.DHW_TANK_TEMPERATURE,
+            destination_variable=ZoneRegisters.DHW_TANK_TEMPERATURE,
         )
 
         # Merge old and new zone.
@@ -958,6 +1036,7 @@ class RemehaApi:
             else ClimateZoneHeatingMode(heating_mode),
             room_setpoint=room_setpoint,
             dhw_comfort_setpoint=dhw_comfort_setpoint,
+            dhw_reduced_setpoint=dhw_reduced_setpoint,
             dhw_calorifier_hysterisis=dhw_calorifier_hysterisis,
             room_temperature=room_temperature,
             pump_running=bool(pump_running),
@@ -971,7 +1050,7 @@ class RemehaApi:
 
         Args:
             variable (ModbusVariableDescription): The description of the variable to write.
-            value (Enum | None): The value to write. If `None`, the modbus NULL value is written instead, if the spec allows it.
+            value (Enum | None): The value to write. If `None`, the GTW-08 NULL value is written instead.
             offset (int): The offset in registers of `variable.start_address`. Used for zone- and device objects.
 
         Raises:
@@ -999,13 +1078,7 @@ class RemehaApi:
     async def async_write_primitive(
         self,
         variable: ModbusVariableDescription,
-        value: str
-        | float
-        | bool
-        | tuple[int, int]
-        | bytes
-        | Callable[[], bytes]
-        | None,
+        value: str | float | bool | tuple[int, int] | None,
         offset: int = 0,
     ) -> None:
         """Write a single primitive value to the modbus device.
@@ -1016,7 +1089,7 @@ class RemehaApi:
 
         Args:
             variable (ModbusVariableDescription): The description of the variable to write.
-            value (str|float|bool|tuple[int,int]|bytes|(() -> bytes)|None): The value to write. If `None`, the modbus NULL value is written instead, if the spec allows it.
+            value (str|float|bool|tuple[int,int]|None): The value to write. If `None`, the GTW-08 NULL value is written instead.
             offset (int): The offset in registers of `variable.start_address`. Used for zone- and device objects.
 
         Raises:
@@ -1028,134 +1101,8 @@ class RemehaApi:
 
         """
 
-        await self._write_registers(
+        await self._async_write_registers(
             variable=variable,
-            registers=serialize(variable=variable, value=value),
+            registers=to_registers(source_variable=variable, value=value),
             offset=offset,
         )
-
-
-class RemehaModbusSocketApi(RemehaApi):
-    """Implementation of the Remeha modbus API that connects to the modbus device through a socket."""
-
-    def __init__(
-        self,
-        name: str,
-        host: str,
-        port: int = 502,
-        connection_type: ConnectionType = ConnectionType.RTU_OVER_TCP,
-        device_address: int = 100,
-    ):
-        """Create a new API with a socket connection to the modbus device."""
-
-        super().__init__(
-            name=name, connection_type=connection_type, device_address=device_address
-        )
-
-        if connection_type in [
-            ConnectionType.TCP,
-            ConnectionType.UDP,
-            ConnectionType.RTU_OVER_TCP,
-        ]:
-            self._host: str = host
-            self._port: int = port
-
-            # Create the appropriate client type, but do not yet connect.
-            match self._connection_type:
-                case ConnectionType.TCP:
-                    self._client = ModbusClient.AsyncModbusTcpClient(
-                        host=self._host,
-                        port=self._port,
-                        framer=FramerType.SOCKET,
-                        timeout=5,
-                    )
-                case ConnectionType.UDP:
-                    self._client = ModbusClient.AsyncModbusUdpClient(
-                        host=self._host,
-                        port=self._port,
-                        framer=FramerType.SOCKET,
-                        timeout=5,
-                    )
-                case ConnectionType.RTU_OVER_TCP:
-                    self._client = ModbusClient.AsyncModbusTcpClient(
-                        host=self._host,
-                        port=self._port,
-                        framer=FramerType.RTU,
-                        timeout=5,
-                    )
-        else:
-            raise ModbusException(
-                f"Connection type [{connection_type}] is unsupported within a socket-based API."
-            )
-
-    def host(self) -> str:
-        """Return the hostname or IP address of the modbus device."""
-        return self._host
-
-    def port(self) -> int:
-        """Return the port number at which the modbus device listens."""
-        return self._port
-
-
-class RemehaModbusSerialApi(RemehaApi):
-    """Implementation of the Remeha modbus API that connects to the modbus device through a serial or USB port."""
-
-    def __init__(
-        self,
-        name: str,
-        port: str,
-        baudrate: int = 19200,
-        bytesize: int = 8,
-        method: SerialConnectionMethod = SerialConnectionMethod.RTU,
-        parity: str = "N",
-        stopbits: int = 2,
-        device_address: int = 1,
-    ):
-        """Create a new API with a serial connection to the modbus device."""
-
-        super().__init__(
-            name=name,
-            connection_type=ConnectionType.SERIAL,
-            device_address=device_address,
-        )
-
-        # Assume self._connection_type is SERIAL
-        self._client = ModbusClient.AsyncModbusSerialClient(
-            port=port,
-            baudrate=baudrate,
-            bytesize=bytesize,
-            framer=method,
-            parity=parity,
-            stopbits=stopbits,
-        )
-
-        self._port: str = port
-        self._baudrate: int = baudrate
-        self._bytesize: int = bytesize
-        self._method: SerialConnectionMethod = method
-        self._parity: str = parity
-        self._stopbits: int = stopbits
-
-    def port(self) -> int:
-        """Return the serial port or USB device where the modbus device is connected to the Home Assistant host."""
-        return self._port
-
-    def baudrate(self) -> int:
-        """Return the speed of the serial connection."""
-        return self._baudrate
-
-    def bytesize(self) -> int:
-        """Return the data size in bits of each byte."""
-        return self._bytesize
-
-    def method(self) -> SerialConnectionMethod:
-        """Return the serial connection method."""
-        return self._method
-
-    def parity(self) -> str:
-        """Return the parity of the data bytes."""
-        return self._parity
-
-    def stopbits(self) -> int:
-        """Return the stopbits of the data bytes."""
-        return self._stopbits

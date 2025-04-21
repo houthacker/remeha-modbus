@@ -3,4 +3,5 @@ pre-commit
 pytest
 pytest-cov
 pytest-homeassistant-custom-component
+pytest-asyncio==0.26.0
 pymodbus==3.8.3

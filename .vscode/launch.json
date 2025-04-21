@@ -15,7 +15,6 @@
           "-c",
           "config"
         ],
-        "preLaunchTask": "Compile English translations"
       },
       {
         "name": "Home Assistant (skip pip)",
@@ -28,8 +27,7 @@
           "-c",
           "config",
           "--skip-pip"
-        ],
-        "preLaunchTask": "Compile English translations"
+        ]
       },
       {
         "name": "Home Assistant: Changed tests",
@@ -46,6 +44,7 @@
         "type": "debugpy",
         "request": "launch",
         "module": "pytest",
+        "justMyCode": false,
         "console": "integratedTerminal",
         "args": ["-vv", "${file}"]
       },
