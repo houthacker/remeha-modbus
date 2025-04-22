@@ -20,7 +20,7 @@ class RemehaUpdateCoordinator(DataUpdateCoordinator):
     def __init__(self, hass: HomeAssistant, config_entry: ConfigEntry, api: RemehaApi):
         """Create a new instance the Remeha Modbus update coordinator."""
 
-        # Update every 15 seconds. This is not user-configurable, since it depends on the amount of
+        # Update every 20 seconds. This is not user-configurable, since it depends on the amount of
         # configured (hard-coded) modbus entities
         super().__init__(
             hass,
