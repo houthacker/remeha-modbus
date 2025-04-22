@@ -5,8 +5,7 @@ from collections.abc import Generator
 from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import pytest
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.const import CONF_HOST, CONF_NAME, CONF_PORT, CONF_TYPE, Platform
+from homeassistant.const import CONF_HOST, CONF_NAME, CONF_PORT, CONF_TYPE
 from homeassistant.core import HomeAssistant
 from homeassistant.util.json import JsonObjectType
 from pymodbus.client import ModbusBaseClient
@@ -21,7 +20,6 @@ from custom_components.remeha_modbus.const import (
     DOMAIN,
     MODBUS_DEVICE_ADDRESS,
 )
-from custom_components.remeha_modbus.coordinator import RemehaUpdateCoordinator
 
 
 def get_api(
@@ -116,43 +114,37 @@ def mock_modbus_client(request) -> AsyncMock:
         return mock
 
 
-async def setup_platform(hass: HomeAssistant, api: RemehaApi):
+async def setup_platform(hass: HomeAssistant):
     """Set up the platform."""
 
-    hass.config.components.add(DOMAIN)
-    config_entry = create_config_entry(api=api)
-    coordinator = RemehaUpdateCoordinator(hass=hass, config_entry=config_entry, api=api)
-
-    # Do not update, since that causes a lingering timer after the tests are finished.
-    coordinator.update_interval = 0
-
+    config_entry = create_config_entry()
     config_entry.add_to_hass(hass=hass)
 
-    config_entry.mock_state(hass, ConfigEntryState.SETUP_IN_PROGRESS)
-    await coordinator.async_config_entry_first_refresh()
-
-    config_entry.runtime_data = {"api": api, "coordinator": coordinator}
-
-    config_entry.mock_state(hass, ConfigEntryState.LOADED)
-    await hass.config_entries.async_forward_entry_setups(
-        entry=config_entry, platforms=[Platform.CLIMATE]
-    )
-
-    await hass.async_block_till_done()
+    # We don't want lingering timers after the tests are done, so disable the updates of the update coordinator.
+    with patch(
+        "custom_components.remeha_modbus.coordinator.RemehaUpdateCoordinator.update_interval",
+        0,
+    ):
+        await hass.config_entries.async_setup(entry_id=config_entry.entry_id)
+        await hass.async_block_till_done()
 
 
-def create_config_entry(api: RemehaApi) -> MockConfigEntry:
+def create_config_entry(
+    hub_name: str = "test_hub", device_address: int = 100
+) -> MockConfigEntry:
     """Mock a config entry for Remeha Modbus integration."""
 
     return MockConfigEntry(
         domain=DOMAIN,
-        title=f"Remeha Modbus {api.name}",
+        title=f"Remeha Modbus {hub_name}",
         unique_id=str(uuid.uuid4()),
         data={
-            CONF_NAME: api.name,
+            CONF_NAME: hub_name,
             CONF_TYPE: CONNECTION_RTU_OVER_TCP,
-            MODBUS_DEVICE_ADDRESS: 100,
+            MODBUS_DEVICE_ADDRESS: device_address,
             CONF_HOST: "does.not.matter",
             CONF_PORT: 8899,
         },
+        version=0,
+        minor_version=1,
     )

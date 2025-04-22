@@ -4,12 +4,27 @@ import asyncio
 import logging
 from dataclasses import dataclass
 from enum import Enum, StrEnum, auto
+from types import MappingProxyType
+from typing import Any, Self
 
-from pymodbus import ModbusException
+from homeassistant.const import CONF_HOST, CONF_PORT, CONF_TYPE
+from pymodbus import FramerType, ModbusException
 from pymodbus import client as ModbusClient
+from pymodbus.client import (
+    AsyncModbusSerialClient,
+    AsyncModbusTcpClient,
+    AsyncModbusUdpClient,
+    ModbusBaseClient,
+)
 from pymodbus.pdu import ModbusPDU
 
 from .const import (
+    MODBUS_DEVICE_ADDRESS,
+    MODBUS_SERIAL_BAUDRATE,
+    MODBUS_SERIAL_BYTESIZE,
+    MODBUS_SERIAL_METHOD,
+    MODBUS_SERIAL_PARITY,
+    MODBUS_SERIAL_STOPBITS,
     REMEHA_DEVICE_INSTANCE_RESERVED_REGISTERS,
     REMEHA_ZONE_RESERVED_REGISTERS,
     DeviceInstanceRegisters,
@@ -477,6 +492,56 @@ class RemehaApi:
         self._device_address = device_address
         self._lock = asyncio.Lock()
         self._message_delay_seconds: int | None = 10 / 1000  # 10ms
+
+    @classmethod
+    def create(cls, name: str, config: MappingProxyType[str, Any]) -> Self:
+        """Create a new `RemehaApi` instance.
+
+        Args:
+            name (str): The name of the modbus hub name.
+            config (MappingProxyType[str, Any]): The dict containing the configuration of the related `ConfigEntry`.
+
+        """
+        connection_type: ConnectionType = config[CONF_TYPE]
+        client: ModbusBaseClient
+        match connection_type:
+            case ConnectionType.SERIAL:
+                client = AsyncModbusSerialClient(
+                    port=config[CONF_PORT],
+                    baudrate=config[MODBUS_SERIAL_BAUDRATE],
+                    bytesize=config[MODBUS_SERIAL_BYTESIZE],
+                    framer=config[MODBUS_SERIAL_METHOD],
+                    parity=config[MODBUS_SERIAL_PARITY],
+                    stopbits=config[MODBUS_SERIAL_STOPBITS],
+                )
+            case ConnectionType.TCP:
+                client = AsyncModbusTcpClient(
+                    host=config[CONF_HOST],
+                    port=int(config[CONF_PORT]),
+                    framer=FramerType.SOCKET,
+                    timeout=5,
+                )
+            case ConnectionType.UDP:
+                client = AsyncModbusUdpClient(
+                    host=config[CONF_HOST],
+                    port=int(config[CONF_PORT]),
+                    framer=FramerType.SOCKET,
+                    timeout=5,
+                )
+            case ConnectionType.RTU_OVER_TCP:
+                client = AsyncModbusTcpClient(
+                    host=config[CONF_HOST],
+                    port=int(config[CONF_PORT]),
+                    framer=FramerType.RTU,
+                    timeout=5,
+                )
+
+        return RemehaApi(
+            name=name,
+            connection_type=connection_type,
+            client=client,
+            device_address=config[MODBUS_DEVICE_ADDRESS],
+        )
 
     @property
     def name(self) -> str:

@@ -39,7 +39,7 @@ from .const import (
 )
 from .coordinator import RemehaUpdateCoordinator
 
-HA_SCHEDULE_TO_REMEHA_SCHEDULE: Final[dict[str, int]] = {
+HA_SCHEDULE_TO_REMEHA_SCHEDULE: Final[dict[str, ClimateZoneScheduleId]] = {
     REMEHA_PRESET_SCHEDULE_1: ClimateZoneScheduleId.SCHEDULE_1,
     REMEHA_PRESET_SCHEDULE_2: ClimateZoneScheduleId.SCHEDULE_2,
     REMEHA_PRESET_SCHEDULE_3: ClimateZoneScheduleId.SCHEDULE_3,
@@ -77,12 +77,6 @@ class InvalidOperationContextError(HomeAssistantError):
 class RemehaClimateEntity(CoordinatorEntity, ClimateEntity):
     """Climate entity backed by a Remeha Modbus implementation."""
 
-    _attr_supported_features = (
-        ClimateEntityFeature.TURN_ON
-        | ClimateEntityFeature.TURN_OFF
-        | ClimateEntityFeature.TARGET_TEMPERATURE
-        | ClimateEntityFeature.PRESET_MODE
-    )
     _attr_has_entity_name = True
     _attr_precision = PRECISION_TENTHS
     _attr_should_poll: bool = False
@@ -205,6 +199,10 @@ class RemehaClimateEntity(CoordinatorEntity, ClimateEntity):
 class RemehaDhwEntity(RemehaClimateEntity):
     """Remeha climate entity for Domestic Hot Water climates."""
 
+    _attr_supported_features = (
+        ClimateEntityFeature.TARGET_TEMPERATURE | ClimateEntityFeature.PRESET_MODE
+    )
+
     def __init__(
         self, api: RemehaApi, coordinator: RemehaUpdateCoordinator, climate_zone_id: int
     ):
@@ -252,10 +250,11 @@ class RemehaDhwEntity(RemehaClimateEntity):
         """
 
         zone: ClimateZone = self._zone
-        if zone.mode == ClimateZoneMode.SCHEDULING:
-            return self.preset_modes[zone.selected_schedule]
-
-        return CLIMATE_DHW_EXTRA_PRESETS[zone.mode.value - 1]
+        return (
+            self.preset_modes[zone.selected_schedule.value]
+            if zone.mode == ClimateZoneMode.SCHEDULING
+            else CLIMATE_DHW_EXTRA_PRESETS[zone.mode.value - 1]
+        )
 
     @property
     def preset_modes(self) -> list[str]:
@@ -309,7 +308,7 @@ class RemehaDhwEntity(RemehaClimateEntity):
             return
 
         zone: ClimateZone = self._zone
-        zone_offset: int = self.api.get_device_register_offset(zone)
+        zone_offset: int = self.api.get_zone_register_offset(zone)
         if preset_mode in [PRESET_COMFORT, PRESET_ECO]:
             zone_mode: ClimateZoneMode = HA_CLIMATE_PRESET_TO_REMEHA_ZONE_MODE[
                 preset_mode
@@ -385,6 +384,13 @@ class RemehaDhwEntity(RemehaClimateEntity):
 class RemehaChEntity(RemehaClimateEntity):
     """Remeha climate entity for Central Heating climates."""
 
+    _attr_supported_features = (
+        ClimateEntityFeature.TURN_ON
+        | ClimateEntityFeature.TURN_OFF
+        | ClimateEntityFeature.TARGET_TEMPERATURE
+        | ClimateEntityFeature.PRESET_MODE
+    )
+
     def __init__(
         self, api: RemehaApi, coordinator: RemehaUpdateCoordinator, climate_zone_id: int
     ):
@@ -430,7 +436,7 @@ class RemehaChEntity(RemehaClimateEntity):
 
         zone: ClimateZone = self._zone
         if zone.mode == ClimateZoneMode.SCHEDULING:
-            return self.preset_modes[zone.selected_schedule]
+            return self.preset_modes[zone.selected_schedule.value]
 
         return zone.mode.name.lower()
 
@@ -510,9 +516,11 @@ class RemehaChEntity(RemehaClimateEntity):
         elif preset_mode in CLIMATE_DEFAULT_PRESETS:
             # Scheduling: set active schedule first, then set mode to scheduling.
             # This prevents the user ending up with an invalid zone state if the latter fails.
-            schedule_id: int = HA_SCHEDULE_TO_REMEHA_SCHEDULE[preset_mode]
+            schedule_id: ClimateZoneScheduleId = HA_SCHEDULE_TO_REMEHA_SCHEDULE[
+                preset_mode
+            ]
 
-            await self.api.async_write_primitive(
+            await self.api.async_write_enum(
                 variable=ZoneRegisters.SELECTED_TIME_PROGRAM,
                 value=schedule_id,
                 offset=zone_offset,
