@@ -9,11 +9,11 @@ from homeassistant.const import CONF_NAME, CONF_TYPE, Platform
 from homeassistant.core import HomeAssistant
 from pymodbus import ModbusException
 
-from .api import (
+from custom_components.remeha_modbus.api import (
     ConnectionType,
     RemehaApi,
 )
-from .coordinator import RemehaUpdateCoordinator
+from custom_components.remeha_modbus.coordinator import RemehaUpdateCoordinator
 
 PLATFORMS: list[Platform] = [Platform.CLIMATE]
 

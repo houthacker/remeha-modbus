@@ -8,8 +8,12 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from pymodbus import ModbusException
 
-from .api import ClimateZone, DeviceInstance, RemehaApi
-from .const import DOMAIN
+from custom_components.remeha_modbus.api import (
+    ClimateZone,
+    DeviceInstance,
+    RemehaApi,
+)
+from custom_components.remeha_modbus.const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 

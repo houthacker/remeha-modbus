@@ -43,6 +43,7 @@ MODBUS_UINT8: Final[str] = "=xB"
 MODBUS_ENUM8: Final[str] = "=xB"
 MODBUS_DEVICE_CATEGORY: Final[str] = "=BB"
 MODBUS_UINT16_BYTES: Final[str] = "=BB"
+MODBUS_TIME_PROGRAM: Final[str] = "=BHBHBHBHBHBHBx"
 
 # The supported step size the setpoint can be increased or decreased
 CLIMATE_TEMPERATURE_STEP: float = 0.5
@@ -111,6 +112,7 @@ class Limits(float, Enum):
 # Base register information for zones, device info
 REMEHA_ZONE_RESERVED_REGISTERS: Final[int] = 512
 REMEHA_DEVICE_INSTANCE_RESERVED_REGISTERS: Final[int] = 6
+REMEHA_TIME_PROGRAM_RESERVED_REGISTERS: Final[int] = 70
 
 # Reference to Remeha modbus registers
 type ModbusVariableRef = int
@@ -121,11 +123,9 @@ class ModbusVariableDescription:
     """Modbus register description.
 
     Attributes:
-        address (ModbusRegisterRef): The register index as specified in the GTW-08 parameter list.
+        start_address (ModbusRegisterRef): The register index as specified in the GTW-08 parameter list.
         name (str): The name as shown in the 'Data' field in the GTW-08 parameter list.
         data_type (DataType): The data type of the variable.
-        struct_format (str | None): `struct` format string. Required when `data_type == DataType.CUSTOM`, optional otherwise.
-        serialize_struct_format (str | None): `struct` format string to serialize value to bytese. Required when `struct_format` has a value, optional otherwise.
         scale (float): Multiply the 'raw' variable value by this.
         count (int): The amount of registers to read/write. Required, and calculated for all types except `DataType.STRING`.
         friendly_name (str | None): The optional parameter name as shown in the Remeha installation manual of the appliance.
@@ -152,9 +152,7 @@ class ModbusVariableDescription:
 
         def ensure_register_count() -> int:
             match self.data_type:
-                case (
-                    DataType.UINT8 | DataType.UINT16 | DataType.INT16 | DataType.TUPLE16
-                ):
+                case DataType.UINT8 | DataType.UINT16 | DataType.INT16 | DataType.TUPLE16:
                     return 1
                 case DataType.UINT32 | DataType.INT32 | DataType.FLOAT32:
                     return 2
@@ -321,4 +319,46 @@ class ZoneRegisters:
         data_type=DataType.INT16,
         scale=0.01,
         friendly_name="CM040",
+    )
+    TIME_PROGRAM_MONDAY: Final[ModbusVariableDescription] = ModbusVariableDescription(
+        start_address=689,
+        name="parZoneTimeProgramMonday",
+        data_type=DataType.STRING,
+        count=10,
+    )
+    TIME_PROGRAM_TUESDAY: Final[ModbusVariableDescription] = ModbusVariableDescription(
+        start_address=699,
+        name="parZoneTimeProgramTuesday",
+        data_type=DataType.STRING,
+        count=10,
+    )
+    TIME_PROGRAM_WEDNESDAY: Final[ModbusVariableDescription] = ModbusVariableDescription(
+        start_address=709,
+        name="parZoneTimeProgramWednesday",
+        data_type=DataType.STRING,
+        count=10,
+    )
+    TIME_PROGRAM_THURSDAY: Final[ModbusVariableDescription] = ModbusVariableDescription(
+        start_address=719,
+        name="parZoneTimeProgramThursday",
+        data_type=DataType.STRING,
+        count=10,
+    )
+    TIME_PROGRAM_FRIDAY: Final[ModbusVariableDescription] = ModbusVariableDescription(
+        start_address=729,
+        name="parZoneTimeProgramFriday",
+        data_type=DataType.STRING,
+        count=10,
+    )
+    TIME_PROGRAM_SATURDAY: Final[ModbusVariableDescription] = ModbusVariableDescription(
+        start_address=739,
+        name="parZoneTimeProgramSaturday",
+        data_type=DataType.STRING,
+        count=10,
+    )
+    TIME_PROGRAM_SUNDAY: Final[ModbusVariableDescription] = ModbusVariableDescription(
+        start_address=749,
+        name="parZoneTimeProgramSunday",
+        data_type=DataType.STRING,
+        count=10,
     )

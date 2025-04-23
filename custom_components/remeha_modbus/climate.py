@@ -21,7 +21,7 @@ from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .api import (
+from custom_components.remeha_modbus.api import (
     ClimateZone,
     ClimateZoneHeatingMode,
     ClimateZoneMode,
@@ -29,7 +29,7 @@ from .api import (
     DeviceInstance,
     RemehaApi,
 )
-from .const import (
+from custom_components.remeha_modbus.const import (
     CLIMATE_DEFAULT_PRESETS,
     CLIMATE_DHW_EXTRA_PRESETS,
     CLIMATE_TEMPERATURE_STEP,
@@ -41,7 +41,7 @@ from .const import (
     REMEHA_PRESET_SCHEDULE_3,
     ZoneRegisters,
 )
-from .coordinator import RemehaUpdateCoordinator
+from custom_components.remeha_modbus.coordinator import RemehaUpdateCoordinator
 
 HA_SCHEDULE_TO_REMEHA_SCHEDULE: Final[dict[str, ClimateZoneScheduleId]] = {
     REMEHA_PRESET_SCHEDULE_1: ClimateZoneScheduleId.SCHEDULE_1,

@@ -1,5 +1,10 @@
 required-version = ">=0.11.0"
 target-version = "py313"
+line-length = 90
+
+[format]
+preview = false
+
 [lint]
 select = [
   "A001",   # Variable {name} is shadowing a Python builtin

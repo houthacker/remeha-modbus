@@ -18,7 +18,7 @@ from pymodbus.client import (
 )
 from pymodbus.pdu import ModbusPDU
 
-from .const import (
+from custom_components.remeha_modbus.const import (
     MODBUS_DEVICE_ADDRESS,
     MODBUS_SERIAL_BAUDRATE,
     MODBUS_SERIAL_BYTESIZE,
@@ -33,7 +33,7 @@ from .const import (
     ModbusVariableDescription,
     ZoneRegisters,
 )
-from .helpers.modbus import from_registers, to_registers
+from custom_components.remeha_modbus.helpers.modbus import from_registers, to_registers
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -970,12 +970,14 @@ class RemehaApi:
             short_name=zone_short_name,
             owning_device=None if owning_device is None else int(owning_device),
             mode=ClimateZoneMode(zone_mode),
-            selected_schedule=None
-            if selected_schedule is None
-            else ClimateZoneScheduleId(selected_schedule),
-            heating_mode=None
-            if heating_mode is None
-            else ClimateZoneHeatingMode(heating_mode),
+            selected_schedule=(
+                None
+                if selected_schedule is None
+                else ClimateZoneScheduleId(selected_schedule)
+            ),
+            heating_mode=(
+                None if heating_mode is None else ClimateZoneHeatingMode(heating_mode)
+            ),
             room_setpoint=room_setpoint,
             dhw_comfort_setpoint=dhw_comfort_setpoint,
             dhw_reduced_setpoint=dhw_reduced_setpoint,
@@ -1093,12 +1095,14 @@ class RemehaApi:
             short_name=zone.short_name,
             owning_device=zone.owning_device,
             mode=ClimateZoneMode(zone_mode),
-            selected_schedule=None
-            if selected_schedule is None
-            else ClimateZoneScheduleId(selected_schedule),
-            heating_mode=None
-            if heating_mode is None
-            else ClimateZoneHeatingMode(heating_mode),
+            selected_schedule=(
+                None
+                if selected_schedule is None
+                else ClimateZoneScheduleId(selected_schedule)
+            ),
+            heating_mode=(
+                None if heating_mode is None else ClimateZoneHeatingMode(heating_mode)
+            ),
             room_setpoint=room_setpoint,
             dhw_comfort_setpoint=dhw_comfort_setpoint,
             dhw_reduced_setpoint=dhw_reduced_setpoint,
@@ -1128,9 +1132,7 @@ class RemehaApi:
 
         """
         if value is None:
-            await self.async_write_primitive(
-                variable=variable, value=None, offset=offset
-            )
+            await self.async_write_primitive(variable=variable, value=None, offset=offset)
         elif isinstance(value, Enum):
             await self.async_write_primitive(
                 variable=variable, value=value.value, offset=offset
