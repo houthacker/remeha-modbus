@@ -189,6 +189,16 @@ class MetaRegisters:
         data_type=DataType.UINT8,
     )
 
+    # This variable exists on the appliance level. In the Remeha Home app however, this variable
+    # is configurable in two places: in the CH zone and at the system level. Change one, change
+    # the other too.
+    # In this integration, this value is shown in all CH climates and can be set as follows:
+    # * To force cooling, set HVACMode to COOL
+    # * To let the system decide to cool or heat, set HVACMode to HEAT_COOL
+    COOLING_FORCED: Final[ModbusVariableDescription] = ModbusVariableDescription(
+        start_address=503, name="parApCoolingForced", data_type=DataType.UINT8
+    )
+
 
 class DeviceInstanceRegisters:
     """The register mappings for device instances."""

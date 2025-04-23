@@ -216,7 +216,7 @@ async def test_climate_zone_equality(mock_modbus_client):
     """Test the equality of climate zones."""
 
     api = get_api(mock_modbus_client=mock_modbus_client)
-    zones: list[ClimateZoneMode] = await api.async_read_zones()
+    zones: list[ClimateZone] = await api.async_read_zones()
 
     assert zones[0] != zones[1]
     assert zones[1] != ClimateZoneMode.MANUAL
