@@ -3,7 +3,11 @@
 from enum import Enum, StrEnum
 from typing import Final, Self
 
-from homeassistant.components.climate.const import PRESET_COMFORT, PRESET_ECO
+from homeassistant.components.climate.const import (
+    PRESET_COMFORT,
+    PRESET_ECO,
+    PRESET_NONE,
+)
 from pydantic import Field, model_validator
 from pydantic.dataclasses import dataclass
 
@@ -56,7 +60,7 @@ CLIMATE_DEFAULT_PRESETS: Final[list[str]] = [
 ]
 
 # Additional presets available on DHW zones
-CLIMATE_DHW_EXTRA_PRESETS: Final[list[str]] = [PRESET_COMFORT, PRESET_ECO]
+CLIMATE_DHW_EXTRA_PRESETS: Final[list[str]] = [PRESET_COMFORT, PRESET_ECO, PRESET_NONE]
 
 
 class DataType(StrEnum):

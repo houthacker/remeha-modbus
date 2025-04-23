@@ -19,6 +19,8 @@ from custom_components.remeha_modbus.const import (
     CONNECTION_RTU_OVER_TCP,
     DOMAIN,
     MODBUS_DEVICE_ADDRESS,
+    REMEHA_ZONE_RESERVED_REGISTERS,
+    ZoneRegisters,
 )
 
 
@@ -106,9 +108,17 @@ def mock_modbus_client(request) -> AsyncMock:
 
             return write_pdu
 
+        async def set_pump_state(zone_id: int, state: bool = False):
+            return await write_to_store(
+                address=ZoneRegisters.PUMP_RUNNING.start_address
+                + (REMEHA_ZONE_RESERVED_REGISTERS * (zone_id - 1)),
+                values=[int(state)],
+            )
+
         mock.connected = MagicMock(return_value=True)
         mock.read_holding_registers.side_effect = get_from_store
         mock.write_registers = write_to_store
+        mock.set_zone_pump_state = set_pump_state
         mock.close = close
 
         return mock

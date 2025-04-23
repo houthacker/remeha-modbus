@@ -9,7 +9,11 @@ from homeassistant.components.climate import (
     HVACAction,
     HVACMode,
 )
-from homeassistant.components.climate.const import PRESET_COMFORT, PRESET_ECO
+from homeassistant.components.climate.const import (
+    PRESET_COMFORT,
+    PRESET_ECO,
+    PRESET_NONE,
+)
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import ATTR_TEMPERATURE, PRECISION_TENTHS, UnitOfTemperature
 from homeassistant.core import HomeAssistant, HomeAssistantError
@@ -154,24 +158,6 @@ class RemehaClimateEntity(CoordinatorEntity, ClimateEntity):
         )
 
     @property
-    def hvac_action(self) -> HVACAction | None:
-        """Return the current HVAC action.
-
-        There only is a current HVAC action if the zone pump is running.
-        If that is the case, the HVAC action is determined by the current HVAC mode.
-        """
-
-        zone: ClimateZone = self._zone
-        if zone.pump_running:
-            match zone.heating_mode:
-                case ClimateZoneHeatingMode.HEATING:
-                    return HVACAction.HEATING
-                case ClimateZoneHeatingMode.COOLING:
-                    return HVACAction.COOLING
-
-        return HVACAction.IDLE
-
-    @property
     def max_temp(self) -> float:
         """Return the maximum temperature of this climate."""
 
@@ -221,16 +207,32 @@ class RemehaDhwEntity(RemehaClimateEntity):
         return self._zone.dhw_calorifier_hysterisis
 
     @property
+    def hvac_action(self) -> HVACAction | None:
+        """Return the current HVAC action.
+
+        For a DHW climate, the action is based on whether the pump is running.
+        """
+
+        zone: ClimateZone = self._zone
+        return HVACAction.HEATING if zone.pump_running is True else HVACAction.IDLE
+
+    @property
     def hvac_mode(self) -> HVACMode | None:
         """Return the current HVAC mode."""
 
         zone: ClimateZone = self._zone
-        if zone.mode == ClimateZoneMode.SCHEDULING:
-            return HVACMode.AUTO
-
-        if zone.pump_running:
-            return HVACMode.HEAT
-
+        match zone.mode:
+            case ClimateZoneMode.SCHEDULING:
+                return HVACMode.AUTO
+            case ClimateZoneMode.MANUAL:
+                return HVACMode.HEAT
+            case ClimateZoneMode.ANTI_FROST:
+                return HVACMode.OFF
+            case _:
+                _LOGGER.warning(
+                    "Cannot derive hvac_mode from ClimateZoneMode %s; falling back to OFF.",
+                    zone.mode.name,
+                )
         return HVACMode.OFF
 
     @property
@@ -250,11 +252,17 @@ class RemehaDhwEntity(RemehaClimateEntity):
         """
 
         zone: ClimateZone = self._zone
-        return (
-            self.preset_modes[zone.selected_schedule.value]
-            if zone.mode == ClimateZoneMode.SCHEDULING
-            else CLIMATE_DHW_EXTRA_PRESETS[zone.mode.value - 1]
-        )
+        match zone.mode:
+            case ClimateZoneMode.SCHEDULING:
+                return self.preset_modes[zone.selected_schedule.value]
+            case ClimateZoneMode.MANUAL | ClimateZoneMode.ANTI_FROST:
+                return CLIMATE_DHW_EXTRA_PRESETS[zone.mode.value - 1]
+            case _:
+                _LOGGER.warning(
+                    "Cannot derive preset_mode for ClimateZoneMode %s, falling back to 'none'.",
+                    zone.mode.name,
+                )
+                return PRESET_NONE
 
     @property
     def preset_modes(self) -> list[str]:
@@ -264,28 +272,34 @@ class RemehaDhwEntity(RemehaClimateEntity):
     async def async_set_hvac_mode(self, hvac_mode: HVACMode):
         """Set the new HVAC mode."""
 
-        if self.hvac_mode == hvac_mode:
-            _LOGGER.debug(
-                "Ignoring requested HVAC mode since this is the current mode already."
-            )
-            return
-
         zone: ClimateZone = self._zone
         zone_offset: int = self.api.get_zone_register_offset(zone)
-        if hvac_mode == HVACMode.AUTO:
+        if hvac_mode == HVACMode.OFF:
+            # There is no real 'off' mode, but 'eco' mode comes as close as possible to it.
             await self.api.async_write_enum(
                 variable=ZoneRegisters.MODE,
-                value=ClimateZoneMode.SCHEDULING,
+                value=ClimateZoneMode.ANTI_FROST,
                 offset=zone_offset,
             )
-            zone.mode = ClimateZoneMode.SCHEDULING
+            zone.mode = ClimateZoneMode.ANTI_FROST
         elif hvac_mode == HVACMode.HEAT:
+            # Also, there is no real 'heat' mode to force, like 'go heat now',
+            # although you could play with setpoint and hysterisis in comfort mode.
+            # HVACMode.HEAT translates best to 'comfort' mode since that keeps the DHW boiler
+            # at the configured comfort(able) temperature.
             await self.api.async_write_enum(
                 variable=ZoneRegisters.MODE,
                 value=ClimateZoneMode.MANUAL,
                 offset=zone_offset,
             )
             zone.mode = ClimateZoneMode.MANUAL
+        elif hvac_mode == HVACMode.AUTO:
+            await self.api.async_write_enum(
+                variable=ZoneRegisters.MODE,
+                value=ClimateZoneMode.SCHEDULING,
+                offset=zone_offset,
+            )
+            zone.mode = ClimateZoneMode.SCHEDULING
         else:
             raise InvalidOperationContextError(
                 translation_domain=DOMAIN,
@@ -398,6 +412,24 @@ class RemehaChEntity(RemehaClimateEntity):
         super().__init__(
             api=api, coordinator=coordinator, climate_zone_id=climate_zone_id
         )
+
+    @property
+    def hvac_action(self) -> HVACAction | None:
+        """Return the current HVAC action.
+
+        There only is a current HVAC action if the zone pump is running.
+        If that is the case, the HVAC action is determined by the current HVAC mode.
+        """
+
+        zone: ClimateZone = self._zone
+        if zone.pump_running:
+            match zone.heating_mode:
+                case ClimateZoneHeatingMode.HEATING:
+                    return HVACAction.HEATING
+                case ClimateZoneHeatingMode.COOLING:
+                    return HVACAction.COOLING
+
+        return HVACAction.IDLE
 
     @property
     def hvac_mode(self) -> HVACMode | None:
