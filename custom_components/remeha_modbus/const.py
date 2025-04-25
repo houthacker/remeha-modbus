@@ -3,11 +3,19 @@
 from enum import Enum, StrEnum
 from typing import Final, Self
 
-from homeassistant.components.climate.const import PRESET_COMFORT, PRESET_ECO
+from homeassistant.components.climate.const import (
+    PRESET_COMFORT,
+    PRESET_ECO,
+    PRESET_NONE,
+)
 from pydantic import Field, model_validator
 from pydantic.dataclasses import dataclass
 
 DOMAIN: Final[str] = "remeha_modbus"
+
+# Versioning for the config flow.
+HA_CONFIG_VERSION = 1
+HA_CONFIG_MINOR_VERSION = 0
 
 # Modbus connection types
 CONNECTION_TCP: Final[str] = "tcp"
@@ -39,6 +47,7 @@ MODBUS_UINT8: Final[str] = "=xB"
 MODBUS_ENUM8: Final[str] = "=xB"
 MODBUS_DEVICE_CATEGORY: Final[str] = "=BB"
 MODBUS_UINT16_BYTES: Final[str] = "=BB"
+MODBUS_TIME_PROGRAM: Final[str] = "=BHBHBHBHBHBHBx"
 
 # The supported step size the setpoint can be increased or decreased
 CLIMATE_TEMPERATURE_STEP: float = 0.5
@@ -56,7 +65,7 @@ CLIMATE_DEFAULT_PRESETS: Final[list[str]] = [
 ]
 
 # Additional presets available on DHW zones
-CLIMATE_DHW_EXTRA_PRESETS: Final[list[str]] = [PRESET_COMFORT, PRESET_ECO]
+CLIMATE_DHW_EXTRA_PRESETS: Final[list[str]] = [PRESET_COMFORT, PRESET_ECO, PRESET_NONE]
 
 
 class DataType(StrEnum):
@@ -104,9 +113,13 @@ class Limits(float, Enum):
     """Domestic hot water maximum temperature."""
 
 
-# Base register information for zones, device info
+# Base register information for zones, device info, time schedules
 REMEHA_ZONE_RESERVED_REGISTERS: Final[int] = 512
 REMEHA_DEVICE_INSTANCE_RESERVED_REGISTERS: Final[int] = 6
+REMEHA_TIME_PROGRAM_RESERVED_REGISTERS: Final[int] = 70
+REMEHA_TIME_PROGRAM_BYTE_SIZE: Final[int] = 20
+REMEHA_TIME_PROGRAM_SLOT_SIZE: Final[int] = 3
+REMEHA_TIME_PROGRAM_TIME_STEP_MINUTES: Final[int] = 10
 
 # Reference to Remeha modbus registers
 type ModbusVariableRef = int
@@ -117,11 +130,9 @@ class ModbusVariableDescription:
     """Modbus register description.
 
     Attributes:
-        address (ModbusRegisterRef): The register index as specified in the GTW-08 parameter list.
+        start_address (ModbusRegisterRef): The register index as specified in the GTW-08 parameter list.
         name (str): The name as shown in the 'Data' field in the GTW-08 parameter list.
         data_type (DataType): The data type of the variable.
-        struct_format (str | None): `struct` format string. Required when `data_type == DataType.CUSTOM`, optional otherwise.
-        serialize_struct_format (str | None): `struct` format string to serialize value to bytese. Required when `struct_format` has a value, optional otherwise.
         scale (float): Multiply the 'raw' variable value by this.
         count (int): The amount of registers to read/write. Required, and calculated for all types except `DataType.STRING`.
         friendly_name (str | None): The optional parameter name as shown in the Remeha installation manual of the appliance.
@@ -148,9 +159,7 @@ class ModbusVariableDescription:
 
         def ensure_register_count() -> int:
             match self.data_type:
-                case (
-                    DataType.UINT8 | DataType.UINT16 | DataType.INT16 | DataType.TUPLE16
-                ):
+                case DataType.UINT8 | DataType.UINT16 | DataType.INT16 | DataType.TUPLE16:
                     return 1
                 case DataType.UINT32 | DataType.INT32 | DataType.FLOAT32:
                     return 2
@@ -187,6 +196,16 @@ class MetaRegisters:
         start_address=189,
         name="NumberOfZones",
         data_type=DataType.UINT8,
+    )
+
+    # This variable exists on the appliance level. In the Remeha Home app however, this variable
+    # is configurable in two places: in the CH zone and at the system level. Change one, change
+    # the other too.
+    # In this integration, this value is shown in all CH climates and can be set as follows:
+    # * To force cooling, set HVACMode to COOL
+    # * To let the system decide to cool or heat, set HVACMode to HEAT_COOL
+    COOLING_FORCED: Final[ModbusVariableDescription] = ModbusVariableDescription(
+        start_address=503, name="parApCoolingForced", data_type=DataType.UINT8
     )
 
 
@@ -265,14 +284,12 @@ class ZoneRegisters:
         scale=0.01,
         friendly_name="CP360",
     )
-    DHW_CALORIFIER_HYSTERISIS: Final[ModbusVariableDescription] = (
-        ModbusVariableDescription(
-            start_address=686,
-            name="parZoneDhwCalorifierHysterisis",
-            data_type=DataType.UINT16,
-            scale=0.01,
-            friendly_name="CP420",
-        )
+    DHW_CALORIFIER_HYSTERISIS: Final[ModbusVariableDescription] = ModbusVariableDescription(
+        start_address=686,
+        name="parZoneDhwCalorifierHysterisis",
+        data_type=DataType.UINT16,
+        scale=0.01,
+        friendly_name="CP420",
     )
     SELECTED_TIME_PROGRAM: Final[ModbusVariableDescription] = ModbusVariableDescription(
         start_address=688,
@@ -280,14 +297,12 @@ class ZoneRegisters:
         data_type=DataType.UINT8,
         friendly_name="CP570",
     )
-    CURRENT_ROOM_TEMPERATURE: Final[ModbusVariableDescription] = (
-        ModbusVariableDescription(
-            start_address=1104,
-            name="varZoneTRoom",
-            data_type=DataType.INT16,
-            scale=0.1,
-            friendly_name="CM030",
-        )
+    CURRENT_ROOM_TEMPERATURE: Final[ModbusVariableDescription] = ModbusVariableDescription(
+        start_address=1104,
+        name="varZoneTRoom",
+        data_type=DataType.INT16,
+        scale=0.1,
+        friendly_name="CM030",
     )
     CURRENT_HEATING_MODE: Final[ModbusVariableDescription] = ModbusVariableDescription(
         start_address=1109,
@@ -307,4 +322,46 @@ class ZoneRegisters:
         data_type=DataType.INT16,
         scale=0.01,
         friendly_name="CM040",
+    )
+    TIME_PROGRAM_MONDAY: Final[ModbusVariableDescription] = ModbusVariableDescription(
+        start_address=689,
+        name="parZoneTimeProgramMonday",
+        data_type=DataType.STRING,
+        count=10,
+    )
+    TIME_PROGRAM_TUESDAY: Final[ModbusVariableDescription] = ModbusVariableDescription(
+        start_address=699,
+        name="parZoneTimeProgramTuesday",
+        data_type=DataType.STRING,
+        count=10,
+    )
+    TIME_PROGRAM_WEDNESDAY: Final[ModbusVariableDescription] = ModbusVariableDescription(
+        start_address=709,
+        name="parZoneTimeProgramWednesday",
+        data_type=DataType.STRING,
+        count=10,
+    )
+    TIME_PROGRAM_THURSDAY: Final[ModbusVariableDescription] = ModbusVariableDescription(
+        start_address=719,
+        name="parZoneTimeProgramThursday",
+        data_type=DataType.STRING,
+        count=10,
+    )
+    TIME_PROGRAM_FRIDAY: Final[ModbusVariableDescription] = ModbusVariableDescription(
+        start_address=729,
+        name="parZoneTimeProgramFriday",
+        data_type=DataType.STRING,
+        count=10,
+    )
+    TIME_PROGRAM_SATURDAY: Final[ModbusVariableDescription] = ModbusVariableDescription(
+        start_address=739,
+        name="parZoneTimeProgramSaturday",
+        data_type=DataType.STRING,
+        count=10,
+    )
+    TIME_PROGRAM_SUNDAY: Final[ModbusVariableDescription] = ModbusVariableDescription(
+        start_address=749,
+        name="parZoneTimeProgramSunday",
+        data_type=DataType.STRING,
+        count=10,
     )

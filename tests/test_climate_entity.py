@@ -8,7 +8,11 @@ from homeassistant.components.climate import (
     HVACMode,
 )
 from homeassistant.components.climate.const import DOMAIN as ClimateDomain
-from homeassistant.components.climate.const import PRESET_COMFORT, PRESET_ECO
+from homeassistant.components.climate.const import (
+    PRESET_COMFORT,
+    PRESET_ECO,
+    PRESET_NONE,
+)
 from homeassistant.const import STATE_OFF
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ServiceNotSupported, ServiceValidationError
@@ -57,7 +61,7 @@ async def test_dhw_climate(hass: HomeAssistant, mock_modbus_client):
         dhw = hass.states.get(entity_id="climate.remeha_modbus_test_hub_dhw")
         assert dhw is not None
 
-        assert dhw.state == STATE_OFF
+        assert dhw.state == "heat"
         assert dhw.attributes["hvac_action"] == HVACAction.IDLE
         assert dhw.attributes["hvac_modes"] == [
             HVACMode.OFF,
@@ -73,6 +77,7 @@ async def test_dhw_climate(hass: HomeAssistant, mock_modbus_client):
             REMEHA_PRESET_SCHEDULE_3,
             PRESET_COMFORT,
             PRESET_ECO,
+            PRESET_NONE,
         ]
         assert dhw.attributes["temperature"] == 55
         assert dhw.attributes["current_temperature"] == 53.2
@@ -248,3 +253,296 @@ async def test_ch_climate(hass: HomeAssistant, mock_modbus_client):
         )
         circa1 = hass.states.get(entity_id="climate.remeha_modbus_test_hub_circa1")
         assert circa1.attributes["preset_mode"] == ClimateZoneMode.MANUAL.name.lower()
+
+
+@pytest.mark.parametrize("mock_modbus_client", ["modbus_store.json"], indirect=True)
+async def test_dhw_climate_hvac_mode_off(hass: HomeAssistant, mock_modbus_client):
+    """Test setting HVACMode.OFF.
+
+    This must put it in preset 'ECO' and return the correct (lowered) temperature setpoint.
+    """
+
+    api = get_api(mock_modbus_client=mock_modbus_client)
+    with patch(
+        "custom_components.remeha_modbus.api.RemehaApi.create",
+        new=lambda name, config: api,
+    ):
+        await setup_platform(hass=hass)
+        await hass.async_block_till_done()
+
+        assert len(hass.states.async_all()) == 2
+
+        dhw = hass.states.get(entity_id="climate.remeha_modbus_test_hub_dhw")
+        assert dhw is not None
+
+        # Setting HVAC mode to OFF activates Preset.ECO
+        await hass.services.async_call(
+            domain=ClimateDomain,
+            service="set_hvac_mode",
+            service_data={"entity_id": dhw.entity_id, "hvac_mode": HVACMode.OFF},
+            blocking=True,
+        )
+
+        dhw = hass.states.get(entity_id="climate.remeha_modbus_test_hub_dhw")
+        assert dhw.state == STATE_OFF
+        assert dhw.attributes["preset_mode"] == PRESET_ECO
+        assert dhw.attributes["temperature"] == 25
+        assert dhw.attributes["hvac_action"] == HVACAction.IDLE
+
+
+@pytest.mark.parametrize("mock_modbus_client", ["modbus_store.json"], indirect=True)
+async def test_dhw_climate_hvac_mode_heat(hass: HomeAssistant, mock_modbus_client):
+    """Test setting HVACMode.HEAT.
+
+    This must put it in preset 'ECO' and return the correct (lowered) temperature setpoint.
+    """
+
+    api = get_api(mock_modbus_client=mock_modbus_client)
+    with (
+        patch(
+            "custom_components.remeha_modbus.api.RemehaApi.create",
+            new=lambda name, config: api,
+        ),
+    ):
+        # In the modbus_store.json file, the zone pump is not running. So update that before we actually start.
+        await mock_modbus_client.set_zone_pump_state(zone_id=2, state=True)
+
+        # Then setup the platform and start testing.
+        await setup_platform(hass=hass)
+        await hass.async_block_till_done()
+
+        assert len(hass.states.async_all()) == 2
+
+        dhw = hass.states.get(entity_id="climate.remeha_modbus_test_hub_dhw")
+        assert dhw is not None
+
+        # Setting HVAC mode to HEAT activates Preset.COMFORT
+        await hass.services.async_call(
+            domain=ClimateDomain,
+            service="set_hvac_mode",
+            service_data={"entity_id": dhw.entity_id, "hvac_mode": HVACMode.HEAT},
+            blocking=True,
+        )
+
+        dhw = hass.states.get(entity_id="climate.remeha_modbus_test_hub_dhw")
+        assert dhw.state == "heat"
+        assert dhw.attributes["preset_mode"] == PRESET_COMFORT
+        assert dhw.attributes["temperature"] == 55
+        assert dhw.attributes["hvac_action"] == HVACAction.HEATING
+
+
+@pytest.mark.parametrize("mock_modbus_client", ["modbus_store.json"], indirect=True)
+async def test_dhw_climate_hvac_mode_auto(hass: HomeAssistant, mock_modbus_client):
+    """Test setting HVACMode.AUTO.
+
+    This must put it in preset 'SCHEDULE_x' and return the correct temperature setpoint,
+    parsed from the selected schedule..
+    """
+
+    api = get_api(mock_modbus_client=mock_modbus_client)
+    with patch(
+        "custom_components.remeha_modbus.api.RemehaApi.create",
+        new=lambda name, config: api,
+    ):
+        # In the modbus_store.json file, the zone pump is not running. So update that before we actually start.
+        await mock_modbus_client.set_zone_pump_state(zone_id=2, state=True)
+
+        # Then setup platform.
+        await setup_platform(hass=hass)
+        await hass.async_block_till_done()
+
+        assert len(hass.states.async_all()) == 2
+
+        dhw = hass.states.get(entity_id="climate.remeha_modbus_test_hub_dhw")
+        assert dhw is not None
+
+        # Select a schedule which will be shown as a preset after HVACMode is set to AUTO.
+        await hass.services.async_call(
+            domain=ClimateDomain,
+            service="set_preset_mode",
+            service_data={
+                "entity_id": dhw.entity_id,
+                "preset_mode": REMEHA_PRESET_SCHEDULE_2,
+            },
+            blocking=True,
+        )
+
+        # Setting HVAC mode to AUTO activates the (previously) selected schedule.
+        # This will return the preset SCHEDULE_x
+        await hass.services.async_call(
+            domain=ClimateDomain,
+            service="set_hvac_mode",
+            service_data={"entity_id": dhw.entity_id, "hvac_mode": HVACMode.AUTO},
+            blocking=True,
+        )
+
+        dhw = hass.states.get(entity_id="climate.remeha_modbus_test_hub_dhw")
+        assert dhw.state == "auto"
+        assert dhw.attributes["preset_mode"] == REMEHA_PRESET_SCHEDULE_2
+        assert dhw.attributes["hvac_action"] == HVACAction.HEATING
+
+        # TODO handle reading schedules
+        assert dhw.attributes["temperature"] == -1
+
+
+@pytest.mark.parametrize("mock_modbus_client", ["modbus_store.json"], indirect=True)
+async def test_dhw_climate_preset_mode_schedule(hass: HomeAssistant, mock_modbus_client):
+    """Test setting preset_mode to SCHEDULE_x (1-3).
+
+    This must put it in hvac_mode 'AUTO' and return the correct (lowered) temperature setpoint.
+    """
+
+    api = get_api(mock_modbus_client=mock_modbus_client)
+    with patch(
+        "custom_components.remeha_modbus.api.RemehaApi.create",
+        new=lambda name, config: api,
+    ):
+        # In the modbus_store.json file, the zone pump is not running. So update that before we actually start.
+        await mock_modbus_client.set_zone_pump_state(zone_id=2, state=True)
+
+        # Then setup platform.
+        await setup_platform(hass=hass)
+        await hass.async_block_till_done()
+
+        assert len(hass.states.async_all()) == 2
+
+        dhw = hass.states.get(entity_id="climate.remeha_modbus_test_hub_dhw")
+        assert dhw is not None
+
+        # Setting preset to SCHEDULE_x sets hvac_mode to HVACMode.AUTO
+        await hass.services.async_call(
+            domain=ClimateDomain,
+            service="set_preset_mode",
+            service_data={
+                "entity_id": dhw.entity_id,
+                "preset_mode": REMEHA_PRESET_SCHEDULE_1,
+            },
+            blocking=True,
+        )
+
+        dhw = hass.states.get(entity_id="climate.remeha_modbus_test_hub_dhw")
+        assert dhw.state == "auto"
+        assert dhw.attributes["preset_mode"] == REMEHA_PRESET_SCHEDULE_1
+        assert dhw.attributes["hvac_action"] == HVACAction.HEATING
+
+        # TODO handle reading schedudes 1-3
+        assert dhw.attributes["temperature"] == -1
+
+
+@pytest.mark.parametrize("mock_modbus_client", ["modbus_store.json"], indirect=True)
+async def test_dhw_climate_preset_mode_eco(hass: HomeAssistant, mock_modbus_client):
+    """Test setting preset_mode to ECO.
+
+    This must put it in hvac_mode 'OFF' and return the correct (lowered) temperature setpoint.
+    """
+
+    api = get_api(mock_modbus_client=mock_modbus_client)
+    with patch(
+        "custom_components.remeha_modbus.api.RemehaApi.create",
+        new=lambda name, config: api,
+    ):
+        # Then setup platform.
+        await setup_platform(hass=hass)
+        await hass.async_block_till_done()
+
+        assert len(hass.states.async_all()) == 2
+
+        dhw = hass.states.get(entity_id="climate.remeha_modbus_test_hub_dhw")
+        assert dhw is not None
+
+        # Setting preset to ECO sets hvac_mode to HVACMode.OFF
+        await hass.services.async_call(
+            domain=ClimateDomain,
+            service="set_preset_mode",
+            service_data={
+                "entity_id": dhw.entity_id,
+                "preset_mode": PRESET_ECO,
+            },
+            blocking=True,
+        )
+
+        dhw = hass.states.get(entity_id="climate.remeha_modbus_test_hub_dhw")
+        assert dhw.state == "off"
+        assert dhw.attributes["preset_mode"] == PRESET_ECO
+        assert dhw.attributes["hvac_action"] == HVACAction.IDLE
+        assert dhw.attributes["temperature"] == 25
+
+
+@pytest.mark.parametrize("mock_modbus_client", ["modbus_store.json"], indirect=True)
+async def test_dhw_climate_preset_mode_comfort(hass: HomeAssistant, mock_modbus_client):
+    """Test setting preset_mode to COMFORT.
+
+    This must put it in hvac_mode 'HEAT' and return the correct temperature setpoint.
+    """
+
+    api = get_api(mock_modbus_client=mock_modbus_client)
+    with patch(
+        "custom_components.remeha_modbus.api.RemehaApi.create",
+        new=lambda name, config: api,
+    ):
+        # In the modbus_store.json file, the zone pump is not running. So update that before we actually start.
+        await mock_modbus_client.set_zone_pump_state(zone_id=2, state=True)
+
+        # Then setup platform.
+        await setup_platform(hass=hass)
+        await hass.async_block_till_done()
+
+        assert len(hass.states.async_all()) == 2
+
+        dhw = hass.states.get(entity_id="climate.remeha_modbus_test_hub_dhw")
+        assert dhw is not None
+
+        # Setting preset to SCHEDULE_x sets hvac_mode to HVACMode.AUTO
+        await hass.services.async_call(
+            domain=ClimateDomain,
+            service="set_preset_mode",
+            service_data={
+                "entity_id": dhw.entity_id,
+                "preset_mode": PRESET_COMFORT,
+            },
+            blocking=True,
+        )
+
+        dhw = hass.states.get(entity_id="climate.remeha_modbus_test_hub_dhw")
+        assert dhw.state == "heat"
+        assert dhw.attributes["preset_mode"] == PRESET_COMFORT
+        assert dhw.attributes["hvac_action"] == HVACAction.HEATING
+        assert dhw.attributes["temperature"] == 55
+
+
+@pytest.mark.parametrize("mock_modbus_client", ["modbus_store.json"], indirect=True)
+async def test_dhw_climate_preset_mode_none(hass: HomeAssistant, mock_modbus_client):
+    """Test setting preset_mode to NONE.
+
+    This must raise an exception since the NONE preset can only be set implicitly.
+    Preset NONE is set when api.ClimateZone.mode has an unsupported value.
+    """
+
+    api = get_api(mock_modbus_client=mock_modbus_client)
+    with patch(
+        "custom_components.remeha_modbus.api.RemehaApi.create",
+        new=lambda name, config: api,
+    ):
+        # In the modbus_store.json file, the zone pump is not running. So update that before we actually start.
+        await mock_modbus_client.set_zone_pump_state(zone_id=2, state=True)
+
+        # Then setup platform.
+        await setup_platform(hass=hass)
+        await hass.async_block_till_done()
+
+        assert len(hass.states.async_all()) == 2
+
+        dhw = hass.states.get(entity_id="climate.remeha_modbus_test_hub_dhw")
+        assert dhw is not None
+
+        # Setting preset to NONE raises an exception.
+        with pytest.raises(InvalidOperationContextError):
+            await hass.services.async_call(
+                domain=ClimateDomain,
+                service="set_preset_mode",
+                service_data={
+                    "entity_id": dhw.entity_id,
+                    "preset_mode": PRESET_NONE,
+                },
+                blocking=True,
+            )

@@ -13,8 +13,7 @@ from custom_components.remeha_modbus.api import (
     DeviceInstance,
 )
 from custom_components.remeha_modbus.const import ZoneRegisters
-
-from .conftest import get_api
+from tests.conftest import get_api
 
 
 @pytest.mark.parametrize("mock_modbus_client", ["modbus_store.json"], indirect=True)

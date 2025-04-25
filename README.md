@@ -5,6 +5,7 @@
 [![Validate HACS](https://github.com/houthacker/remeha-modbus/actions/workflows/hacs.yaml/badge.svg)](https://github.com/houthacker/remeha-modbus/actions/workflows/hacs.yaml)
 [![pytest](https://github.com/houthacker/remeha-modbus/actions/workflows/pytest.yaml/badge.svg)](https://github.com/houthacker/remeha-modbus/actions/workflows/pytest.yaml)
 [![badge](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/houthacker/ff0da84bf72a3d20fb68db8cb9d3e38e/raw/coverage_badge.json)](https://github.com/houthacker/remeha-modbus/actions/workflows/coverage.yaml)
+[![GitHub tag (latest by date)](https://img.shields.io/github/v/tag/houthacker/remeha-modbus)](https://github.com/houthacker/remeha-modbus/releases/latest)
 
 
 This integration allows you to manage your Remeha heating/cooling appliance locally from Home Assistant.
@@ -47,3 +48,9 @@ Planned features and features under discussion are available in the [issues](htt
     - Automatically discovered once the integration has been set up.
     - Linked to a device, showing the type of board in the Remeha appliance, including its soft- and hardware versions.
     - Climate features are enabled depending on the climate zone type (for instance, a DHW zone is only able to heat, not cool).
+
+### Installation
+To install this integration, you need to have [HACS](https://hacs.xyz/docs/use) installed in your Home Assistant.
+
+[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=houthacker&repository=remeha-modbus&category=integration)
+

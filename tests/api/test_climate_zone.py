@@ -11,8 +11,7 @@ from custom_components.remeha_modbus.api import (
     DeviceBoardType,
     DeviceInstance,
 )
-
-from .conftest import get_api
+from tests.conftest import get_api
 
 
 def test_device_board_category():
@@ -20,25 +19,16 @@ def test_device_board_category():
 
     Required because these are shown in the front-end.
     """
-    assert (
-        str(DeviceBoardCategory(type=DeviceBoardType.CU_GH, generation=2)) == "CU-GH-2"
-    )
-    assert (
-        str(DeviceBoardCategory(type=DeviceBoardType.CU_OH, generation=3)) == "CU-OH-3"
-    )
+    assert str(DeviceBoardCategory(type=DeviceBoardType.CU_GH, generation=2)) == "CU-GH-2"
+    assert str(DeviceBoardCategory(type=DeviceBoardType.CU_OH, generation=3)) == "CU-OH-3"
     assert str(DeviceBoardCategory(type=DeviceBoardType.EHC, generation=10)) == "EHC-10"
     assert str(DeviceBoardCategory(type=DeviceBoardType.MK, generation=3)) == "MK-3"
     assert str(DeviceBoardCategory(type=DeviceBoardType.SCB, generation=17)) == "SCB-17"
     assert str(DeviceBoardCategory(type=DeviceBoardType.EEC, generation=2)) == "EEC-2"
-    assert (
-        str(DeviceBoardCategory(type=DeviceBoardType.GATEWAY, generation=8)) == "GTW-8"
-    )
+    assert str(DeviceBoardCategory(type=DeviceBoardType.GATEWAY, generation=8)) == "GTW-8"
 
     # Compare to a different type
-    assert (
-        DeviceBoardCategory(type=DeviceBoardType.EHC, generation=10)
-        != DeviceBoardType.EHC
-    )
+    assert DeviceBoardCategory(type=DeviceBoardType.EHC, generation=10) != DeviceBoardType.EHC
 
 
 def test_device_instance_equality():
@@ -216,7 +206,7 @@ async def test_climate_zone_equality(mock_modbus_client):
     """Test the equality of climate zones."""
 
     api = get_api(mock_modbus_client=mock_modbus_client)
-    zones: list[ClimateZoneMode] = await api.async_read_zones()
+    zones: list[ClimateZone] = await api.async_read_zones()
 
     assert zones[0] != zones[1]
     assert zones[1] != ClimateZoneMode.MANUAL

@@ -9,11 +9,11 @@ from homeassistant.const import CONF_NAME, CONF_TYPE, Platform
 from homeassistant.core import HomeAssistant
 from pymodbus import ModbusException
 
-from .api import (
+from custom_components.remeha_modbus.api import (
     ConnectionType,
     RemehaApi,
 )
-from .coordinator import RemehaUpdateCoordinator
+from custom_components.remeha_modbus.coordinator import RemehaUpdateCoordinator
 
 PLATFORMS: list[Platform] = [Platform.CLIMATE]
 
@@ -38,9 +38,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         await api.async_connect()
         await api.async_health_check()
     except ModbusException as ex:
-        raise ConfigEntryNotReady(
-            f"Error while executing modbus health check: {ex}"
-        ) from ex
+        raise ConfigEntryNotReady(f"Error while executing modbus health check: {ex}") from ex
 
     coordinator = RemehaUpdateCoordinator(hass=hass, config_entry=entry, api=api)
 
@@ -51,3 +49,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True
+
+
+async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+    """Unload the Remeha Modbus configuration."""
+
+    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)

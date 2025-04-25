@@ -14,9 +14,7 @@ NULL_VALUES: Final[dict[DataType, int]] = {
     DataType.UINT16: int.from_bytes(b"\x00\xff", byteorder="little"),
     DataType.UINT32: int.from_bytes(b"\x00\x00\xff\xff", byteorder="little"),
     DataType.INT16: int.from_bytes(b"\x80\x00", signed=True, byteorder="little"),
-    DataType.INT32: int.from_bytes(
-        b"\x80\x00\x00\x00", signed=True, byteorder="little"
-    ),
+    DataType.INT32: int.from_bytes(b"\x80\x00\x00\x00", signed=True, byteorder="little"),
 }
 
 
@@ -100,9 +98,7 @@ def _to_registers(
     if value is None:
         value = _to_gtw08_null_value(source_variable.data_type)
 
-    return ModbusClientMixin.convert_to_registers(
-        value=value, data_type=mixin_data_type
-    )
+    return ModbusClientMixin.convert_to_registers(value=value, data_type=mixin_data_type)
 
 
 def to_registers(
