@@ -1,4 +1,4 @@
-dateutil==2.9.0.post0
+python-dateutil==2.9.0.post0
 pre-commit
 pytest
 pytest-cov

@@ -13,7 +13,7 @@
   "requirements": [
     "pymodbus==3.8.3",
     "pydantic==2.10.6",
-    "dateutil==2.9.0.post0"
+    "python-dateutil==2.9.0.post0"
   ],
   "version": "0.2.0"
 }
