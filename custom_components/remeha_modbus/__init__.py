@@ -38,9 +38,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         await api.async_connect()
         await api.async_health_check()
     except ModbusException as ex:
-        raise ConfigEntryNotReady(
-            f"Error while executing modbus health check: {ex}"
-        ) from ex
+        raise ConfigEntryNotReady(f"Error while executing modbus health check: {ex}") from ex
 
     coordinator = RemehaUpdateCoordinator(hass=hass, config_entry=entry, api=api)
 

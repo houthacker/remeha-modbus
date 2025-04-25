@@ -47,9 +47,7 @@ STEP_MODBUS_GENERIC_SCHEMA = vol.Schema(
 MODBUS_SERIAL_SCHEMA = vol.Schema(
     {
         vol.Required(MODBUS_SERIAL_BAUDRATE, default=115200): cv.positive_int,
-        vol.Required(MODBUS_SERIAL_BYTESIZE, default=8): vol.All(
-            int, vol.In([5, 6, 7, 8])
-        ),
+        vol.Required(MODBUS_SERIAL_BYTESIZE, default=8): vol.All(int, vol.In([5, 6, 7, 8])),
         vol.Required(MODBUS_SERIAL_METHOD, default=MODBUS_SERIAL_METHOD_RTU): vol.In(
             [MODBUS_SERIAL_METHOD_RTU, MODBUS_SERIAL_METHOD_ASCII]
         ),
@@ -89,9 +87,7 @@ class ConfigFlow(ConfigFlow, domain=DOMAIN):
     VERSION = 0
     MINOR_VERSION = 1
 
-    async def async_step_user(
-        self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    async def async_step_user(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         """Configure the modbus settings."""
 
         errors: dict[str, str] = {}
@@ -134,13 +130,9 @@ class ConfigFlow(ConfigFlow, domain=DOMAIN):
         """Configure modbus over a serial connection."""
 
         if user_input is not None and user_input[MODBUS_SERIAL_BAUDRATE] is not None:
-            return self.async_create_entry(
-                title="Remeha Modbus", data={**self.data, **user_input}
-            )
+            return self.async_create_entry(title="Remeha Modbus", data={**self.data, **user_input})
 
-        return self.async_show_form(
-            step_id="modbus_serial", data_schema=MODBUS_SERIAL_SCHEMA
-        )
+        return self.async_show_form(step_id="modbus_serial", data_schema=MODBUS_SERIAL_SCHEMA)
 
     async def async_step_modbus_socket(
         self, user_input: dict[str, Any] | None = None
@@ -149,9 +141,7 @@ class ConfigFlow(ConfigFlow, domain=DOMAIN):
 
         errors: dict[str, str] = {}
         if user_input is not None and user_input[CONF_HOST] is not None:
-            return self.async_create_entry(
-                title="Remeha Modbus", data={**self.data, **user_input}
-            )
+            return self.async_create_entry(title="Remeha Modbus", data={**self.data, **user_input})
 
         return self.async_show_form(
             step_id="modbus_socket", data_schema=MODBUS_SOCKET_SCHEMA, errors=errors

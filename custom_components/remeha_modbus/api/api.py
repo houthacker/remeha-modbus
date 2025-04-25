@@ -329,9 +329,7 @@ class ClimateZone:
                 case ClimateZoneMode.ANTI_FROST:
                     return self.dhw_reduced_setpoint
 
-        _LOGGER.warning(
-            "Current setpoint not supported for climate zones of type %s", self.type
-        )
+        _LOGGER.warning("Current setpoint not supported for climate zones of type %s", self.type)
         return -1
 
     @current_setpoint.setter
@@ -355,9 +353,7 @@ class ClimateZone:
                 case ClimateZoneMode.SCHEDULING:
                     # Ignore, user must adjust schedule.
                     # TODO implement temporary setpoint override
-                    _LOGGER.warning(
-                        "Ignoring requested DHW setpoint, adjust schedule to do this."
-                    )
+                    _LOGGER.warning("Ignoring requested DHW setpoint, adjust schedule to do this.")
                 case ClimateZoneMode.MANUAL:
                     self.dhw_comfort_setpoint = value
                 case ClimateZoneMode.ANTI_FROST:
@@ -380,9 +376,7 @@ class ClimateZone:
         if self.is_domestic_hot_water():
             return self.dhw_tank_temperature
 
-        _LOGGER.warning(
-            "Current temperature not supported for climate zones of type %s", self.type
-        )
+        _LOGGER.warning("Current temperature not supported for climate zones of type %s", self.type)
         return -1
 
     @property
@@ -461,9 +455,7 @@ class ClimateZone:
         """
         if isinstance(other, self.__class__):
             return (
-                self.id == other.id
-                and self.type == other.type
-                and self.function == other.function
+                self.id == other.id and self.type == other.type and self.function == other.function
             )
 
         return False
@@ -651,9 +643,7 @@ class RemehaApi:
                 slave=self._device_address,
             )
             if response.isError():
-                raise ModbusException(
-                    "Modbus device returned an error while writing registers."
-                )
+                raise ModbusException("Modbus device returned an error while writing registers.")
 
     def get_zone_register_offset(self, zone: ClimateZone | int) -> int:
         """Get the offset in registers for the given `ClimateZone | int`."""
@@ -715,9 +705,7 @@ class RemehaApi:
         """
 
         return from_registers(
-            registers=await self._async_read_registers(
-                variable=MetaRegisters.NUMBER_OF_DEVICES
-            ),
+            registers=await self._async_read_registers(variable=MetaRegisters.NUMBER_OF_DEVICES),
             destination_variable=MetaRegisters.NUMBER_OF_DEVICES,
         )
 
@@ -805,8 +793,7 @@ class RemehaApi:
         return [
             zone
             for zone in [
-                await self.async_read_zone(zone_id)
-                for zone_id in range(1, number_of_zones + 1)
+                await self.async_read_zone(zone_id) for zone_id in range(1, number_of_zones + 1)
             ]
             if zone is not None
         ]
@@ -823,9 +810,7 @@ class RemehaApi:
 
         """
         return from_registers(
-            registers=await self._async_read_registers(
-                variable=MetaRegisters.NUMBER_OF_ZONES
-            ),
+            registers=await self._async_read_registers(variable=MetaRegisters.NUMBER_OF_ZONES),
             destination_variable=MetaRegisters.NUMBER_OF_ZONES,
         )
 
@@ -876,9 +861,7 @@ class RemehaApi:
 
         # Bail out if the zone is not present.
         if zone_type == ClimateZoneType.NOT_PRESENT.value:
-            _LOGGER.info(
-                "Ignoring zone(zone_id=%d), because its type is NOT_PRESENT.", id
-            )
+            _LOGGER.info("Ignoring zone(zone_id=%d), because its type is NOT_PRESENT.", id)
             return None
 
         zone_function = from_registers(
@@ -971,13 +954,9 @@ class RemehaApi:
             owning_device=None if owning_device is None else int(owning_device),
             mode=ClimateZoneMode(zone_mode),
             selected_schedule=(
-                None
-                if selected_schedule is None
-                else ClimateZoneScheduleId(selected_schedule)
+                None if selected_schedule is None else ClimateZoneScheduleId(selected_schedule)
             ),
-            heating_mode=(
-                None if heating_mode is None else ClimateZoneHeatingMode(heating_mode)
-            ),
+            heating_mode=(None if heating_mode is None else ClimateZoneHeatingMode(heating_mode)),
             room_setpoint=room_setpoint,
             dhw_comfort_setpoint=dhw_comfort_setpoint,
             dhw_reduced_setpoint=dhw_reduced_setpoint,
@@ -1096,13 +1075,9 @@ class RemehaApi:
             owning_device=zone.owning_device,
             mode=ClimateZoneMode(zone_mode),
             selected_schedule=(
-                None
-                if selected_schedule is None
-                else ClimateZoneScheduleId(selected_schedule)
+                None if selected_schedule is None else ClimateZoneScheduleId(selected_schedule)
             ),
-            heating_mode=(
-                None if heating_mode is None else ClimateZoneHeatingMode(heating_mode)
-            ),
+            heating_mode=(None if heating_mode is None else ClimateZoneHeatingMode(heating_mode)),
             room_setpoint=room_setpoint,
             dhw_comfort_setpoint=dhw_comfort_setpoint,
             dhw_reduced_setpoint=dhw_reduced_setpoint,
@@ -1134,13 +1109,9 @@ class RemehaApi:
         if value is None:
             await self.async_write_primitive(variable=variable, value=None, offset=offset)
         elif isinstance(value, Enum):
-            await self.async_write_primitive(
-                variable=variable, value=value.value, offset=offset
-            )
+            await self.async_write_primitive(variable=variable, value=value.value, offset=offset)
         else:
-            raise TypeError(
-                f"Expect value to be an Enum or None, but got {type(value).__name__}"
-            )
+            raise TypeError(f"Expect value to be an Enum or None, but got {type(value).__name__}")
 
     async def async_write_primitive(
         self,

@@ -48,9 +48,7 @@ async def test_generic_config_invalid_data(
     await hass.async_block_till_done()
 
 
-async def test_config_modbus_serial(
-    hass: HomeAssistant, mock_setup_entry: AsyncMock
-) -> None:
+async def test_config_modbus_serial(hass: HomeAssistant, mock_setup_entry: AsyncMock) -> None:
     """Test for modbus serial configuration setup."""
     result = await hass.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
@@ -99,9 +97,7 @@ async def test_config_modbus_serial(
     assert len(mock_setup_entry.mock_calls) == 1
 
 
-async def test_config_modbus_socket(
-    hass: HomeAssistant, mock_setup_entry: AsyncMock
-) -> None:
+async def test_config_modbus_socket(hass: HomeAssistant, mock_setup_entry: AsyncMock) -> None:
     """Test for modbus serial configuration setup."""
     result = await hass.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}

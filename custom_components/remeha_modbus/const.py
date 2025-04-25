@@ -109,10 +109,13 @@ class Limits(float, Enum):
     """Domestic hot water maximum temperature."""
 
 
-# Base register information for zones, device info
+# Base register information for zones, device info, time schedules
 REMEHA_ZONE_RESERVED_REGISTERS: Final[int] = 512
 REMEHA_DEVICE_INSTANCE_RESERVED_REGISTERS: Final[int] = 6
 REMEHA_TIME_PROGRAM_RESERVED_REGISTERS: Final[int] = 70
+REMEHA_TIME_PROGRAM_BYTE_SIZE: Final[int] = 20
+REMEHA_TIME_PROGRAM_SLOT_SIZE: Final[int] = 3
+REMEHA_TIME_PROGRAM_TIME_STEP_MINUTES: Final[int] = 10
 
 # Reference to Remeha modbus registers
 type ModbusVariableRef = int
@@ -277,14 +280,12 @@ class ZoneRegisters:
         scale=0.01,
         friendly_name="CP360",
     )
-    DHW_CALORIFIER_HYSTERISIS: Final[ModbusVariableDescription] = (
-        ModbusVariableDescription(
-            start_address=686,
-            name="parZoneDhwCalorifierHysterisis",
-            data_type=DataType.UINT16,
-            scale=0.01,
-            friendly_name="CP420",
-        )
+    DHW_CALORIFIER_HYSTERISIS: Final[ModbusVariableDescription] = ModbusVariableDescription(
+        start_address=686,
+        name="parZoneDhwCalorifierHysterisis",
+        data_type=DataType.UINT16,
+        scale=0.01,
+        friendly_name="CP420",
     )
     SELECTED_TIME_PROGRAM: Final[ModbusVariableDescription] = ModbusVariableDescription(
         start_address=688,
@@ -292,14 +293,12 @@ class ZoneRegisters:
         data_type=DataType.UINT8,
         friendly_name="CP570",
     )
-    CURRENT_ROOM_TEMPERATURE: Final[ModbusVariableDescription] = (
-        ModbusVariableDescription(
-            start_address=1104,
-            name="varZoneTRoom",
-            data_type=DataType.INT16,
-            scale=0.1,
-            friendly_name="CM030",
-        )
+    CURRENT_ROOM_TEMPERATURE: Final[ModbusVariableDescription] = ModbusVariableDescription(
+        start_address=1104,
+        name="varZoneTRoom",
+        data_type=DataType.INT16,
+        scale=0.1,
+        friendly_name="CM030",
     )
     CURRENT_HEATING_MODE: Final[ModbusVariableDescription] = ModbusVariableDescription(
         start_address=1109,

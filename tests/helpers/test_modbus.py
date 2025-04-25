@@ -14,9 +14,9 @@ def test_to_registers_happy_path():
     ) == [201]
 
     # UINT16, scale 0.01
-    assert modbus.to_registers(
-        source_variable=ZoneRegisters.DHW_TANK_TEMPERATURE, value=52.3
-    ) == [5230]
+    assert modbus.to_registers(source_variable=ZoneRegisters.DHW_TANK_TEMPERATURE, value=52.3) == [
+        5230
+    ]
 
     # ENUM8
     assert modbus.to_registers(
@@ -25,9 +25,7 @@ def test_to_registers_happy_path():
     ) == [ClimateZoneHeatingMode.COOLING.value]
 
     # STRING(3)
-    assert modbus.to_registers(
-        source_variable=ZoneRegisters.SHORT_NAME, value="DHW"
-    ) == [
+    assert modbus.to_registers(source_variable=ZoneRegisters.SHORT_NAME, value="DHW") == [
         int.from_bytes(b"\x44\x48"),
         int.from_bytes(b"\x57\x00"),
     ]

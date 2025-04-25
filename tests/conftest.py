@@ -34,7 +34,7 @@ def get_api(
     # mock_modbus_client MUST be a mock, otherwise a real connection might be made and mess up the appliance.
     if not isinstance(mock_modbus_client, Mock):
         pytest.fail(
-            f"Trying to create RemehaApi with non-mock type {type(mock_modbus_client).__qualname__}."
+            f"Trying to create RemehaApi with non-mocked modbus client type {type(mock_modbus_client).__qualname__}."
         )
 
     return RemehaApi(
@@ -61,7 +61,7 @@ def mock_setup_entry() -> Generator[AsyncMock]:
 
 
 @pytest.fixture
-def mock_modbus_client(request) -> AsyncMock:
+def mock_modbus_client(request) -> Generator[AsyncMock]:
     """Create a mocked pymodbus client.
 
     The registers for the modbus client are retrieved from the `request` and will be
@@ -98,9 +98,7 @@ def mock_modbus_client(request) -> AsyncMock:
 
         async def write_to_store(address: int, values: list[int], **kwargs):
             for idx, r in enumerate(values):
-                store["server"]["registers"][str(address + idx)] = (
-                    int(r).to_bytes(2).hex()
-                )
+                store["server"]["registers"][str(address + idx)] = int(r).to_bytes(2).hex()
 
             write_pdu.side_effect = AsyncMock()
             write_pdu.isError = Mock(return_value=False)
@@ -121,7 +119,7 @@ def mock_modbus_client(request) -> AsyncMock:
         mock.set_zone_pump_state = set_pump_state
         mock.close = close
 
-        return mock
+        yield mock
 
 
 async def setup_platform(hass: HomeAssistant):
@@ -139,9 +137,7 @@ async def setup_platform(hass: HomeAssistant):
         await hass.async_block_till_done()
 
 
-def create_config_entry(
-    hub_name: str = "test_hub", device_address: int = 100
-) -> MockConfigEntry:
+def create_config_entry(hub_name: str = "test_hub", device_address: int = 100) -> MockConfigEntry:
     """Mock a config entry for Remeha Modbus integration."""
 
     return MockConfigEntry(

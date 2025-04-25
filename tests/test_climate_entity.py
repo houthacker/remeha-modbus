@@ -386,9 +386,7 @@ async def test_dhw_climate_hvac_mode_auto(hass: HomeAssistant, mock_modbus_clien
 
 
 @pytest.mark.parametrize("mock_modbus_client", ["modbus_store.json"], indirect=True)
-async def test_dhw_climate_preset_mode_schedule(
-    hass: HomeAssistant, mock_modbus_client
-):
+async def test_dhw_climate_preset_mode_schedule(hass: HomeAssistant, mock_modbus_client):
     """Test setting preset_mode to SCHEDULE_x (1-3).
 
     This must put it in hvac_mode 'AUTO' and return the correct (lowered) temperature setpoint.
