@@ -18,6 +18,8 @@ from custom_components.remeha_modbus.api import ConnectionType, RemehaApi
 from custom_components.remeha_modbus.const import (
     CONNECTION_RTU_OVER_TCP,
     DOMAIN,
+    HA_CONFIG_MINOR_VERSION,
+    HA_CONFIG_VERSION,
     MODBUS_DEVICE_ADDRESS,
     REMEHA_ZONE_RESERVED_REGISTERS,
     ZoneRegisters,
@@ -151,6 +153,6 @@ def create_config_entry(hub_name: str = "test_hub", device_address: int = 100) -
             CONF_HOST: "does.not.matter",
             CONF_PORT: 8899,
         },
-        version=0,
-        minor_version=1,
+        version=HA_CONFIG_VERSION,
+        minor_version=HA_CONFIG_MINOR_VERSION,
     )

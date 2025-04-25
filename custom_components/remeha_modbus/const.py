@@ -13,6 +13,10 @@ from pydantic.dataclasses import dataclass
 
 DOMAIN: Final[str] = "remeha_modbus"
 
+# Versioning for the config flow.
+HA_CONFIG_VERSION = 0
+HA_CONFIG_MINOR_VERSION = 1
+
 # Modbus connection types
 CONNECTION_TCP: Final[str] = "tcp"
 CONNECTION_UDP: Final[str] = "udp"

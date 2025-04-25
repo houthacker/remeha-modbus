@@ -11,8 +11,7 @@ from custom_components.remeha_modbus.api import (
     DeviceBoardType,
     DeviceInstance,
 )
-
-from .conftest import get_api
+from tests.conftest import get_api
 
 
 def test_device_board_category():
