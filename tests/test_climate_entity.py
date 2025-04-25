@@ -18,7 +18,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ServiceNotSupported, ServiceValidationError
 
 from custom_components.remeha_modbus.api import ClimateZoneMode
-from custom_components.remeha_modbus.climate import InvalidOperationContextError
+from custom_components.remeha_modbus.climate import InvalidClimateContext
 from custom_components.remeha_modbus.const import (
     REMEHA_PRESET_SCHEDULE_1,
     REMEHA_PRESET_SCHEDULE_2,
@@ -211,7 +211,7 @@ async def test_ch_climate(hass: HomeAssistant, mock_modbus_client):
         assert circa1.attributes["preset_mode"] == REMEHA_PRESET_SCHEDULE_1
 
         # Try turning it off
-        with pytest.raises(InvalidOperationContextError):
+        with pytest.raises(InvalidClimateContext):
             await hass.services.async_call(
                 domain=ClimateDomain,
                 service="turn_off",
@@ -536,7 +536,7 @@ async def test_dhw_climate_preset_mode_none(hass: HomeAssistant, mock_modbus_cli
         assert dhw is not None
 
         # Setting preset to NONE raises an exception.
-        with pytest.raises(InvalidOperationContextError):
+        with pytest.raises(InvalidClimateContext):
             await hass.services.async_call(
                 domain=ClimateDomain,
                 service="set_preset_mode",

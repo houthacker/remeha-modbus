@@ -16,7 +16,7 @@ from homeassistant.components.climate.const import (
 )
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import ATTR_TEMPERATURE, PRECISION_TENTHS, UnitOfTemperature
-from homeassistant.core import HomeAssistant, HomeAssistantError
+from homeassistant.core import HomeAssistant
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
@@ -42,6 +42,7 @@ from custom_components.remeha_modbus.const import (
     ZoneRegisters,
 )
 from custom_components.remeha_modbus.coordinator import RemehaUpdateCoordinator
+from custom_components.remeha_modbus.errors import InvalidClimateContext
 
 HA_SCHEDULE_TO_REMEHA_SCHEDULE: Final[dict[str, ClimateZoneScheduleId]] = {
     REMEHA_PRESET_SCHEDULE_1: ClimateZoneScheduleId.SCHEDULE_1,
@@ -72,10 +73,6 @@ async def async_setup_entry(
         for zone_id in coordinator.data["climates"]
     ]
     async_add_entities(entities)
-
-
-class InvalidOperationContextError(HomeAssistantError):
-    """Exception to indicate an operation was attempted that is invalid in the current context."""
 
 
 class RemehaClimateEntity(CoordinatorEntity, ClimateEntity):
@@ -289,7 +286,7 @@ class RemehaDhwEntity(RemehaClimateEntity):
             )
             zone.mode = ClimateZoneMode.SCHEDULING
         else:
-            raise InvalidOperationContextError(
+            raise InvalidClimateContext(
                 translation_domain=DOMAIN,
                 translation_key="climate_invalid_operation_ctx_hvac",
                 translation_placeholders={
@@ -336,7 +333,7 @@ class RemehaDhwEntity(RemehaClimateEntity):
             zone.selected_schedule = schedule_id
         else:
             # Unknown preset mode
-            raise InvalidOperationContextError(
+            raise InvalidClimateContext(
                 translation_domain=DOMAIN,
                 translation_key="climate_unsupported_preset_mode",
                 translation_placeholders={"preset_mode": preset_mode},
@@ -363,7 +360,7 @@ class RemehaDhwEntity(RemehaClimateEntity):
                 offset=zone_offset,
             )
         else:
-            raise InvalidOperationContextError(
+            raise InvalidClimateContext(
                 translation_domain=DOMAIN,
                 translation_key="climate_invalid_operation_ctx",
                 translation_placeholders={
@@ -490,7 +487,7 @@ class RemehaChEntity(RemehaClimateEntity):
             )
             zone.mode = ClimateZoneMode.ANTI_FROST
         else:
-            raise InvalidOperationContextError(
+            raise InvalidClimateContext(
                 translation_domain=DOMAIN,
                 translation_key="climate_invalid_operation_ctx_hvac",
                 translation_placeholders={
@@ -536,7 +533,7 @@ class RemehaChEntity(RemehaClimateEntity):
             zone.selected_schedule = ClimateZoneScheduleId(schedule_id)
         else:
             # Unknown preset mode
-            raise InvalidOperationContextError(
+            raise InvalidClimateContext(
                 translation_domain=DOMAIN,
                 translation_key="climate_unsupported_preset_mode",
                 translation_placeholders={"preset_mode": preset_mode},
@@ -551,7 +548,7 @@ class RemehaChEntity(RemehaClimateEntity):
         zone: ClimateZone = self._zone
         zone_offset: int = self.api.get_zone_register_offset(zone)
         if self.preset_mode != ClimateZoneMode.MANUAL.name.lower():
-            raise InvalidOperationContextError(
+            raise InvalidClimateContext(
                 translation_domain=DOMAIN,
                 translation_key="climate_invalid_operation_ctx",
                 translation_placeholders={
@@ -585,7 +582,7 @@ class RemehaChEntity(RemehaClimateEntity):
                 offset=zone_offset,
             )
         else:
-            raise InvalidOperationContextError(
+            raise InvalidClimateContext(
                 translation_domain=DOMAIN,
                 translation_key="climate_invalid_operation_ctx",
                 translation_placeholders={
