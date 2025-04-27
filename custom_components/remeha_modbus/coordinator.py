@@ -47,6 +47,7 @@ class RemehaUpdateCoordinator(DataUpdateCoordinator):
     async def _async_update_data(self) -> dict[str, dict[int, ClimateZone]]:
         try:
             zones: list[ClimateZone] = []
+            is_cooling_forced: bool = await self._api.async_is_cooling_forced
             if self.data is None:
                 zones = await self._api.async_read_zones()
             else:
@@ -57,7 +58,15 @@ class RemehaUpdateCoordinator(DataUpdateCoordinator):
         except ModbusException as ex:
             raise UpdateFailed("Error while communicating with modbus device.") from ex
 
-        return {"climates": {zone.id: zone for zone in zones}}
+        return {
+            "climates": {zone.id: zone for zone in zones},
+            "cooling_forced": is_cooling_forced,
+        }
+
+    def is_cooling_forced(self) -> bool:
+        """Return whether the appliance is in forced cooling mode."""
+
+        return self.data["cooling_forced"]
 
     def get_device(self, id: int) -> DeviceInstance | None:
         """Return the device instance with `id`.

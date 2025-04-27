@@ -156,11 +156,11 @@ async def test_ch_climate(hass: HomeAssistant, mock_modbus_client):
         circa1 = hass.states.get(entity_id="climate.remeha_modbus_test_hub_circa1")
         assert circa1 is not None
 
-        assert circa1.state == "cool"
+        assert circa1.state == "heat_cool"
         assert circa1.attributes["hvac_action"] == HVACAction.COOLING
         assert circa1.attributes["hvac_modes"] == [
             HVACMode.OFF,
-            HVACMode.HEAT,
+            HVACMode.HEAT_COOL,
             HVACMode.COOL,
             HVACMode.AUTO,
         ]
@@ -238,7 +238,7 @@ async def test_ch_climate(hass: HomeAssistant, mock_modbus_client):
             service="set_hvac_mode",
             service_data={
                 "entity_id": circa1.entity_id,
-                "hvac_mode": HVACMode.HEAT,
+                "hvac_mode": HVACMode.HEAT_COOL,
             },
             blocking=True,
         )

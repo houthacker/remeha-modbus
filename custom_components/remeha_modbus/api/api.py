@@ -551,6 +551,15 @@ class RemehaApi:
         async with self._lock:
             return self._client.connected
 
+    @property
+    async def async_is_cooling_forced(self) -> bool:
+        """Return whether the appliance is in forced cooling mode."""
+
+        return from_registers(
+            registers=await self._async_read_registers(variable=MetaRegisters.COOLING_FORCED),
+            destination_variable=MetaRegisters.COOLING_FORCED,
+        )
+
     async def async_connect(self) -> bool:
         """Connect to the configured modbus device."""
 

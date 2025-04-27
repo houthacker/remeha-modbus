@@ -39,6 +39,7 @@ from custom_components.remeha_modbus.const import (
     REMEHA_PRESET_SCHEDULE_2,
     REMEHA_PRESET_SCHEDULE_3,
     TEMPERATURE_STEP,
+    MetaRegisters,
     ZoneRegisters,
 )
 from custom_components.remeha_modbus.coordinator import RemehaUpdateCoordinator
@@ -411,24 +412,20 @@ class RemehaChEntity(RemehaClimateEntity):
         """Return the current HVAC mode."""
 
         zone: ClimateZone = self._zone
+        cooling_forced: bool = self.coordinator.is_cooling_forced()
+
         match zone.mode:
             case ClimateZoneMode.SCHEDULING:
                 return HVACMode.AUTO
             case ClimateZoneMode.ANTI_FROST:
                 return HVACMode.OFF
             case ClimateZoneMode.MANUAL:
-                match zone.heating_mode:
-                    case ClimateZoneHeatingMode.STANDBY:
-                        return HVACMode.OFF
-                    case ClimateZoneHeatingMode.COOLING:
-                        return HVACMode.COOL
-                    case ClimateZoneHeatingMode.HEATING:
-                        return HVACMode.HEAT
+                return HVACMode.COOL if cooling_forced else HVACMode.HEAT_COOL
 
     @property
     def hvac_modes(self) -> list[HVACMode]:
         """Return the available HVAC modes for this zone."""
-        return [HVACMode.OFF, HVACMode.HEAT, HVACMode.COOL, HVACMode.AUTO]
+        return [HVACMode.OFF, HVACMode.HEAT_COOL, HVACMode.COOL, HVACMode.AUTO]
 
     @property
     def preset_mode(self) -> str | None:
@@ -472,10 +469,13 @@ class RemehaChEntity(RemehaClimateEntity):
                 offset=zone_offset,
             )
             zone.mode = ClimateZoneMode.SCHEDULING
-        elif hvac_mode == HVACMode.HEAT:
+        elif hvac_mode in [HVACMode.HEAT_COOL, HVACMode.COOL]:
             await self.api.async_write_enum(
-                variable=ZoneRegisters.MODE,
-                value=ClimateZoneMode.MANUAL,
+                variable=ZoneRegisters.MODE, value=ClimateZoneMode.MANUAL, offset=zone_offset
+            )
+            await self.api.async_write_primitive(
+                variable=MetaRegisters.COOLING_FORCED,
+                value=bool(hvac_mode == HVACMode.COOL),
                 offset=zone_offset,
             )
             zone.mode = ClimateZoneMode.MANUAL
