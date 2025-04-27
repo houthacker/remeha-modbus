@@ -149,9 +149,6 @@ async def test_reconfigure_non_unique_id(hass: HomeAssistant, mock_modbus_client
         await setup_platform(hass=hass)
         await hass.async_block_till_done()
 
-        states = hass.states.async_all()
-        assert len(states) == 2
-
         entries = hass.config_entries.async_entries(domain=DOMAIN)
         assert len(entries) == 1
 

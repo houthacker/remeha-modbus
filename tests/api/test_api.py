@@ -79,7 +79,7 @@ async def test_read_zone(mock_modbus_client):
     assert zone is not None
     assert zone.current_setpoint == 20.0
     assert zone.current_temparature == 23.2
-    assert zone.dhw_calorifier_hysterisis is None
+    assert zone.dhw_calorifier_hysteresis is None
     assert zone.dhw_comfort_setpoint is None
     assert zone.dhw_reduced_setpoint is None
     assert zone.dhw_tank_temperature is None

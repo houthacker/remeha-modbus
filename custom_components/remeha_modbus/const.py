@@ -50,7 +50,7 @@ MODBUS_UINT16_BYTES: Final[str] = "=BB"
 MODBUS_TIME_PROGRAM: Final[str] = "=BHBHBHBHBHBHBx"
 
 # The supported step size the setpoint can be increased or decreased
-CLIMATE_TEMPERATURE_STEP: float = 0.5
+TEMPERATURE_STEP: float = 0.5
 
 # The default presets that are available on all climate zones
 REMEHA_PRESET_SCHEDULE_1: Final[str] = "schedule_1"
@@ -111,6 +111,12 @@ class Limits(float, Enum):
 
     DHW_MAX_TEMP = 65.0
     """Domestic hot water maximum temperature."""
+
+    HYSTERESIS_MIN_TEMP = 0.0
+    """The minimum required hysteresis."""
+
+    HYSTERESIS_MAX_TEMP = 40.0
+    """The maximum allowed hysteresis."""
 
 
 # Base register information for zones, device info, time schedules
@@ -284,8 +290,10 @@ class ZoneRegisters:
         scale=0.01,
         friendly_name="CP360",
     )
-    DHW_CALORIFIER_HYSTERISIS: Final[ModbusVariableDescription] = ModbusVariableDescription(
+    DHW_CALORIFIER_HYSTERESIS: Final[ModbusVariableDescription] = ModbusVariableDescription(
         start_address=686,
+        # It's actually Hysteresis (with an e), but since the parameter list defines it
+        # as Hysterisis, we'll conform to their naming.
         name="parZoneDhwCalorifierHysterisis",
         data_type=DataType.UINT16,
         scale=0.01,

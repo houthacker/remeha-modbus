@@ -32,13 +32,13 @@ from custom_components.remeha_modbus.api import (
 from custom_components.remeha_modbus.const import (
     CLIMATE_DEFAULT_PRESETS,
     CLIMATE_DHW_EXTRA_PRESETS,
-    CLIMATE_TEMPERATURE_STEP,
     DOMAIN,
     HA_PRESET_ANTI_FROST,
     HA_PRESET_MANUAL,
     REMEHA_PRESET_SCHEDULE_1,
     REMEHA_PRESET_SCHEDULE_2,
     REMEHA_PRESET_SCHEDULE_3,
+    TEMPERATURE_STEP,
     ZoneRegisters,
 )
 from custom_components.remeha_modbus.coordinator import RemehaUpdateCoordinator
@@ -81,7 +81,7 @@ class RemehaClimateEntity(CoordinatorEntity, ClimateEntity):
     _attr_has_entity_name = True
     _attr_precision = PRECISION_TENTHS
     _attr_should_poll: bool = False
-    _attr_target_temperature_step: float = CLIMATE_TEMPERATURE_STEP
+    _attr_target_temperature_step: float = TEMPERATURE_STEP
     _attr_temperature_unit = UnitOfTemperature.CELSIUS
     _attr_translation_key = DOMAIN
 
@@ -183,13 +183,13 @@ class RemehaDhwEntity(RemehaClimateEntity):
         super().__init__(api=api, coordinator=coordinator, climate_zone_id=climate_zone_id)
 
     @property
-    def calorifier_hysterisis(self) -> float:
-        """Return the hysterisis to start the tank load.
+    def calorifier_hysteresis(self) -> float:
+        """Return the hysteresis to start the tank load.
 
-        This means the DHW tank starts heating up once `self.target_temperature - self.current_temperature >= self.calorifier_hysterisis`.
+        This means the DHW tank starts heating up once `self.target_temperature - self.current_temperature >= self.calorifier_hysteresis`.
         """
 
-        return self._zone.dhw_calorifier_hysterisis
+        return self._zone.dhw_calorifier_hysteresis
 
     @property
     def hvac_action(self) -> HVACAction | None:
@@ -269,7 +269,7 @@ class RemehaDhwEntity(RemehaClimateEntity):
             zone.mode = ClimateZoneMode.ANTI_FROST
         elif hvac_mode == HVACMode.HEAT:
             # Also, there is no real 'heat' mode to force, like 'go heat now',
-            # although you could play with setpoint and hysterisis in comfort mode.
+            # although you could play with setpoint and hysteresis in comfort mode.
             # HVACMode.HEAT translates best to 'comfort' mode since that keeps the DHW boiler
             # at the configured comfort(able) temperature.
             await self.api.async_write_enum(
@@ -575,21 +575,14 @@ class RemehaChEntity(RemehaClimateEntity):
 
         zone: ClimateZone = self._zone
         zone_offset: int = self.api.get_zone_register_offset(zone)
-        if self.preset_mode == ClimateZoneMode.MANUAL.name.lower():
+        if self.preset_mode != HA_PRESET_ANTI_FROST:
             await self.api.async_write_enum(
                 variable=ZoneRegisters.MODE,
                 value=ClimateZoneMode.ANTI_FROST,
                 offset=zone_offset,
             )
         else:
-            raise InvalidClimateContext(
-                translation_domain=DOMAIN,
-                translation_key="climate_invalid_operation_ctx",
-                translation_placeholders={
-                    "operation": "turn_off",
-                    "preset_mode": self.preset_mode,
-                },
-            )
+            _LOGGER.debug("Turning off climate %s that is already off; ignoring.", self.name)
 
         # Update HA state until next poll
         zone.mode = ClimateZoneMode.ANTI_FROST

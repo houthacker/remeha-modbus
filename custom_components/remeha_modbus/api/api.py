@@ -286,8 +286,8 @@ class ClimateZone:
     dhw_reduced_setpoint: float | None
     """The setpoint for DHW in reduced (eco) mode"""
 
-    dhw_calorifier_hysterisis: float | None
-    """Hysterisis to start DHW tank load"""
+    dhw_calorifier_hysteresis: float | None
+    """Hysteresis to start DHW tank load"""
 
     room_temperature: float | None
     """The current room temperature"""
@@ -831,7 +831,7 @@ class RemehaApi:
         |       664     | `parZoneRoomManualSetpoint`       | Manually set wished room temperature of the zone.     |   `UINT16`    | `float`                   |
         |       665     | `parZoneDhwComfortSetpoint`       | Wished comfort domestic hot water temperature.        |   `UINT16`    | `float`                   |
         |       666     | `parZoneDhwReducedSetpoint`       | Wished reduced domestic hot water temperature.        |   `UINT16`    | `float`                   |
-        |       686     | `parZoneDhwCalorifierHysterisis`  | Hysterisis to start DHW tank load                     |   `UINT16`    | `float`                   |
+        |       686     | `parZoneDhwCalorifierHysteresis`  | Hysteresis to start DHW tank load                     |   `UINT16`    | `float`                   |
         |       688     | `parZoneTimeProgramSelected`      | Time program selected by the user.                    |   `ENUM8`     | `ClimateZoneScheduleId`   |
         |      1104     | `varZoneTRoom`                    | Current room temperature for zone.                    |   `INT16`     | `float`                   |
         |      1109     | `varZoneCurrentHeatingMode`       | Current mode the zone is functioning in.              |   `ENUM8`     | `ClimateZoneHeatingMode`  |
@@ -906,12 +906,12 @@ class RemehaApi:
             ),
             destination_variable=ZoneRegisters.DHW_REDUCED_SETPOINT,
         )
-        dhw_calorifier_hysterisis = from_registers(
+        dhw_calorifier_hysteresis = from_registers(
             registers=await self._async_read_registers(
-                variable=ZoneRegisters.DHW_CALORIFIER_HYSTERISIS,
+                variable=ZoneRegisters.DHW_CALORIFIER_HYSTERESIS,
                 offset=zone_register_offset,
             ),
-            destination_variable=ZoneRegisters.DHW_CALORIFIER_HYSTERISIS,
+            destination_variable=ZoneRegisters.DHW_CALORIFIER_HYSTERESIS,
         )
         selected_schedule = from_registers(
             registers=await self._async_read_registers(
@@ -960,7 +960,7 @@ class RemehaApi:
             room_setpoint=room_setpoint,
             dhw_comfort_setpoint=dhw_comfort_setpoint,
             dhw_reduced_setpoint=dhw_reduced_setpoint,
-            dhw_calorifier_hysterisis=dhw_calorifier_hysterisis,
+            dhw_calorifier_hysteresis=dhw_calorifier_hysteresis,
             room_temperature=room_temperature,
             pump_running=bool(pump_running),
             dhw_tank_temperature=dhw_tank_temperature,
@@ -980,7 +980,7 @@ class RemehaApi:
         |       664     | `parZoneRoomManualSetpoint`       | Manually set wished room temperature of the zone.     |   `UINT16`    | `float`                   |
         |       665     | `parZoneDhwComfortSetpoint`       | Wished comfort domestic hot water temperature.        |   `UINT16`    | `float`                   |
         |       666     | `parZoneDhwReducedSetpoint`       | Wished reduced domestic hot water temperature.        |   `UINT16`    | `float`                   |
-        |       686     | `parZoneDhwCalorifierHysterisis   | Hysterisis to start DHW tank load                     |   `UINT16`    | `float`                   |
+        |       686     | `parZoneDhwCalorifierHysteresis   | Hysteresis to start DHW tank load                     |   `UINT16`    | `float`                   |
         |       688     | `parZoneTimeProgramSelected`      | Time program selected by the user.                    |   `ENUM8`     | `ClimateZoneScheduleId`   |
         |      1104     | `varZoneTRoom`                    | Current room temperature for zone.                    |   `INT16`     | `float`                   |
         |      1109     | `varZoneCurrentHeatingMode`       | Current mode the zone is functioning in.              |   `ENUM8`     | `ClimateZoneHeatingMode`  |
@@ -1026,12 +1026,12 @@ class RemehaApi:
             ),
             destination_variable=ZoneRegisters.DHW_REDUCED_SETPOINT,
         )
-        dhw_calorifier_hysterisis = from_registers(
+        dhw_calorifier_hysteresis = from_registers(
             registers=await self._async_read_registers(
-                variable=ZoneRegisters.DHW_CALORIFIER_HYSTERISIS,
+                variable=ZoneRegisters.DHW_CALORIFIER_HYSTERESIS,
                 offset=zone_register_offset,
             ),
-            destination_variable=ZoneRegisters.DHW_CALORIFIER_HYSTERISIS,
+            destination_variable=ZoneRegisters.DHW_CALORIFIER_HYSTERESIS,
         )
         selected_schedule = from_registers(
             registers=await self._async_read_registers(
@@ -1081,7 +1081,7 @@ class RemehaApi:
             room_setpoint=room_setpoint,
             dhw_comfort_setpoint=dhw_comfort_setpoint,
             dhw_reduced_setpoint=dhw_reduced_setpoint,
-            dhw_calorifier_hysterisis=dhw_calorifier_hysterisis,
+            dhw_calorifier_hysteresis=dhw_calorifier_hysteresis,
             room_temperature=room_temperature,
             pump_running=bool(pump_running),
             dhw_tank_temperature=dhw_tank_temperature,

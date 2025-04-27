@@ -1,6 +1,7 @@
 """Coordinator for fetching modbus data of Remeha devices."""
 
 import logging
+from collections.abc import Callable
 from datetime import timedelta
 
 from homeassistant.config_entries import ConfigEntry
@@ -35,7 +36,7 @@ class RemehaUpdateCoordinator(DataUpdateCoordinator):
             config_entry=config_entry,
         )
         self._api: RemehaApi = api
-        self._device_instances: dict[int, DeviceInstance] = {}
+        self._device_instances: list[DeviceInstance] = []
 
     async def _async_setup(self):
         try:
@@ -77,3 +78,8 @@ class RemehaUpdateCoordinator(DataUpdateCoordinator):
         """
 
         return self.data["climates"][id] if self.data["climates"] else None
+
+    def get_climates(self, predicate: Callable[[ClimateZone], bool]) -> list[ClimateZone]:
+        """Return all climate that match the given predicate."""
+
+        return [climate for climate in self.data["climates"].values() if predicate(climate) is True]
