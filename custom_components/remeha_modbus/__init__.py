@@ -15,7 +15,7 @@ from custom_components.remeha_modbus.api import (
 )
 from custom_components.remeha_modbus.coordinator import RemehaUpdateCoordinator
 
-PLATFORMS: list[Platform] = [Platform.CLIMATE, Platform.NUMBER]
+PLATFORMS: list[Platform] = [Platform.CLIMATE, Platform.NUMBER, Platform.SENSOR]
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:

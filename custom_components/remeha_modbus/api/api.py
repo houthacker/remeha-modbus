@@ -72,10 +72,20 @@ class DeviceBoardType(Enum):
     """Circuit control board"""
 
     EEC = int("1b", 16)
-    """Mainboard for gas boilers like GAS 120 Ace"""
+    """Motherboard for gas boilers like GAS 120 Ace"""
 
     GATEWAY = int("1e", 16)
     """A gateway, for example GTW-08 (modbus gateway)"""
+
+    def is_mainboard(self) -> bool:
+        """Return whether this value represents a mainboard, a.k.a. the main device."""
+
+        return self in [
+            DeviceBoardType.CU_GH,
+            DeviceBoardType.CU_OH,
+            DeviceBoardType.EHC,
+            DeviceBoardType.EEC,
+        ]
 
 
 @dataclass(eq=False)
@@ -138,6 +148,11 @@ class DeviceInstance:
 
     article_number: int
     """The article number of the device"""
+
+    def is_mainboard(self) -> bool:
+        """Return whether this device is a mainboard."""
+
+        return self.board_category.type.is_mainboard()
 
     def __eq__(self, other) -> bool:
         """Compare this `DeviceInstance` with another for equality.
@@ -388,7 +403,7 @@ class RemehaApi:
         """Get the offset in registers for the given `DeviceInfo | int`."""
 
         device_id: int = device.id if isinstance(device, DeviceInstance) else device
-        return (device_id - 1) * REMEHA_DEVICE_INSTANCE_RESERVED_REGISTERS
+        return device_id * REMEHA_DEVICE_INSTANCE_RESERVED_REGISTERS
 
     async def async_health_check(self) -> None:
         """Attempt to check the system health by reading a single register (128 - numberOfDevices).
@@ -421,7 +436,7 @@ class RemehaApi:
             instance
             for instance in [
                 await self.async_read_device_instance(instance_id)
-                for instance_id in range(1, number_of_instances + 1)
+                for instance_id in range(number_of_instances)
             ]
             if instance is not None
         ]
@@ -506,6 +521,33 @@ class RemehaApi:
             sw_version=sw_version,
             hw_version=hw_version,
             article_number=article_number,
+        )
+
+    async def async_read_sensor_values(
+        self, descriptions: list[ModbusVariableDescription]
+    ) -> dict[ModbusVariableDescription, Any]:
+        """Read the values of the given list of variable descriptions.
+
+        Args:
+            descriptions (list[ModbusVariableDescription]): The list of modbus variables to retrieve.
+
+        Returns:
+            dict[ModbusVariableDescription, Any]: A mapping from modbus variables to their values.
+
+        """
+
+        return dict(
+            zip(
+                descriptions,
+                [
+                    from_registers(
+                        registers=await self._async_read_registers(variable=d),
+                        destination_variable=d,
+                    )
+                    for d in descriptions
+                ],
+                strict=True,
+            )
         )
 
     async def async_read_zones(self) -> list[ClimateZone]:

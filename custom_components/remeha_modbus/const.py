@@ -8,6 +8,11 @@ from homeassistant.components.climate.const import (
     PRESET_ECO,
     PRESET_NONE,
 )
+from homeassistant.components.sensor import (
+    SensorDeviceClass,
+    SensorEntityDescription,
+    SensorStateClass,
+)
 from pydantic import Field, model_validator
 from pydantic.dataclasses import dataclass
 
@@ -133,7 +138,7 @@ REMEHA_TIME_PROGRAM_TIME_STEP_MINUTES: Final[int] = 10
 type ModbusVariableRef = int
 
 
-@dataclass
+@dataclass(unsafe_hash=True)
 class ModbusVariableDescription:
     """Modbus register description.
 
@@ -203,9 +208,35 @@ class MetaRegisters:
         data_type=DataType.UINT8,
     )
     NUMBER_OF_ZONES: Final[ModbusVariableDescription] = ModbusVariableDescription(
-        start_address=189,
-        name="NumberOfZones",
-        data_type=DataType.UINT8,
+        start_address=189, name="NumberOfZones", data_type=DataType.UINT8
+    )
+
+    OUTSIDE_TEMPERATURE: Final[ModbusVariableDescription] = ModbusVariableDescription(
+        start_address=384, name="varApTOutside", data_type=DataType.INT16, scale=0.01
+    )
+
+    FLOW_TEMPERATURE: Final[ModbusVariableDescription] = ModbusVariableDescription(
+        start_address=400, name="varApTFlow", data_type=DataType.INT16, scale=0.01
+    )
+
+    RETURN_TEMPERATURE: Final[ModbusVariableDescription] = ModbusVariableDescription(
+        start_address=401, name="varApTReturn", data_type=DataType.INT16, scale=0.01
+    )
+
+    HEAT_PUMP_FLOW_TEMPERATURE: Final[ModbusVariableDescription] = ModbusVariableDescription(
+        start_address=403, name="varHpHeatPumpTF", data_type=DataType.INT16, scale=0.01
+    )
+
+    HEAT_PUMP_RETURN_TEMPERATURE: Final[ModbusVariableDescription] = ModbusVariableDescription(
+        start_address=404, name="varHpHeatPumpTR", data_type=DataType.INT16, scale=0.01
+    )
+
+    WATER_PRESSURE: Final[ModbusVariableDescription] = ModbusVariableDescription(
+        start_address=409, name="varApWaterPressure", data_type=DataType.UINT8, scale=0.1
+    )
+
+    FLOW_METER: Final[ModbusVariableDescription] = ModbusVariableDescription(
+        start_address=410, name="varApFlowmeter", data_type=DataType.UINT16, scale=0.01
     )
 
     # This variable exists on the appliance level. In the Remeha Home app however, this variable
@@ -389,3 +420,56 @@ class ZoneRegisters:
         scale=0.01,
         friendly_name="CM040",
     )
+
+
+REMEHA_SENSORS: Final[dict[ModbusVariableDescription, SensorEntityDescription]] = {
+    MetaRegisters.OUTSIDE_TEMPERATURE: SensorEntityDescription(  # 384
+        key=MetaRegisters.OUTSIDE_TEMPERATURE.name,
+        device_class=SensorDeviceClass.TEMPERATURE,
+        name="outside_temperature",
+        native_unit_of_measurement="°C",
+        state_class=SensorStateClass.MEASUREMENT,
+    ),
+    MetaRegisters.FLOW_TEMPERATURE: SensorEntityDescription(  # 400
+        key=MetaRegisters.FLOW_TEMPERATURE.name,
+        device_class=SensorDeviceClass.TEMPERATURE,
+        name="flow_temperature",
+        native_unit_of_measurement="°C",
+        state_class=SensorStateClass.MEASUREMENT,
+    ),
+    MetaRegisters.RETURN_TEMPERATURE: SensorEntityDescription(  # 401
+        key=MetaRegisters.RETURN_TEMPERATURE.name,
+        device_class=SensorDeviceClass.TEMPERATURE,
+        name="reteurn_temperature",
+        native_unit_of_measurement="°C",
+        state_class=SensorStateClass.MEASUREMENT,
+    ),
+    MetaRegisters.HEAT_PUMP_FLOW_TEMPERATURE: SensorEntityDescription(  # 403
+        key=MetaRegisters.HEAT_PUMP_FLOW_TEMPERATURE.name,
+        device_class=SensorDeviceClass.TEMPERATURE,
+        name="heat_pump_flow_temperature",
+        native_unit_of_measurement="°C",
+        state_class=SensorStateClass.MEASUREMENT,
+    ),
+    MetaRegisters.HEAT_PUMP_RETURN_TEMPERATURE: SensorEntityDescription(  # 404
+        key=MetaRegisters.HEAT_PUMP_RETURN_TEMPERATURE.name,
+        device_class=SensorDeviceClass.TEMPERATURE,
+        name="heat_pump_return_temperature",
+        native_unit_of_measurement="°C",
+        state_class=SensorStateClass.MEASUREMENT,
+    ),
+    MetaRegisters.WATER_PRESSURE: SensorEntityDescription(  # 409
+        key=MetaRegisters.WATER_PRESSURE.name,
+        device_class=SensorDeviceClass.PRESSURE,
+        name="water_pressure",
+        native_unit_of_measurement="bar",
+        state_class=SensorStateClass.MEASUREMENT,
+    ),
+    MetaRegisters.FLOW_METER: SensorEntityDescription(  # 410
+        key=MetaRegisters.FLOW_METER.name,
+        device_class=SensorDeviceClass.VOLUME_FLOW_RATE,
+        name="flow_rate",
+        native_unit_of_measurement="L/min",
+        state_class=SensorStateClass.MEASUREMENT,
+    ),
+}
