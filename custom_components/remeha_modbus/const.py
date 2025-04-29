@@ -92,6 +92,8 @@ class DataType(StrEnum):
     FLOAT32 = "float32"
     FLOAT64 = "float64"
     STRING = "string"
+    CIA_301_TIME_OF_DAY = "cia301_time_of_day"
+    """A time of day, encoded as defined in the CAN301 par 9.1.6.4, 'Time of Day'."""
 
     TUPLE16 = "tuple16"
     """A `tuple[int, int]` read from a single register."""
@@ -169,6 +171,8 @@ class ModbusVariableDescription:
                     return 1
                 case DataType.UINT32 | DataType.INT32 | DataType.FLOAT32:
                     return 2
+                case DataType.CIA_301_TIME_OF_DAY:
+                    return 3
                 case DataType.UINT64 | DataType.INT64 | DataType.FLOAT64:
                     return 4
                 case _:
@@ -269,6 +273,13 @@ class ZoneRegisters:
         data_type=DataType.UINT8,
         friendly_name="CP320",
     )
+    TEMPORARY_SETPOINT: Final[ModbusVariableDescription] = ModbusVariableDescription(
+        start_address=663,
+        name="parZoneTemporaryRoomSetpoint",
+        data_type=DataType.UINT16,
+        scale=0.1,
+        friendly_name="CP510",
+    )
     ROOM_MANUAL_SETPOINT: Final[ModbusVariableDescription] = ModbusVariableDescription(
         start_address=664,
         name="parZoneRoomManualSetpoint",
@@ -304,32 +315,6 @@ class ZoneRegisters:
         name="parZoneTimeProgramSelected",
         data_type=DataType.UINT8,
         friendly_name="CP570",
-    )
-    CURRENT_ROOM_TEMPERATURE: Final[ModbusVariableDescription] = ModbusVariableDescription(
-        start_address=1104,
-        name="varZoneTRoom",
-        data_type=DataType.INT16,
-        scale=0.1,
-        friendly_name="CM030",
-    )
-    CURRENT_HEATING_MODE: Final[ModbusVariableDescription] = ModbusVariableDescription(
-        start_address=1109,
-        name="varZoneCurrentHeatingMode",
-        data_type=DataType.UINT8,
-        friendly_name="CM200",
-    )
-    PUMP_RUNNING: Final[ModbusVariableDescription] = ModbusVariableDescription(
-        start_address=1110,
-        name="varZonePumpRunning",
-        data_type=DataType.UINT8,
-        friendly_name="CM050",
-    )
-    DHW_TANK_TEMPERATURE: Final[ModbusVariableDescription] = ModbusVariableDescription(
-        start_address=1119,
-        name="varDhwTankTemperature",
-        data_type=DataType.INT16,
-        scale=0.01,
-        friendly_name="CM040",
     )
     TIME_PROGRAM_MONDAY: Final[ModbusVariableDescription] = ModbusVariableDescription(
         start_address=689,
@@ -372,4 +357,35 @@ class ZoneRegisters:
         name="parZoneTimeProgramSunday",
         data_type=DataType.STRING,
         count=10,
+    )
+    END_TIME_MODE_CHANGE: Final[ModbusVariableDescription] = ModbusVariableDescription(
+        start_address=978,
+        name="parZoneEndTimeModeChange",
+        data_type=DataType.CIA_301_TIME_OF_DAY,
+    )
+    CURRENT_ROOM_TEMPERATURE: Final[ModbusVariableDescription] = ModbusVariableDescription(
+        start_address=1104,
+        name="varZoneTRoom",
+        data_type=DataType.INT16,
+        scale=0.1,
+        friendly_name="CM030",
+    )
+    CURRENT_HEATING_MODE: Final[ModbusVariableDescription] = ModbusVariableDescription(
+        start_address=1109,
+        name="varZoneCurrentHeatingMode",
+        data_type=DataType.UINT8,
+        friendly_name="CM200",
+    )
+    PUMP_RUNNING: Final[ModbusVariableDescription] = ModbusVariableDescription(
+        start_address=1110,
+        name="varZonePumpRunning",
+        data_type=DataType.UINT8,
+        friendly_name="CM050",
+    )
+    DHW_TANK_TEMPERATURE: Final[ModbusVariableDescription] = ModbusVariableDescription(
+        start_address=1119,
+        name="varDhwTankTemperature",
+        data_type=DataType.INT16,
+        scale=0.01,
+        friendly_name="CM040",
     )

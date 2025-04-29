@@ -1,8 +1,12 @@
 """Test modbus helper."""
 
+from datetime import datetime
+
+from dateutil import tz
+
 from custom_components.remeha_modbus.api import ClimateZoneHeatingMode
 from custom_components.remeha_modbus.const import DeviceInstanceRegisters, ZoneRegisters
-from custom_components.remeha_modbus.helpers import modbus
+from custom_components.remeha_modbus.helpers import gtw08, modbus
 
 
 def test_to_registers_happy_path():
@@ -39,6 +43,22 @@ def test_to_registers_happy_path():
     assert modbus.to_registers(
         source_variable=ZoneRegisters.CURRENT_ROOM_TEMPERATURE, value=None
     ) == [modbus.NULL_VALUES[ZoneRegisters.CURRENT_ROOM_TEMPERATURE.data_type]]
+
+    # CIA_301_TIME_OF_DAY, bytes
+    assert modbus.to_registers(
+        source_variable=ZoneRegisters.END_TIME_MODE_CHANGE, value=b"\xc5\x00\x03\xdc\x3a\xf5"
+    ) == [
+        int.from_bytes(b"\xc5\x00"),
+        int.from_bytes(b"\x03\xdc"),
+        int.from_bytes(b"\x3a\xf5"),
+    ]
+
+    # CIA_301_TIME_OF_DAY, None
+    assert modbus.to_registers(source_variable=ZoneRegisters.END_TIME_MODE_CHANGE, value=None) == [
+        int.from_bytes(b"\xff\x00"),
+        int.from_bytes(b"\xff\x00"),
+        int.from_bytes(b"\xff\x00"),
+    ]
 
 
 def test_from_registers_happy_path():
@@ -93,6 +113,39 @@ def test_from_registers_happy_path():
         modbus.from_registers(
             registers=[int.from_bytes(b"\x80\x00", signed=True, byteorder="little")],
             destination_variable=ZoneRegisters.CURRENT_ROOM_TEMPERATURE,
+        )
+        is None
+    )
+
+    # CIA_301_TIME_OF_DAY, bytes
+    assert modbus.from_registers(
+        registers=[
+            int.from_bytes(b"\xc5\x00"),
+            int.from_bytes(b"\x03\xdc"),
+            int.from_bytes(b"\x3a\xf5"),
+        ],
+        destination_variable=ZoneRegisters.END_TIME_MODE_CHANGE,
+    ) == gtw08.TimeOfDay.to_bytes(
+        datetime(
+            year=2025,
+            month=4,
+            day=28,
+            hour=18,
+            minute=00,
+            second=00,
+            tzinfo=tz.gettz("Europe/Amsterdam"),
+        )
+    )
+
+    # CIA_301_TIME_OF_DAY, None
+    assert (
+        modbus.from_registers(
+            registers=[
+                int.from_bytes(b"\xff\x00"),
+                int.from_bytes(b"\xff\x00"),
+                int.from_bytes(b"\xff\x00"),
+            ],
+            destination_variable=ZoneRegisters.END_TIME_MODE_CHANGE,
         )
         is None
     )
