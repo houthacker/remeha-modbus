@@ -75,7 +75,7 @@ async def test_read_sensor_values(mock_modbus_client):
 
     api = get_api(mock_modbus_client=mock_modbus_client)
     assert await api.async_read_sensor_values(descriptions=REMEHA_SENSORS.keys()) == dict(
-        zip(REMEHA_SENSORS.keys(), [20.44, 20.00, 21.14, 22.54, 1.2, 12.66], strict=True)
+        zip(REMEHA_SENSORS.keys(), [24.82, 20.44, 20.00, 21.14, 22.54, 1.2, 12.66], strict=True)
     )
 
 
