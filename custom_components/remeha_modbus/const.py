@@ -8,6 +8,11 @@ from homeassistant.components.climate.const import (
     PRESET_ECO,
     PRESET_NONE,
 )
+from homeassistant.components.sensor import (
+    SensorDeviceClass,
+    SensorEntityDescription,
+    SensorStateClass,
+)
 from pydantic import Field, model_validator
 from pydantic.dataclasses import dataclass
 
@@ -50,7 +55,7 @@ MODBUS_UINT16_BYTES: Final[str] = "=BB"
 MODBUS_TIME_PROGRAM: Final[str] = "=BHBHBHBHBHBHBx"
 
 # The supported step size the setpoint can be increased or decreased
-CLIMATE_TEMPERATURE_STEP: float = 0.5
+TEMPERATURE_STEP: float = 0.5
 
 # The default presets that are available on all climate zones
 REMEHA_PRESET_SCHEDULE_1: Final[str] = "schedule_1"
@@ -92,6 +97,8 @@ class DataType(StrEnum):
     FLOAT32 = "float32"
     FLOAT64 = "float64"
     STRING = "string"
+    CIA_301_TIME_OF_DAY = "cia301_time_of_day"
+    """A time of day, encoded as defined in the CAN301 par 9.1.6.4, 'Time of Day'."""
 
     TUPLE16 = "tuple16"
     """A `tuple[int, int]` read from a single register."""
@@ -112,6 +119,12 @@ class Limits(float, Enum):
     DHW_MAX_TEMP = 65.0
     """Domestic hot water maximum temperature."""
 
+    HYSTERESIS_MIN_TEMP = 0.0
+    """The minimum required hysteresis."""
+
+    HYSTERESIS_MAX_TEMP = 40.0
+    """The maximum allowed hysteresis."""
+
 
 # Base register information for zones, device info, time schedules
 REMEHA_ZONE_RESERVED_REGISTERS: Final[int] = 512
@@ -125,7 +138,7 @@ REMEHA_TIME_PROGRAM_TIME_STEP_MINUTES: Final[int] = 10
 type ModbusVariableRef = int
 
 
-@dataclass
+@dataclass(unsafe_hash=True)
 class ModbusVariableDescription:
     """Modbus register description.
 
@@ -163,6 +176,8 @@ class ModbusVariableDescription:
                     return 1
                 case DataType.UINT32 | DataType.INT32 | DataType.FLOAT32:
                     return 2
+                case DataType.CIA_301_TIME_OF_DAY:
+                    return 3
                 case DataType.UINT64 | DataType.INT64 | DataType.FLOAT64:
                     return 4
                 case _:
@@ -193,9 +208,35 @@ class MetaRegisters:
         data_type=DataType.UINT8,
     )
     NUMBER_OF_ZONES: Final[ModbusVariableDescription] = ModbusVariableDescription(
-        start_address=189,
-        name="NumberOfZones",
-        data_type=DataType.UINT8,
+        start_address=189, name="NumberOfZones", data_type=DataType.UINT8
+    )
+
+    OUTSIDE_TEMPERATURE: Final[ModbusVariableDescription] = ModbusVariableDescription(
+        start_address=384, name="varApTOutside", data_type=DataType.INT16, scale=0.01
+    )
+
+    FLOW_TEMPERATURE: Final[ModbusVariableDescription] = ModbusVariableDescription(
+        start_address=400, name="varApTFlow", data_type=DataType.INT16, scale=0.01
+    )
+
+    RETURN_TEMPERATURE: Final[ModbusVariableDescription] = ModbusVariableDescription(
+        start_address=401, name="varApTReturn", data_type=DataType.INT16, scale=0.01
+    )
+
+    HEAT_PUMP_FLOW_TEMPERATURE: Final[ModbusVariableDescription] = ModbusVariableDescription(
+        start_address=403, name="varHpHeatPumpTF", data_type=DataType.INT16, scale=0.01
+    )
+
+    HEAT_PUMP_RETURN_TEMPERATURE: Final[ModbusVariableDescription] = ModbusVariableDescription(
+        start_address=404, name="varHpHeatPumpTR", data_type=DataType.INT16, scale=0.01
+    )
+
+    WATER_PRESSURE: Final[ModbusVariableDescription] = ModbusVariableDescription(
+        start_address=409, name="varApWaterPressure", data_type=DataType.UINT8, scale=0.1
+    )
+
+    FLOW_METER: Final[ModbusVariableDescription] = ModbusVariableDescription(
+        start_address=410, name="varApFlowmeter", data_type=DataType.UINT16, scale=0.01
     )
 
     # This variable exists on the appliance level. In the Remeha Home app however, this variable
@@ -263,6 +304,13 @@ class ZoneRegisters:
         data_type=DataType.UINT8,
         friendly_name="CP320",
     )
+    TEMPORARY_SETPOINT: Final[ModbusVariableDescription] = ModbusVariableDescription(
+        start_address=663,
+        name="parZoneTemporaryRoomSetpoint",
+        data_type=DataType.UINT16,
+        scale=0.1,
+        friendly_name="CP510",
+    )
     ROOM_MANUAL_SETPOINT: Final[ModbusVariableDescription] = ModbusVariableDescription(
         start_address=664,
         name="parZoneRoomManualSetpoint",
@@ -284,8 +332,10 @@ class ZoneRegisters:
         scale=0.01,
         friendly_name="CP360",
     )
-    DHW_CALORIFIER_HYSTERISIS: Final[ModbusVariableDescription] = ModbusVariableDescription(
+    DHW_CALORIFIER_HYSTERESIS: Final[ModbusVariableDescription] = ModbusVariableDescription(
         start_address=686,
+        # It's actually Hysteresis (with an e), but since the parameter list defines it
+        # as Hysterisis, we'll conform to their naming.
         name="parZoneDhwCalorifierHysterisis",
         data_type=DataType.UINT16,
         scale=0.01,
@@ -296,32 +346,6 @@ class ZoneRegisters:
         name="parZoneTimeProgramSelected",
         data_type=DataType.UINT8,
         friendly_name="CP570",
-    )
-    CURRENT_ROOM_TEMPERATURE: Final[ModbusVariableDescription] = ModbusVariableDescription(
-        start_address=1104,
-        name="varZoneTRoom",
-        data_type=DataType.INT16,
-        scale=0.1,
-        friendly_name="CM030",
-    )
-    CURRENT_HEATING_MODE: Final[ModbusVariableDescription] = ModbusVariableDescription(
-        start_address=1109,
-        name="varZoneCurrentHeatingMode",
-        data_type=DataType.UINT8,
-        friendly_name="CM200",
-    )
-    PUMP_RUNNING: Final[ModbusVariableDescription] = ModbusVariableDescription(
-        start_address=1110,
-        name="varZonePumpRunning",
-        data_type=DataType.UINT8,
-        friendly_name="CM050",
-    )
-    DHW_TANK_TEMPERATURE: Final[ModbusVariableDescription] = ModbusVariableDescription(
-        start_address=1119,
-        name="varDhwTankTemperature",
-        data_type=DataType.INT16,
-        scale=0.01,
-        friendly_name="CM040",
     )
     TIME_PROGRAM_MONDAY: Final[ModbusVariableDescription] = ModbusVariableDescription(
         start_address=689,
@@ -365,3 +389,87 @@ class ZoneRegisters:
         data_type=DataType.STRING,
         count=10,
     )
+    END_TIME_MODE_CHANGE: Final[ModbusVariableDescription] = ModbusVariableDescription(
+        start_address=978,
+        name="parZoneEndTimeModeChange",
+        data_type=DataType.CIA_301_TIME_OF_DAY,
+    )
+    CURRENT_ROOM_TEMPERATURE: Final[ModbusVariableDescription] = ModbusVariableDescription(
+        start_address=1104,
+        name="varZoneTRoom",
+        data_type=DataType.INT16,
+        scale=0.1,
+        friendly_name="CM030",
+    )
+    CURRENT_HEATING_MODE: Final[ModbusVariableDescription] = ModbusVariableDescription(
+        start_address=1109,
+        name="varZoneCurrentHeatingMode",
+        data_type=DataType.UINT8,
+        friendly_name="CM200",
+    )
+    PUMP_RUNNING: Final[ModbusVariableDescription] = ModbusVariableDescription(
+        start_address=1110,
+        name="varZonePumpRunning",
+        data_type=DataType.UINT8,
+        friendly_name="CM050",
+    )
+    DHW_TANK_TEMPERATURE: Final[ModbusVariableDescription] = ModbusVariableDescription(
+        start_address=1119,
+        name="varDhwTankTemperature",
+        data_type=DataType.INT16,
+        scale=0.01,
+        friendly_name="CM040",
+    )
+
+
+REMEHA_SENSORS: Final[dict[ModbusVariableDescription, SensorEntityDescription]] = {
+    MetaRegisters.OUTSIDE_TEMPERATURE: SensorEntityDescription(  # 384
+        key=MetaRegisters.OUTSIDE_TEMPERATURE.name,
+        device_class=SensorDeviceClass.TEMPERATURE,
+        name="outside_temperature",
+        native_unit_of_measurement="°C",
+        state_class=SensorStateClass.MEASUREMENT,
+    ),
+    MetaRegisters.FLOW_TEMPERATURE: SensorEntityDescription(  # 400
+        key=MetaRegisters.FLOW_TEMPERATURE.name,
+        device_class=SensorDeviceClass.TEMPERATURE,
+        name="flow_temperature",
+        native_unit_of_measurement="°C",
+        state_class=SensorStateClass.MEASUREMENT,
+    ),
+    MetaRegisters.RETURN_TEMPERATURE: SensorEntityDescription(  # 401
+        key=MetaRegisters.RETURN_TEMPERATURE.name,
+        device_class=SensorDeviceClass.TEMPERATURE,
+        name="reteurn_temperature",
+        native_unit_of_measurement="°C",
+        state_class=SensorStateClass.MEASUREMENT,
+    ),
+    MetaRegisters.HEAT_PUMP_FLOW_TEMPERATURE: SensorEntityDescription(  # 403
+        key=MetaRegisters.HEAT_PUMP_FLOW_TEMPERATURE.name,
+        device_class=SensorDeviceClass.TEMPERATURE,
+        name="heat_pump_flow_temperature",
+        native_unit_of_measurement="°C",
+        state_class=SensorStateClass.MEASUREMENT,
+    ),
+    MetaRegisters.HEAT_PUMP_RETURN_TEMPERATURE: SensorEntityDescription(  # 404
+        key=MetaRegisters.HEAT_PUMP_RETURN_TEMPERATURE.name,
+        device_class=SensorDeviceClass.TEMPERATURE,
+        name="heat_pump_return_temperature",
+        native_unit_of_measurement="°C",
+        state_class=SensorStateClass.MEASUREMENT,
+    ),
+    MetaRegisters.WATER_PRESSURE: SensorEntityDescription(  # 409
+        key=MetaRegisters.WATER_PRESSURE.name,
+        device_class=SensorDeviceClass.PRESSURE,
+        name="water_pressure",
+        native_unit_of_measurement="bar",
+        state_class=SensorStateClass.MEASUREMENT,
+    ),
+    MetaRegisters.FLOW_METER: SensorEntityDescription(  # 410
+        key=MetaRegisters.FLOW_METER.name,
+        device_class=SensorDeviceClass.VOLUME_FLOW_RATE,
+        name="flow_rate",
+        native_unit_of_measurement="L/min",
+        state_class=SensorStateClass.MEASUREMENT,
+    ),
+}

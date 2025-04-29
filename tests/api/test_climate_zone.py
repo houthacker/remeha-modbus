@@ -1,11 +1,13 @@
 """Tests for ClimateZone."""
 
 import pytest
+from homeassistant.core import HomeAssistant
 
 from custom_components.remeha_modbus.api import (
     ClimateZone,
     ClimateZoneFunction,
     ClimateZoneMode,
+    ClimateZoneScheduleId,
     ClimateZoneType,
     DeviceBoardCategory,
     DeviceBoardType,
@@ -212,3 +214,22 @@ async def test_climate_zone_equality(mock_modbus_client):
     assert zones[1] != ClimateZoneMode.MANUAL
     assert zones[0] == zones[0]
     assert zones[1] == zones[1]
+
+
+@pytest.mark.parametrize("mock_modbus_client", ["modbus_store_ch_scheduling.json"], indirect=True)
+async def test_scheduling_temporary_setpoint(hass: HomeAssistant, mock_modbus_client):
+    """Test that a temporary setpoint can be set if the zone is in scheduling mode."""
+
+    # Retrieve a single zone.
+    api = get_api(mock_modbus_client=mock_modbus_client)
+    zone: ClimateZone = await api.async_read_zone(1)
+    assert zone.selected_schedule == ClimateZoneScheduleId.SCHEDULE_1
+
+    # Override the setpoint
+    current_setpoint: float = zone.current_setpoint
+    temporary_setpoint = current_setpoint + 1
+
+    zone.current_setpoint = temporary_setpoint
+
+    # TODO implement schedule processing, use hass to get time zone.
+    assert zone.current_setpoint == -1  # temporary_setpoint

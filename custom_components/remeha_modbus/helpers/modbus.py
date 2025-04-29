@@ -9,12 +9,13 @@ from custom_components.remeha_modbus.const import DataType, ModbusVariableDescri
 
 _LOGGER = logging.getLogger(__name__)
 
-NULL_VALUES: Final[dict[DataType, int]] = {
+NULL_VALUES: Final[dict[DataType, int | bytes]] = {
     DataType.UINT8: int.from_bytes(b"\xff"),
     DataType.UINT16: int.from_bytes(b"\x00\xff", byteorder="little"),
     DataType.UINT32: int.from_bytes(b"\x00\x00\xff\xff", byteorder="little"),
     DataType.INT16: int.from_bytes(b"\x80\x00", signed=True, byteorder="little"),
     DataType.INT32: int.from_bytes(b"\x80\x00\x00\x00", signed=True, byteorder="little"),
+    DataType.CIA_301_TIME_OF_DAY: b"\xff\x00\xff\x00\xff\x00",
 }
 
 
@@ -30,17 +31,18 @@ HA_TO_PYMODBUS_TYPE: Final[dict[DataType, ModbusClientMixin.DATATYPE]] = {
     DataType.FLOAT64: ModbusClientMixin.DATATYPE.FLOAT64,
     DataType.STRING: ModbusClientMixin.DATATYPE.STRING,
     DataType.TUPLE16: ModbusClientMixin.DATATYPE.UINT16,
+    DataType.CIA_301_TIME_OF_DAY: ModbusClientMixin.DATATYPE.BITS,
 }
 
 
-def _is_gtw08_null_value(variable: ModbusVariableDescription, val: int) -> bool:
+def _is_gtw08_null_value(variable: ModbusVariableDescription, val: int | bytes) -> bool:
     if variable.data_type in NULL_VALUES:
         return val == NULL_VALUES[variable.data_type]
 
     return val is None
 
 
-def _to_gtw08_null_value(data_type: DataType) -> int:
+def _to_gtw08_null_value(data_type: DataType) -> int | bytes:
     if data_type in NULL_VALUES:
         return NULL_VALUES[data_type]
 
@@ -49,9 +51,14 @@ def _to_gtw08_null_value(data_type: DataType) -> int:
 
 def _from_registers(
     variable: ModbusVariableDescription, registers: list[int]
-) -> str | int | float | tuple[int, int] | None:
-    val = ModbusClientMixin.convert_from_registers(
-        registers=registers, data_type=HA_TO_PYMODBUS_TYPE[variable.data_type]
+) -> str | int | float | tuple[int, int] | bytes | None:
+    # If variable requires a bytes result, use our own conversion since the ModbusClientMixin doesn't support them.
+    val = (
+        b"".join([x.to_bytes(2) for x in registers])
+        if variable.data_type == DataType.CIA_301_TIME_OF_DAY
+        else ModbusClientMixin.convert_from_registers(
+            registers=registers, data_type=HA_TO_PYMODBUS_TYPE[variable.data_type]
+        )
     )
 
     # Post-process
@@ -74,7 +81,7 @@ def _from_registers(
 
 def _to_registers(
     source_variable: ModbusVariableDescription,
-    value: str | float | None,
+    value: str | float | bytes | None,
 ) -> list[int]:
     mixin_data_type: ModbusClientMixin.DATATYPE = HA_TO_PYMODBUS_TYPE.get(
         source_variable.data_type, None
@@ -98,12 +105,16 @@ def _to_registers(
     if value is None:
         value = _to_gtw08_null_value(source_variable.data_type)
 
+    # bytes to registers does not go through the ModbusClientMixin, since is has no bytes support.
+    if isinstance(value, bytes) and source_variable.data_type == DataType.CIA_301_TIME_OF_DAY:
+        return [int.from_bytes(value[i : i + 2]) for i in range(0, len(value), 2)]
+
     return ModbusClientMixin.convert_to_registers(value=value, data_type=mixin_data_type)
 
 
 def to_registers(
     source_variable: ModbusVariableDescription,
-    value: str | float | tuple[int, int] | None,
+    value: str | float | tuple[int, int] | bytes | None,
 ) -> list[int]:
     """Serialize `value` to a list of modbus register values.
 
@@ -117,7 +128,7 @@ def to_registers(
 
     Args:
         source_variable (ModbusVariableDescription): The description of the variable to serialize.
-        value (str|float|bool|tuple[int,int]| None))]): The value to serialize.
+        value (str|float|bool|tuple[int,int]|bytes|None))]): The value to serialize.
 
     Returns:
         `list[int]`: The list of modbus register values. `list[0]` corresponds to `variable.start_address`.
@@ -143,7 +154,7 @@ def to_registers(
 def from_registers(
     registers: list[int],
     destination_variable: ModbusVariableDescription,
-) -> str | int | float | tuple[int, int] | None:
+) -> str | int | float | tuple[int, int] | bytes | None:
     """Deserializes `response` into a value of type `data_type`.
 
     #### Scaling response values

@@ -3,6 +3,7 @@
 import asyncio
 import logging
 from dataclasses import dataclass
+from datetime import datetime
 from enum import Enum, StrEnum, auto
 from types import MappingProxyType
 from typing import Any, Self
@@ -27,13 +28,23 @@ from custom_components.remeha_modbus.const import (
     MODBUS_SERIAL_STOPBITS,
     REMEHA_DEVICE_INSTANCE_RESERVED_REGISTERS,
     REMEHA_ZONE_RESERVED_REGISTERS,
+    DataType,
     DeviceInstanceRegisters,
-    Limits,
     MetaRegisters,
     ModbusVariableDescription,
     ZoneRegisters,
 )
+from custom_components.remeha_modbus.helpers.gtw08 import TimeOfDay
 from custom_components.remeha_modbus.helpers.modbus import from_registers, to_registers
+
+from .climate_zone import (
+    ClimateZone,
+    ClimateZoneFunction,
+    ClimateZoneHeatingMode,
+    ClimateZoneMode,
+    ClimateZoneScheduleId,
+    ClimateZoneType,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -61,10 +72,20 @@ class DeviceBoardType(Enum):
     """Circuit control board"""
 
     EEC = int("1b", 16)
-    """Mainboard for gas boilers like GAS 120 Ace"""
+    """Motherboard for gas boilers like GAS 120 Ace"""
 
     GATEWAY = int("1e", 16)
     """A gateway, for example GTW-08 (modbus gateway)"""
+
+    def is_mainboard(self) -> bool:
+        """Return whether this value represents a mainboard, a.k.a. the main device."""
+
+        return self in [
+            DeviceBoardType.CU_GH,
+            DeviceBoardType.CU_OH,
+            DeviceBoardType.EHC,
+            DeviceBoardType.EEC,
+        ]
 
 
 @dataclass(eq=False)
@@ -128,6 +149,11 @@ class DeviceInstance:
     article_number: int
     """The article number of the device"""
 
+    def is_mainboard(self) -> bool:
+        """Return whether this device is a mainboard."""
+
+        return self.board_category.type.is_mainboard()
+
     def __eq__(self, other) -> bool:
         """Compare this `DeviceInstance` with another for equality.
 
@@ -173,292 +199,6 @@ class SerialConnectionMethod(StrEnum):
 
     ASCII = auto()
     """ASCII data transmission preceded by slave id and followed by a crc. Used for new devices."""
-
-
-class ClimateZoneType(Enum):
-    """Enumerates the available zone types."""
-
-    NOT_PRESENT = 0
-    CH_ONLY = 1
-    CH_AND_COOLING = 2
-    DHW = 3
-    PROCESS_HEAT = 4
-    SWIMMING_POOL = 5
-    OTHER = 254
-
-
-class ClimateZoneFunction(Enum):
-    """Enumerates the available zone functions."""
-
-    DISABLED = 0
-    DIRECT = 1
-    MIXING_CIRCUIT = 2
-    SWIMMING_POOL = 3
-    HIGH_TEMPERATURE = 4
-    FAN_CONVECTOR = 5
-    DHW_TANK = 6
-    ELECTRICAL_DHW_TANK = 7
-    TIME_PROGRAM = 8
-    PROCESS_HEAT = 9
-    DHW_LAYERED = 10
-    DHW_BIC = 11
-    DHW_COMMERCIAL_TANK = 12
-    DHW_PRIMARY = 254
-
-    def is_supported(self) -> bool:
-        """Return whether this `ClimateZoneFunction` is currently supported within this integration."""
-        return self in [
-            ClimateZoneFunction.MIXING_CIRCUIT,
-            ClimateZoneFunction.DHW_PRIMARY,
-        ]
-
-
-class ClimateZoneMode(Enum):
-    """Enumerates the modes a zone can be in."""
-
-    SCHEDULING = 0
-    MANUAL = 1
-    ANTI_FROST = 2
-
-
-class ClimateZoneScheduleId(Enum):
-    """The climate zone time program selected by the user.
-
-    Note: After updating the enum values, **ALWAYS** update the mapping to _attr_preset_modes of RemehaModbusClimateEntity!
-    """
-
-    SCHEDULE_1 = 0
-    SCHEDULE_2 = 1
-    SCHEDULE_3 = 2
-
-
-class ClimateZoneHeatingMode(Enum):
-    """The mode the zone is currently functioning in."""
-
-    STANDBY = 0
-    HEATING = 1
-    COOLING = 2
-
-
-@dataclass(eq=False)
-class ClimateZone:
-    """Defines a climate zone following the GTW-08 parameter list.
-
-    In the GTW-08 parameter list, a climate zone contains all fields for all zone types.
-    The API must stay as close as possible to the original mapping and therefore a
-    `ClimateZone` does not differentiate between zone types.
-    However, the entities created from `ClimateZone` instances have distinct types for all supported zone types.
-    """
-
-    id: int
-    """The one-based climate zone id"""
-
-    type: ClimateZoneType
-    """The type of climate zone"""
-
-    function: ClimateZoneFunction
-    """The climate zone function"""
-
-    short_name: str
-    """The climate zone short name"""
-
-    owning_device: int | None
-    """The id of the device owning the zone."""
-
-    mode: ClimateZoneMode
-    """The current mode the zone is in"""
-
-    selected_schedule: ClimateZoneScheduleId | None
-    """The currently selected schedule.
-
-    Although this property is optional, it needn't be `None` if `mode != ClimateZoneMode.SCHEDULING`.
-    """
-
-    heating_mode: ClimateZoneHeatingMode
-    """The current heating mode of the climate zone"""
-
-    room_setpoint: float | None
-    """The current room temperature setpoint"""
-
-    dhw_comfort_setpoint: float | None
-    """The setpoint for DHW in comfort mode"""
-
-    dhw_reduced_setpoint: float | None
-    """The setpoint for DHW in reduced (eco) mode"""
-
-    dhw_calorifier_hysterisis: float | None
-    """Hysterisis to start DHW tank load"""
-
-    room_temperature: float | None
-    """The current room temperature"""
-
-    dhw_tank_temperature: float | None
-    """The current DHW tank temperature"""
-
-    pump_running: bool
-    """Whether the zone pump is currently running"""
-
-    dhw_tank_temperature: float | None
-    """The current DHW tank temperature"""
-
-    @property
-    def current_setpoint(self) -> float | None:
-        """Return the current setpoint of this zone.
-
-        The actual returned setpoint field depends on the type of zone and
-        the current zone mode.
-
-        Returns:
-            `float`: The current zone setpoint, or `-1` zone type or mode does not support a current setpoint.
-
-        """
-
-        if self.is_central_heating():
-            return self.room_setpoint
-
-        if self.is_domestic_hot_water():
-            match self.mode:
-                case ClimateZoneMode.SCHEDULING:
-                    # TODO get setpoint from schedule
-                    _LOGGER.warning(
-                        "Current setpoint not supported for DHW zones in SCHEDULING mode."
-                    )
-                    return -1
-                case ClimateZoneMode.MANUAL:
-                    return self.dhw_comfort_setpoint
-                case ClimateZoneMode.ANTI_FROST:
-                    return self.dhw_reduced_setpoint
-
-        _LOGGER.warning("Current setpoint not supported for climate zones of type %s", self.type)
-        return -1
-
-    @current_setpoint.setter
-    def current_setpoint(self, value: float):
-        """Set the current setpoint of this zone."""
-
-        # Check requested setpoint against min/max
-        if value < self.min_temp or value > self.max_temp:
-            _LOGGER.warning(
-                "Ignoring requested setpoint of %f.2 since it is outside allowed range (%f.2, %f.2)",
-                value,
-                self.min_temp,
-                self.max_temp,
-            )
-            return
-
-        if self.is_central_heating():
-            self.room_setpoint = value
-        elif self.is_domestic_hot_water():
-            match self.mode:
-                case ClimateZoneMode.SCHEDULING:
-                    # Ignore, user must adjust schedule.
-                    # TODO implement temporary setpoint override
-                    _LOGGER.warning("Ignoring requested DHW setpoint, adjust schedule to do this.")
-                case ClimateZoneMode.MANUAL:
-                    self.dhw_comfort_setpoint = value
-                case ClimateZoneMode.ANTI_FROST:
-                    self.dhw_reduced_setpoint = value
-        else:
-            _LOGGER.warning(
-                "Setting setpoint not supported for climate zones of type %s", self.type
-            )
-
-    @property
-    def current_temparature(self) -> float:
-        """Return the current temperature of this zone.
-
-        The actual returned temperature field depends on the type of zone.
-        """
-
-        if self.is_central_heating():
-            return self.room_temperature
-
-        if self.is_domestic_hot_water():
-            return self.dhw_tank_temperature
-
-        _LOGGER.warning("Current temperature not supported for climate zones of type %s", self.type)
-        return -1
-
-    @property
-    def max_temp(self) -> float:
-        """The highest allowed setpoint for this zone.
-
-        The maximum temperature differs per zone type:
-        * For DHW (Domestinc Hot Water) it's 65 degrees C
-        * For CH (Central Heating) or mixing circuits it's 30 degrees C
-        * For all others it's the lowest value of the above.
-            This is to ensure unknown zone types won't get a flow temperature they can't handle.
-        """
-
-        if self.is_central_heating():
-            return Limits.CH_MAX_TEMP
-
-        if self.is_domestic_hot_water():
-            return Limits.DHW_MAX_TEMP
-
-        return min(Limits.CH_MAX_TEMP, Limits.DHW_MAX_TEMP)
-
-    @property
-    def min_temp(self) -> float:
-        """The lowest allowed setpoint for this zone.
-
-        The minimum temperature differs per zone type:
-        * For DHW (Domestinc Hot Water) it's 6 degrees C
-        * For CH (Central Heating) or mixing circuits it's 10 degrees C
-        * For all others it's the highest value of the above.
-            This is to ensure unknown zone types won't get a flow temperature they can't handle.
-        """
-
-        if self.is_central_heating():
-            return Limits.CH_MIN_TEMP
-
-        if self.is_domestic_hot_water():
-            return Limits.DHW_MIN_TEMP
-
-        return max(Limits.CH_MIN_TEMP, Limits.DHW_MIN_TEMP)
-
-    def is_central_heating(self) -> bool:
-        """Determine if this zone is a CH (central heating) zone."""
-
-        return self.type in [
-            ClimateZoneType.CH_ONLY,
-            ClimateZoneType.CH_AND_COOLING,
-        ] or (
-            self.type == ClimateZoneType.OTHER
-            and self.function == ClimateZoneFunction.MIXING_CIRCUIT
-        )
-
-    def is_domestic_hot_water(self) -> bool:
-        """Determine if this zone is a DHW (domestic hot water) zone."""
-
-        return self.type == ClimateZoneType.DHW or (
-            self.type == ClimateZoneType.OTHER
-            and self.function
-            in [
-                ClimateZoneFunction.DHW_BIC,
-                ClimateZoneFunction.DHW_COMMERCIAL_TANK,
-                ClimateZoneFunction.DHW_LAYERED,
-                ClimateZoneFunction.DHW_PRIMARY,
-                ClimateZoneFunction.DHW_TANK,
-                ClimateZoneFunction.ELECTRICAL_DHW_TANK,
-            ]
-        )
-
-    def __eq__(self, other) -> bool:
-        """Compare this `ClimateZone` with another for equality.
-
-        For equality, only the properties `id`, `type` and `function` are considered.
-
-        Returns:
-            `bool`: `True` if the objects are considered equal, `False` otherwise.
-
-        """
-        if isinstance(other, self.__class__):
-            return (
-                self.id == other.id and self.type == other.type and self.function == other.function
-            )
-
-        return False
 
 
 #################################
@@ -550,6 +290,15 @@ class RemehaApi:
         """Return whether we're connected to the modbus device."""
         async with self._lock:
             return self._client.connected
+
+    @property
+    async def async_is_cooling_forced(self) -> bool:
+        """Return whether the appliance is in forced cooling mode."""
+
+        return from_registers(
+            registers=await self._async_read_registers(variable=MetaRegisters.COOLING_FORCED),
+            destination_variable=MetaRegisters.COOLING_FORCED,
+        )
 
     async def async_connect(self) -> bool:
         """Connect to the configured modbus device."""
@@ -654,7 +403,7 @@ class RemehaApi:
         """Get the offset in registers for the given `DeviceInfo | int`."""
 
         device_id: int = device.id if isinstance(device, DeviceInstance) else device
-        return (device_id - 1) * REMEHA_DEVICE_INSTANCE_RESERVED_REGISTERS
+        return device_id * REMEHA_DEVICE_INSTANCE_RESERVED_REGISTERS
 
     async def async_health_check(self) -> None:
         """Attempt to check the system health by reading a single register (128 - numberOfDevices).
@@ -687,7 +436,7 @@ class RemehaApi:
             instance
             for instance in [
                 await self.async_read_device_instance(instance_id)
-                for instance_id in range(1, number_of_instances + 1)
+                for instance_id in range(number_of_instances)
             ]
             if instance is not None
         ]
@@ -774,6 +523,33 @@ class RemehaApi:
             article_number=article_number,
         )
 
+    async def async_read_sensor_values(
+        self, descriptions: list[ModbusVariableDescription]
+    ) -> dict[ModbusVariableDescription, Any]:
+        """Read the values of the given list of variable descriptions.
+
+        Args:
+            descriptions (list[ModbusVariableDescription]): The list of modbus variables to retrieve.
+
+        Returns:
+            dict[ModbusVariableDescription, Any]: A mapping from modbus variables to their values.
+
+        """
+
+        return dict(
+            zip(
+                descriptions,
+                [
+                    from_registers(
+                        registers=await self._async_read_registers(variable=d),
+                        destination_variable=d,
+                    )
+                    for d in descriptions
+                ],
+                strict=True,
+            )
+        )
+
     async def async_read_zones(self) -> list[ClimateZone]:
         """Retrieve the available zones of the modbus device.
 
@@ -831,7 +607,7 @@ class RemehaApi:
         |       664     | `parZoneRoomManualSetpoint`       | Manually set wished room temperature of the zone.     |   `UINT16`    | `float`                   |
         |       665     | `parZoneDhwComfortSetpoint`       | Wished comfort domestic hot water temperature.        |   `UINT16`    | `float`                   |
         |       666     | `parZoneDhwReducedSetpoint`       | Wished reduced domestic hot water temperature.        |   `UINT16`    | `float`                   |
-        |       686     | `parZoneDhwCalorifierHysterisis`  | Hysterisis to start DHW tank load                     |   `UINT16`    | `float`                   |
+        |       686     | `parZoneDhwCalorifierHysteresis`  | Hysteresis to start DHW tank load                     |   `UINT16`    | `float`                   |
         |       688     | `parZoneTimeProgramSelected`      | Time program selected by the user.                    |   `ENUM8`     | `ClimateZoneScheduleId`   |
         |      1104     | `varZoneTRoom`                    | Current room temperature for zone.                    |   `INT16`     | `float`                   |
         |      1109     | `varZoneCurrentHeatingMode`       | Current mode the zone is functioning in.              |   `ENUM8`     | `ClimateZoneHeatingMode`  |
@@ -888,6 +664,12 @@ class RemehaApi:
             ),
             destination_variable=ZoneRegisters.MODE,
         )
+        temporary_setpoint = from_registers(
+            registers=await self._async_read_registers(
+                variable=ZoneRegisters.TEMPORARY_SETPOINT, offset=zone_register_offset
+            ),
+            destination_variable=ZoneRegisters.TEMPORARY_SETPOINT,
+        )
         room_setpoint = from_registers(
             registers=await self._async_read_registers(
                 variable=ZoneRegisters.ROOM_MANUAL_SETPOINT, offset=zone_register_offset
@@ -906,12 +688,18 @@ class RemehaApi:
             ),
             destination_variable=ZoneRegisters.DHW_REDUCED_SETPOINT,
         )
-        dhw_calorifier_hysterisis = from_registers(
+        dhw_calorifier_hysteresis = from_registers(
             registers=await self._async_read_registers(
-                variable=ZoneRegisters.DHW_CALORIFIER_HYSTERISIS,
+                variable=ZoneRegisters.DHW_CALORIFIER_HYSTERESIS,
                 offset=zone_register_offset,
             ),
-            destination_variable=ZoneRegisters.DHW_CALORIFIER_HYSTERISIS,
+            destination_variable=ZoneRegisters.DHW_CALORIFIER_HYSTERESIS,
+        )
+        end_time_temporary_override = from_registers(
+            registers=await self._async_read_registers(
+                variable=ZoneRegisters.END_TIME_MODE_CHANGE, offset=zone_register_offset
+            ),
+            destination_variable=ZoneRegisters.END_TIME_MODE_CHANGE,
         )
         selected_schedule = from_registers(
             registers=await self._async_read_registers(
@@ -953,6 +741,7 @@ class RemehaApi:
             short_name=zone_short_name,
             owning_device=None if owning_device is None else int(owning_device),
             mode=ClimateZoneMode(zone_mode),
+            temporary_setpoint=temporary_setpoint,
             selected_schedule=(
                 None if selected_schedule is None else ClimateZoneScheduleId(selected_schedule)
             ),
@@ -960,7 +749,8 @@ class RemehaApi:
             room_setpoint=room_setpoint,
             dhw_comfort_setpoint=dhw_comfort_setpoint,
             dhw_reduced_setpoint=dhw_reduced_setpoint,
-            dhw_calorifier_hysterisis=dhw_calorifier_hysterisis,
+            dhw_calorifier_hysteresis=dhw_calorifier_hysteresis,
+            temporary_setpoint_end_time=end_time_temporary_override,
             room_temperature=room_temperature,
             pump_running=bool(pump_running),
             dhw_tank_temperature=dhw_tank_temperature,
@@ -980,7 +770,7 @@ class RemehaApi:
         |       664     | `parZoneRoomManualSetpoint`       | Manually set wished room temperature of the zone.     |   `UINT16`    | `float`                   |
         |       665     | `parZoneDhwComfortSetpoint`       | Wished comfort domestic hot water temperature.        |   `UINT16`    | `float`                   |
         |       666     | `parZoneDhwReducedSetpoint`       | Wished reduced domestic hot water temperature.        |   `UINT16`    | `float`                   |
-        |       686     | `parZoneDhwCalorifierHysterisis   | Hysterisis to start DHW tank load                     |   `UINT16`    | `float`                   |
+        |       686     | `parZoneDhwCalorifierHysteresis   | Hysteresis to start DHW tank load                     |   `UINT16`    | `float`                   |
         |       688     | `parZoneTimeProgramSelected`      | Time program selected by the user.                    |   `ENUM8`     | `ClimateZoneScheduleId`   |
         |      1104     | `varZoneTRoom`                    | Current room temperature for zone.                    |   `INT16`     | `float`                   |
         |      1109     | `varZoneCurrentHeatingMode`       | Current mode the zone is functioning in.              |   `ENUM8`     | `ClimateZoneHeatingMode`  |
@@ -1008,6 +798,12 @@ class RemehaApi:
             ),
             destination_variable=ZoneRegisters.MODE,
         )
+        temporary_setpoint = from_registers(
+            registers=await self._async_read_registers(
+                variable=ZoneRegisters.TEMPORARY_SETPOINT, offset=zone_register_offset
+            ),
+            destination_variable=ZoneRegisters.TEMPORARY_SETPOINT,
+        )
         room_setpoint = from_registers(
             registers=await self._async_read_registers(
                 variable=ZoneRegisters.ROOM_MANUAL_SETPOINT, offset=zone_register_offset
@@ -1026,12 +822,18 @@ class RemehaApi:
             ),
             destination_variable=ZoneRegisters.DHW_REDUCED_SETPOINT,
         )
-        dhw_calorifier_hysterisis = from_registers(
+        dhw_calorifier_hysteresis = from_registers(
             registers=await self._async_read_registers(
-                variable=ZoneRegisters.DHW_CALORIFIER_HYSTERISIS,
+                variable=ZoneRegisters.DHW_CALORIFIER_HYSTERESIS,
                 offset=zone_register_offset,
             ),
-            destination_variable=ZoneRegisters.DHW_CALORIFIER_HYSTERISIS,
+            destination_variable=ZoneRegisters.DHW_CALORIFIER_HYSTERESIS,
+        )
+        end_time_temporary_override = from_registers(
+            registers=await self._async_read_registers(
+                variable=ZoneRegisters.END_TIME_MODE_CHANGE, offset=zone_register_offset
+            ),
+            destination_variable=ZoneRegisters.END_TIME_MODE_CHANGE,
         )
         selected_schedule = from_registers(
             registers=await self._async_read_registers(
@@ -1074,6 +876,7 @@ class RemehaApi:
             short_name=zone.short_name,
             owning_device=zone.owning_device,
             mode=ClimateZoneMode(zone_mode),
+            temporary_setpoint=temporary_setpoint,
             selected_schedule=(
                 None if selected_schedule is None else ClimateZoneScheduleId(selected_schedule)
             ),
@@ -1081,7 +884,8 @@ class RemehaApi:
             room_setpoint=room_setpoint,
             dhw_comfort_setpoint=dhw_comfort_setpoint,
             dhw_reduced_setpoint=dhw_reduced_setpoint,
-            dhw_calorifier_hysterisis=dhw_calorifier_hysterisis,
+            dhw_calorifier_hysteresis=dhw_calorifier_hysteresis,
+            temporary_setpoint_end_time=end_time_temporary_override,
             room_temperature=room_temperature,
             pump_running=bool(pump_running),
             dhw_tank_temperature=dhw_tank_temperature,
@@ -1116,7 +920,7 @@ class RemehaApi:
     async def async_write_primitive(
         self,
         variable: ModbusVariableDescription,
-        value: str | float | bool | tuple[int, int] | None,
+        value: str | float | bool | tuple[int, int] | datetime | None,
         offset: int = 0,
     ) -> None:
         """Write a single primitive value to the modbus device.
@@ -1124,10 +928,11 @@ class RemehaApi:
         ### Notes:
             * If `value` is a tuple, the whole tuple must fit in a single register, contain exactly two elements that are both treated as unsigned bytes.
                 Therefore the individual values cannot exceed 2^8.
+            * Values of type `datatype` are only allowed when `variable.data_type == DataType.CIA_301_TIME_OF_DAY`.
 
         Args:
             variable (ModbusVariableDescription): The description of the variable to write.
-            value (str|float|bool|tuple[int,int]|None): The value to write. If `None`, the GTW-08 NULL value is written instead.
+            value (str|float|bool|tuple[int,int]|datetime|None): The value to write. If `None`, the GTW-08 NULL value is written instead.
             offset (int): The offset in registers of `variable.start_address`. Used for zone- and device objects.
 
         Raises:
@@ -1136,8 +941,17 @@ class RemehaApi:
                 * If no conversion path exists between `variable.data_type` and `value`
                 * If conversion to a numeric type fails.
                 * If `value` is a `tuple` which does not contain exactly two elements.
+                * If `value` is a `datetime` but `variable.data_type is not DataType.CIA_301_TIME_OF_DAY`.
 
         """
+
+        if isinstance(value, datetime):
+            if variable.data_type is not DataType.CIA_301_TIME_OF_DAY:
+                raise ValueError(
+                    f"No conversion path from {type(value).__qualname__} to modbus data type {variable.data_type.name}."
+                )
+
+            value = TimeOfDay.to_bytes(value)
 
         await self._async_write_registers(
             variable=variable,

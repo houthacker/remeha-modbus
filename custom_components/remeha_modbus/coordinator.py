@@ -1,7 +1,9 @@
 """Coordinator for fetching modbus data of Remeha devices."""
 
 import logging
+from collections.abc import Callable
 from datetime import timedelta
+from typing import Any
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
@@ -13,7 +15,7 @@ from custom_components.remeha_modbus.api import (
     DeviceInstance,
     RemehaApi,
 )
-from custom_components.remeha_modbus.const import DOMAIN
+from custom_components.remeha_modbus.const import DOMAIN, REMEHA_SENSORS, ModbusVariableDescription
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -39,14 +41,18 @@ class RemehaUpdateCoordinator(DataUpdateCoordinator):
 
     async def _async_setup(self):
         try:
-            self._device_instances = await self._api.async_read_device_instances()
+            self._device_instances = {
+                instance.id: instance for instance in await self._api.async_read_device_instances()
+            }
         except ModbusException as ex:
             raise UpdateFailed("Error while communicating with modbus device.") from ex
 
     async def _async_update_data(self) -> dict[str, dict[int, ClimateZone]]:
         try:
             zones: list[ClimateZone] = []
-            if self.data is None:
+            is_cooling_forced: bool = await self._api.async_is_cooling_forced
+            sensors = await self._api.async_read_sensor_values(REMEHA_SENSORS)
+            if not self.data or "climates" not in self.data:
                 zones = await self._api.async_read_zones()
             else:
                 zones = [
@@ -56,17 +62,41 @@ class RemehaUpdateCoordinator(DataUpdateCoordinator):
         except ModbusException as ex:
             raise UpdateFailed("Error while communicating with modbus device.") from ex
 
-        return {"climates": {zone.id: zone for zone in zones}}
+        return {
+            "climates": {zone.id: zone for zone in zones},
+            "cooling_forced": is_cooling_forced,
+            "sensors": sensors,
+        }
+
+    def is_cooling_forced(self) -> bool:
+        """Return whether the appliance is in forced cooling mode."""
+
+        return self.data["cooling_forced"]
 
     def get_device(self, id: int) -> DeviceInstance | None:
-        """Return the device instance with `id`.
+        """Return the device instance with `id` (0-based).
 
         Returns
             `DeviceInstance | None`: The device instance, or `None` if no device has the given `id`.
 
         """
 
-        return self._device_instances[id] if self._device_instances[id] else None
+        return self._device_instances.get(id, None)
+
+    def get_devices(
+        self, predicate: Callable[[DeviceInstance], bool] = lambda _: True
+    ) -> list[DeviceInstance]:
+        """Return all device instances that match the given predicate.
+
+        Args:
+            predicate (Callable[[DeviceInstance], bool]): The predicate to evanuate on all device instances. Defaults to `True`.
+
+        Returns:
+            `list[DeviceInstance]`: The list of all matching device instances.
+
+        """
+
+        return [d for d in self._device_instances.values() if predicate(d) is True]
 
     def get_climate(self, id: int) -> ClimateZone | None:
         """Return the climate instance with `id`.
@@ -77,3 +107,13 @@ class RemehaUpdateCoordinator(DataUpdateCoordinator):
         """
 
         return self.data["climates"][id] if self.data["climates"] else None
+
+    def get_climates(self, predicate: Callable[[ClimateZone], bool]) -> list[ClimateZone]:
+        """Return all climate that match the given predicate."""
+
+        return [climate for climate in self.data["climates"].values() if predicate(climate) is True]
+
+    def get_sensor_value(self, variable: ModbusVariableDescription) -> Any:
+        """Get the current value of a sensor."""
+
+        return self.data["sensors"][variable]

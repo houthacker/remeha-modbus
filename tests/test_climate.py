@@ -18,7 +18,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ServiceNotSupported, ServiceValidationError
 
 from custom_components.remeha_modbus.api import ClimateZoneMode
-from custom_components.remeha_modbus.climate import InvalidOperationContextError
+from custom_components.remeha_modbus.climate import InvalidClimateContext
 from custom_components.remeha_modbus.const import (
     REMEHA_PRESET_SCHEDULE_1,
     REMEHA_PRESET_SCHEDULE_2,
@@ -40,8 +40,7 @@ async def test_climates(hass: HomeAssistant, mock_modbus_client):
         await setup_platform(hass=hass)
         await hass.async_block_till_done()
 
-        states = hass.states.async_all()
-        assert len(states) == 2
+        assert len(hass.states.async_all(domain_filter="climate")) == 2
 
 
 @pytest.mark.parametrize("mock_modbus_client", ["modbus_store.json"], indirect=True)
@@ -55,8 +54,6 @@ async def test_dhw_climate(hass: HomeAssistant, mock_modbus_client):
     ):
         await setup_platform(hass=hass)
         await hass.async_block_till_done()
-
-        assert len(hass.states.async_all()) == 2
 
         dhw = hass.states.get(entity_id="climate.remeha_modbus_test_hub_dhw")
         assert dhw is not None
@@ -156,16 +153,14 @@ async def test_ch_climate(hass: HomeAssistant, mock_modbus_client):
         await setup_platform(hass=hass)
         await hass.async_block_till_done()
 
-        assert len(hass.states.async_all()) == 2
-
         circa1 = hass.states.get(entity_id="climate.remeha_modbus_test_hub_circa1")
         assert circa1 is not None
 
-        assert circa1.state == "cool"
+        assert circa1.state == "heat_cool"
         assert circa1.attributes["hvac_action"] == HVACAction.COOLING
         assert circa1.attributes["hvac_modes"] == [
             HVACMode.OFF,
-            HVACMode.HEAT,
+            HVACMode.HEAT_COOL,
             HVACMode.COOL,
             HVACMode.AUTO,
         ]
@@ -197,50 +192,6 @@ async def test_ch_climate(hass: HomeAssistant, mock_modbus_client):
         circa1 = hass.states.get(entity_id="climate.remeha_modbus_test_hub_circa1")
         assert circa1.attributes["temperature"] == circa1.attributes["max_temp"]
 
-        # Set preset mode to something other than MANUAL, so the climate can't be turned off.
-        await hass.services.async_call(
-            domain=ClimateDomain,
-            service="set_preset_mode",
-            service_data={
-                "entity_id": circa1.entity_id,
-                "preset_mode": REMEHA_PRESET_SCHEDULE_1,
-            },
-            blocking=True,
-        )
-        circa1 = hass.states.get(entity_id="climate.remeha_modbus_test_hub_circa1")
-        assert circa1.attributes["preset_mode"] == REMEHA_PRESET_SCHEDULE_1
-
-        # Try turning it off
-        with pytest.raises(InvalidOperationContextError):
-            await hass.services.async_call(
-                domain=ClimateDomain,
-                service="turn_off",
-                service_data={"entity_id": circa1.entity_id},
-                blocking=True,
-            )
-
-        # Back to manual mode
-        await hass.services.async_call(
-            domain=ClimateDomain,
-            service="set_preset_mode",
-            service_data={
-                "entity_id": circa1.entity_id,
-                "preset_mode": ClimateZoneMode.MANUAL.name.lower(),
-            },
-            blocking=True,
-        )
-
-        # Turn off must now succeed.
-        await hass.services.async_call(
-            domain=ClimateDomain,
-            service="turn_off",
-            service_data={"entity_id": circa1.entity_id},
-            blocking=True,
-        )
-
-        circa1 = hass.states.get(entity_id="climate.remeha_modbus_test_hub_circa1")
-        assert circa1.state == STATE_OFF
-
         # Setting mode to the same value raises no exception
         await hass.services.async_call(
             domain=ClimateDomain,
@@ -251,6 +202,48 @@ async def test_ch_climate(hass: HomeAssistant, mock_modbus_client):
             },
             blocking=True,
         )
+        circa1 = hass.states.get(entity_id="climate.remeha_modbus_test_hub_circa1")
+        assert circa1.attributes["preset_mode"] == ClimateZoneMode.MANUAL.name.lower()
+
+        # Turn it off.
+        await hass.services.async_call(
+            domain=ClimateDomain,
+            service="turn_off",
+            service_data={"entity_id": circa1.entity_id},
+            blocking=True,
+        )
+
+        circa1 = hass.states.get(entity_id="climate.remeha_modbus_test_hub_circa1")
+        assert circa1.state == STATE_OFF
+
+        # Setting HVAC mode influences preset mode
+        await hass.services.async_call(
+            domain=ClimateDomain,
+            service="set_hvac_mode",
+            service_data={
+                "entity_id": circa1.entity_id,
+                "hvac_mode": HVACMode.AUTO,
+            },
+            blocking=True,
+        )
+
+        # Preset mode must have changed to previously selected schedule.
+        circa1 = hass.states.get(entity_id="climate.remeha_modbus_test_hub_circa1")
+        assert circa1.state == "auto"
+        assert circa1.attributes["preset_mode"] == REMEHA_PRESET_SCHEDULE_1
+
+        # Setting HVAC mode influences preset mode
+        await hass.services.async_call(
+            domain=ClimateDomain,
+            service="set_hvac_mode",
+            service_data={
+                "entity_id": circa1.entity_id,
+                "hvac_mode": HVACMode.HEAT_COOL,
+            },
+            blocking=True,
+        )
+
+        # Preset mode must have changed to manual
         circa1 = hass.states.get(entity_id="climate.remeha_modbus_test_hub_circa1")
         assert circa1.attributes["preset_mode"] == ClimateZoneMode.MANUAL.name.lower()
 
@@ -269,8 +262,6 @@ async def test_dhw_climate_hvac_mode_off(hass: HomeAssistant, mock_modbus_client
     ):
         await setup_platform(hass=hass)
         await hass.async_block_till_done()
-
-        assert len(hass.states.async_all()) == 2
 
         dhw = hass.states.get(entity_id="climate.remeha_modbus_test_hub_dhw")
         assert dhw is not None
@@ -311,8 +302,6 @@ async def test_dhw_climate_hvac_mode_heat(hass: HomeAssistant, mock_modbus_clien
         await setup_platform(hass=hass)
         await hass.async_block_till_done()
 
-        assert len(hass.states.async_all()) == 2
-
         dhw = hass.states.get(entity_id="climate.remeha_modbus_test_hub_dhw")
         assert dhw is not None
 
@@ -350,8 +339,6 @@ async def test_dhw_climate_hvac_mode_auto(hass: HomeAssistant, mock_modbus_clien
         # Then setup platform.
         await setup_platform(hass=hass)
         await hass.async_block_till_done()
-
-        assert len(hass.states.async_all()) == 2
 
         dhw = hass.states.get(entity_id="climate.remeha_modbus_test_hub_dhw")
         assert dhw is not None
@@ -404,8 +391,6 @@ async def test_dhw_climate_preset_mode_schedule(hass: HomeAssistant, mock_modbus
         await setup_platform(hass=hass)
         await hass.async_block_till_done()
 
-        assert len(hass.states.async_all()) == 2
-
         dhw = hass.states.get(entity_id="climate.remeha_modbus_test_hub_dhw")
         assert dhw is not None
 
@@ -444,8 +429,6 @@ async def test_dhw_climate_preset_mode_eco(hass: HomeAssistant, mock_modbus_clie
         # Then setup platform.
         await setup_platform(hass=hass)
         await hass.async_block_till_done()
-
-        assert len(hass.states.async_all()) == 2
 
         dhw = hass.states.get(entity_id="climate.remeha_modbus_test_hub_dhw")
         assert dhw is not None
@@ -486,8 +469,6 @@ async def test_dhw_climate_preset_mode_comfort(hass: HomeAssistant, mock_modbus_
         # Then setup platform.
         await setup_platform(hass=hass)
         await hass.async_block_till_done()
-
-        assert len(hass.states.async_all()) == 2
 
         dhw = hass.states.get(entity_id="climate.remeha_modbus_test_hub_dhw")
         assert dhw is not None
@@ -530,13 +511,11 @@ async def test_dhw_climate_preset_mode_none(hass: HomeAssistant, mock_modbus_cli
         await setup_platform(hass=hass)
         await hass.async_block_till_done()
 
-        assert len(hass.states.async_all()) == 2
-
         dhw = hass.states.get(entity_id="climate.remeha_modbus_test_hub_dhw")
         assert dhw is not None
 
         # Setting preset to NONE raises an exception.
-        with pytest.raises(InvalidOperationContextError):
+        with pytest.raises(InvalidClimateContext):
             await hass.services.async_call(
                 domain=ClimateDomain,
                 service="set_preset_mode",

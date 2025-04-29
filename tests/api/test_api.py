@@ -12,7 +12,7 @@ from custom_components.remeha_modbus.api import (
     ConnectionType,
     DeviceInstance,
 )
-from custom_components.remeha_modbus.const import ZoneRegisters
+from custom_components.remeha_modbus.const import REMEHA_SENSORS, ZoneRegisters
 from tests.conftest import get_api
 
 
@@ -50,9 +50,9 @@ async def test_read_device_instance(mock_modbus_client):
     """Test that a device can be read through the modbus interface."""
 
     api = get_api(mock_modbus_client=mock_modbus_client)
-    device = await api.async_read_device_instance(1)
+    device = await api.async_read_device_instance(0)
     assert device is not None
-    assert device.id == 1
+    assert device.id == 0
     assert device.hw_version == (2, 1)
     assert device.sw_version == (1, 1)
     assert str(device.board_category) == "EHC-10"
@@ -70,6 +70,16 @@ async def test_read_device_instances(mock_modbus_client):
 
 
 @pytest.mark.parametrize("mock_modbus_client", ["modbus_store.json"], indirect=True)
+async def test_read_sensor_values(mock_modbus_client):
+    """Read values for a given list of variables that are configured as sensors."""
+
+    api = get_api(mock_modbus_client=mock_modbus_client)
+    assert await api.async_read_sensor_values(descriptions=REMEHA_SENSORS.keys()) == dict(
+        zip(REMEHA_SENSORS.keys(), [24.82, 20.44, 20.00, 21.14, 22.54, 1.2, 12.66], strict=True)
+    )
+
+
+@pytest.mark.parametrize("mock_modbus_client", ["modbus_store.json"], indirect=True)
 async def test_read_zone(mock_modbus_client):
     """Read a single zone."""
 
@@ -79,7 +89,7 @@ async def test_read_zone(mock_modbus_client):
     assert zone is not None
     assert zone.current_setpoint == 20.0
     assert zone.current_temparature == 23.2
-    assert zone.dhw_calorifier_hysterisis is None
+    assert zone.dhw_calorifier_hysteresis is None
     assert zone.dhw_comfort_setpoint is None
     assert zone.dhw_reduced_setpoint is None
     assert zone.dhw_tank_temperature is None

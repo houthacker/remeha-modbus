@@ -37,6 +37,7 @@
 				"editor.formatOnSave": true,
 				"editor.formatOnType": true,
 				"files.trimTrailingWhitespace": true,
+				"extensions.verifySignature": false,
 				"[python]": {
 					"editor.codeActionsOnSave": {
 						"source.organizeImports": "explicit"
@@ -49,6 +50,7 @@
 	},
 	"remoteUser": "vscode",
 	"features": {
-		"ghcr.io/devcontainers/features/github-cli:1": {}
+		"ghcr.io/devcontainers/features/github-cli:1": {},
+		"ghcr.io/warrenbuckley/codespace-features/sqlite:latest": {}
 	}
 }
