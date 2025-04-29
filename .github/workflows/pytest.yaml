@@ -25,8 +25,12 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r ${{ github.workspace }}/requirements.test.txt
       - name: Run pytest
+        id: run_pytest
         run: |
           pytest --cov-report=term-missing --junitxml=${{ github.workspace }}/junit-coverage.xml --cov= tests/ | tee ${{ github.workspace }}/pytest-coverage.txt
+      - name: Check for test failures
+        if: ${{ steps.run_pytest.outcome }} == 'failure'
+        run: exit 1
 
       - name: Upload coverage reports
         uses: actions/upload-artifact@v4
