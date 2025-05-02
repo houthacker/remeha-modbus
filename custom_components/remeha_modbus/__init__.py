@@ -15,7 +15,12 @@ from custom_components.remeha_modbus.api import (
 )
 from custom_components.remeha_modbus.coordinator import RemehaUpdateCoordinator
 
-PLATFORMS: list[Platform] = [Platform.CLIMATE, Platform.NUMBER, Platform.SENSOR]
+PLATFORMS: list[Platform] = [
+    Platform.CLIMATE,
+    Platform.NUMBER,
+    Platform.SENSOR,
+    Platform.BINARY_SENSOR,
+]
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
@@ -53,5 +58,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload the Remeha Modbus configuration."""
+
+    # Close the connection to the modbus server.
+    coordinator: RemehaUpdateCoordinator = entry.runtime_data["coordinator"]
+    await coordinator.async_shutdown()
 
     return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)

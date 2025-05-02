@@ -3,6 +3,9 @@
 import pytest
 
 from custom_components.remeha_modbus.api import (
+    Appliance,
+    ApplianceErrorPriority,
+    ApplianceStatus,
     ClimateZone,
     ClimateZoneFunction,
     ClimateZoneHeatingMode,
@@ -75,7 +78,11 @@ async def test_read_sensor_values(mock_modbus_client):
 
     api = get_api(mock_modbus_client=mock_modbus_client)
     assert await api.async_read_sensor_values(descriptions=REMEHA_SENSORS.keys()) == dict(
-        zip(REMEHA_SENSORS.keys(), [24.82, 20.44, 20.00, 21.14, 22.54, 1.2, 12.66], strict=True)
+        zip(
+            REMEHA_SENSORS.keys(),
+            [int("0223", 16), 3, 24.82, 20.44, 20.00, 21.14, 22.54, 1.2, 12.66],
+            strict=True,
+        )
     )
 
 
@@ -210,3 +217,31 @@ async def test_write_enum(mock_modbus_client):
 
     update = await api.async_read_zone_update(zone=zone)
     assert update.heating_mode is ClimateZoneHeatingMode.HEATING
+
+
+@pytest.mark.parametrize("mock_modbus_client", ["modbus_store.json"], indirect=True)
+async def test_read_appliance(mock_modbus_client):
+    """Test that the API can read the appliance status from the modbus device."""
+
+    api = get_api(mock_modbus_client=mock_modbus_client)
+    appliance: Appliance = await api.async_read_appliance()
+
+    assert appliance.current_error == int("0223", 16)  # H02.23 Flow rate error.
+    assert appliance.error_priority == ApplianceErrorPriority.BLOCKING
+
+    status: ApplianceStatus = appliance.status
+    assert not status.flame_on
+    assert not status.heat_pump_on
+    assert not status.electrical_backup_on
+    assert not status.electrical_backup2_on
+    assert not status.dhw_electrical_backup_on
+    assert status.service_required
+    assert not status.power_down_reset_needed
+    assert status.water_pressure_low
+    assert status.appliance_pump_on
+    assert not status.three_way_valve_open
+    assert not status.three_way_valve
+    assert not status.three_way_valve_closed
+    assert not status.dhw_active
+    assert not status.ch_active
+    assert status.cooling_active

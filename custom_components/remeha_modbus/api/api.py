@@ -37,6 +37,7 @@ from custom_components.remeha_modbus.const import (
 from custom_components.remeha_modbus.helpers.gtw08 import TimeOfDay
 from custom_components.remeha_modbus.helpers.modbus import from_registers, to_registers
 
+from .appliance import Appliance, ApplianceErrorPriority, ApplianceStatus
 from .climate_zone import (
     ClimateZone,
     ClimateZoneFunction,
@@ -47,6 +48,7 @@ from .climate_zone import (
 )
 
 _LOGGER = logging.getLogger(__name__)
+
 
 #################################
 ### Device class definitions  ###
@@ -129,6 +131,11 @@ class DeviceBoardCategory:
 
         return False
 
+    def __hash__(self):
+        """Return a hash of this device board category."""
+
+        return hash(self.type)
+
 
 @dataclass(eq=False)
 class DeviceInstance:
@@ -169,10 +176,9 @@ class DeviceInstance:
 
         return False
 
-
-#################################
-### Climate class definitions ###
-#################################
+    def __hash__(self):
+        """Return a hash of this device instance."""
+        return hash((self.id, self.board_category))
 
 
 class ConnectionType(StrEnum):
@@ -315,7 +321,7 @@ class RemehaApi:
         async with self._lock:
             if self._client.connected:
                 try:
-                    await self._client.close()
+                    self._client.close()
                 except ModbusException as ex:
                     _LOGGER.error("Error while closing modbus client", exc_info=ex)
 
@@ -523,6 +529,54 @@ class RemehaApi:
             article_number=article_number,
         )
 
+    async def async_read_appliance(self) -> Appliance:
+        """Read the appliance status registers.
+
+        Returns:
+            `Appliance`: The appliance with its status fields.
+
+        Raises:
+            `ModbusException`: If the appliance status fields cannot be obtained.
+            `ValueError`: If the retrieved modbus data cannot be successfully deserialized.
+
+        """
+
+        current_error: int = from_registers(
+            registers=await self._async_read_registers(variable=MetaRegisters.CURRENT_ERROR),
+            destination_variable=MetaRegisters.CURRENT_ERROR,
+        )
+
+        raw_error_priority = from_registers(
+            registers=await self._async_read_registers(variable=MetaRegisters.ERROR_PRIORITY),
+            destination_variable=MetaRegisters.ERROR_PRIORITY,
+        )
+
+        error_priority: ApplianceErrorPriority = (
+            ApplianceErrorPriority(raw_error_priority)
+            if raw_error_priority
+            else ApplianceErrorPriority.NO_ERROR
+        )
+        appliance_status: ApplianceStatus = ApplianceStatus(
+            bits=(
+                from_registers(
+                    registers=await self._async_read_registers(
+                        variable=MetaRegisters.APPLIANCE_STATUS_1
+                    ),
+                    destination_variable=MetaRegisters.APPLIANCE_STATUS_1,
+                ),
+                from_registers(
+                    registers=await self._async_read_registers(
+                        variable=MetaRegisters.APPLIANCE_STATUS_2
+                    ),
+                    destination_variable=MetaRegisters.APPLIANCE_STATUS_2,
+                ),
+            )
+        )
+
+        return Appliance(
+            current_error=current_error, error_priority=error_priority, status=appliance_status
+        )
+
     async def async_read_sensor_values(
         self, descriptions: list[ModbusVariableDescription]
     ) -> dict[ModbusVariableDescription, Any]:
@@ -561,7 +615,7 @@ class RemehaApi:
 
         Raises
             `ModbusException`: If the list of zones cannot be obtained.
-            `ValueError`: If the retrieved modbus data cannot be deserialized. successfully.
+            `ValueError`: If the retrieved modbus data cannot be successfully deserialized.
 
         """
 

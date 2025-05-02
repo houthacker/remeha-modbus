@@ -31,7 +31,6 @@ HA_TO_PYMODBUS_TYPE: Final[dict[DataType, ModbusClientMixin.DATATYPE]] = {
     DataType.FLOAT64: ModbusClientMixin.DATATYPE.FLOAT64,
     DataType.STRING: ModbusClientMixin.DATATYPE.STRING,
     DataType.TUPLE16: ModbusClientMixin.DATATYPE.UINT16,
-    DataType.CIA_301_TIME_OF_DAY: ModbusClientMixin.DATATYPE.BITS,
 }
 
 
@@ -87,7 +86,7 @@ def _to_registers(
         source_variable.data_type, None
     )
 
-    if mixin_data_type is None:
+    if mixin_data_type is None and source_variable.data_type != DataType.CIA_301_TIME_OF_DAY:
         raise ValueError(
             f"No conversion path from {source_variable.data_type.name} to a modbus data type."
         )
@@ -181,10 +180,7 @@ def from_registers(
     # Ensure the required amount of registers.
     if len(registers) != destination_variable.count:
         raise ValueError(
-            "Got %i registers, but deserializing to %s requires %i.",
-            len(registers),
-            destination_variable.data_type.name,
-            destination_variable.count,
+            f"Got {len(registers)} registers, but deserializing to {destination_variable.data_type.name} requires {destination_variable.count}.",
         )
 
     return _from_registers(variable=destination_variable, registers=registers)

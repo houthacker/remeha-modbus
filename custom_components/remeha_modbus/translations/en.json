@@ -1,83 +1,83 @@
 {
-    "config": {
-        "abort": {
-            "already_configured": "Device is already configured"
-        },
-        "error": {
-            "cannot_connect": "Failed to connect",
-            "unknown": "Unexpected error"
-        },
-        "step": {
-            "modbus_serial": {
-                "data": {
-                    "baudrate": "baudrate",
-                    "bytesize": "bytesize",
-                    "method": "method",
-                    "parity": "parity",
-                    "port": "port",
-                    "stopbits": "stopbits"
-                },
-                "data_description": {
-                    "baudrate": "Speed of the serial connection, higher speed gives better performance.",
-                    "bytesize": "Data size in bits of each byte.",
-                    "method": "Method of the connection to modbus.",
-                    "parity": "Parity of the data bytes.",
-                    "port": "Serial port or USB device where your modbus device is connected to your Home Assistant.",
-                    "stopbits": "Stopbits of the data bytes."
-                }
-            },
-            "modbus_socket": {
-                "data": {
-                    "host": "host",
-                    "port": "port"
-                },
-                "data_description": {
-                    "host": "IP address or hostname of your modbus device, e.g. `192.168.1.1`",
-                    "port": "Network port for communication."
-                }
-            },
-            "user": {
-                "data": {
-                    "name": "Name",
-                    "slave": "Modbus address",
-                    "type": "Connection type"
-                },
-                "data_description": {
-                    "name": "The name of the modbus hub. Must be unique.",
-                    "slave": "The GTW-08 modbus address",
-                    "type": "The type of modbus connection."
-                }
-            }
-        }
+  "config": {
+    "abort": {
+      "already_configured": "Device is already configured"
     },
-    "entity": {
-        "climate": {
-            "remeha_modbus": {
-                "state_attributes": {
-                    "preset_mode": {
-                        "state": {
-                            "anti_frost": "Anti frost",
-                            "comfort": "Comfort",
-                            "eco": "Eco",
-                            "manual": "Manual",
-                            "schedule_1": "Schedule 1",
-                            "schedule_2": "Schedule 2",
-                            "schedule_3": "Schedule 3"
-                        }
-                    }
-                }
-            }
-        }
+    "error": {
+      "cannot_connect": "Failed to connect",
+      "unknown": "Unexpected error"
     },
-    "exceptions": {
-        "climate_invalid_operation_ctx": {
-            "message": "Requested operation {operation} is invalid in preset mode {preset_mode}."
+    "step": {
+      "modbus_serial": {
+        "data": {
+          "baudrate": "baudrate",
+          "bytesize": "bytesize",
+          "method": "method",
+          "parity": "parity",
+          "port": "port",
+          "stopbits": "stopbits"
         },
-        "climate_invalid_operation_ctx_hvac": {
-            "message": "Setting HVAC mode to {hvac_mode} is unsupported for zone {zone_name}."
-        },
-        "climate_unsupported_preset_mode": {
-            "message": "Requested preset mode {preset_mode} is unsupported."
+        "data_description": {
+          "baudrate": "Speed of the serial connection, higher speed gives better performance.",
+          "bytesize": "Data size in bits of each byte.",
+          "method": "Method of the connection to modbus.",
+          "parity": "Parity of the data bytes.",
+          "port": "Serial port or USB device where your modbus device is connected to your Home Assistant.",
+          "stopbits": "Stopbits of the data bytes."
         }
+      },
+      "modbus_socket": {
+        "data": {
+          "host": "host",
+          "port": "port"
+        },
+        "data_description": {
+          "host": "IP address or hostname of your modbus device, e.g. `192.168.1.1`",
+          "port": "Network port for communication."
+        }
+      },
+      "user": {
+        "data": {
+          "name": "Name",
+          "slave": "Modbus address",
+          "type": "Connection type"
+        },
+        "data_description": {
+          "name": "The name of the modbus hub. Must be unique.",
+          "slave": "The GTW-08 modbus address",
+          "type": "The type of modbus connection."
+        }
+      }
     }
+  },
+  "entity": {
+    "climate": {
+      "remeha_modbus": {
+        "state_attributes": {
+          "preset_mode": {
+            "state": {
+              "anti_frost": "Anti frost",
+              "comfort": "Comfort",
+              "eco": "Eco",
+              "manual": "Manual",
+              "schedule_1": "Schedule 1",
+              "schedule_2": "Schedule 2",
+              "schedule_3": "Schedule 3"
+            }
+          }
+        }
+      }
+    }
+  },
+  "exceptions": {
+    "climate_invalid_operation_ctx": {
+      "message": "Requested operation {operation} is invalid in preset mode {preset_mode}."
+    },
+    "climate_invalid_operation_ctx_hvac": {
+      "message": "Setting HVAC mode to {hvac_mode} is unsupported for zone {zone_name}."
+    },
+    "climate_unsupported_preset_mode": {
+      "message": "Requested preset mode {preset_mode} is unsupported."
+    }
+  }
 }

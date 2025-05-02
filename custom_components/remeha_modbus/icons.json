@@ -14,6 +14,23 @@
           }
         }
       }
+    },
+    "binary_sensor": {
+      "flame_on": { "default": "mdi:fire" },
+      "heat_pump_on": { "default": "mdi:heat-pump" },
+      "electrical_backup_on": { "default": "mdi:electric-switch-closed" },
+      "electrical_backup2_on": { "default": "mdi:electric-switch-closed" },
+      "dhw_electrical_backup_on": { "default": "mdi:electric-switch-closed" },
+      "service_requireds": { "default": "mdi:help-box-multiple-outline" },
+      "power_down_reset_needed": { "default": "mdi:restart-alert" },
+      "water_pressure_low": { "default": "mdi:water-alert-outline" },
+      "appliance_pump_on": { "default": "mdi:pump" },
+      "three_way_valve_open": { "default": "mdi:pipe-valve" },
+      "three_way_valve": { "default": "mdi:pipe-valve" },
+      "three_way_valve_closed": { "default": "mdi:pipe-valve" },
+      "dhw_active": { "default": "mdi:water-boiler-auto" },
+      "ch_active": { "default": "mdi:heating-coil" },
+      "cooling_active": { "default": "mdi:coolant-temperature" }
     }
   }
 }
