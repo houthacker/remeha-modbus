@@ -144,7 +144,6 @@ class RemehaBinarySensorEntity(CoordinatorEntity, BinarySensorEntity):
 
     _attr_has_entity_name = True
     _attr_should_poll = False
-    _attr_translation_key = DOMAIN
 
     def __init__(
         self,
@@ -167,6 +166,12 @@ class RemehaBinarySensorEntity(CoordinatorEntity, BinarySensorEntity):
         self._attr_unique_id = name
         self._attr_device_class = device_class
         self._state_func: Callable[[], bool | None] = state_func
+
+    @property
+    def translation_key(self) -> str:
+        """The translation key."""
+
+        return self.name
 
     @property
     def is_on(self) -> bool | None:
