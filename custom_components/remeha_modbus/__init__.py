@@ -61,8 +61,6 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     # Close the connection to the modbus server.
     coordinator: RemehaUpdateCoordinator = entry.runtime_data["coordinator"]
-    api: RemehaApi = entry.runtime_data["api"]
     await coordinator.async_shutdown()
-    await api.async_close()
 
     return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)

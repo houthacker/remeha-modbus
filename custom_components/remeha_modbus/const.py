@@ -220,7 +220,7 @@ class MetaRegisters:
     )
 
     ERROR_PRIORITY: Final[ModbusVariableDescription] = ModbusVariableDescription(
-        start_address=278, name="applianceErrorPriority", data_type=DataType.UINT8
+        start_address=278, name="applianceErrorPriority", data_type=DataType.INT16
     )
 
     APPLIANCE_STATUS_1: Final[ModbusVariableDescription] = ModbusVariableDescription(

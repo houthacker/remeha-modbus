@@ -321,7 +321,7 @@ class RemehaApi:
         async with self._lock:
             if self._client.connected:
                 try:
-                    await self._client.close()
+                    self._client.close()
                 except ModbusException as ex:
                     _LOGGER.error("Error while closing modbus client", exc_info=ex)
 

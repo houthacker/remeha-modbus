@@ -180,10 +180,7 @@ def from_registers(
     # Ensure the required amount of registers.
     if len(registers) != destination_variable.count:
         raise ValueError(
-            "Got %i registers, but deserializing to %s requires %i.",
-            len(registers),
-            destination_variable.data_type.name,
-            destination_variable.count,
+            f"Got {len(registers)} registers, but deserializing to {destination_variable.data_type.name} requires {destination_variable.count}.",
         )
 
     return _from_registers(variable=destination_variable, registers=registers)

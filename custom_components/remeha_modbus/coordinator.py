@@ -120,3 +120,9 @@ class RemehaUpdateCoordinator(DataUpdateCoordinator):
         """Get the current value of a sensor."""
 
         return self.data["sensors"][variable]
+
+    async def async_shutdown(self):
+        """Shutdown this coordinator."""
+
+        await self._api.async_close()
+        return await super().async_shutdown()
