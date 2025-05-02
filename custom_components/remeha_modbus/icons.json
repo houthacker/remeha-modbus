@@ -14,6 +14,25 @@
           }
         }
       }
+    },
+    "binary_sensor": {
+      "remeha_modbus": {
+        "flame_on": "mdi:fire",
+        "heat_pump_on": "mdi:heat-pump",
+        "electrical_backup_on": "mdi:electric-switch-closed",
+        "electrical_backup2_on": "mdi:electric-switch-closed",
+        "dhw_electrical_backup_on": "mdi:electric-switch-closed",
+        "service_requireds": "mdi:help-box-multiple-outline",
+        "power_down_reset_needed": "mdi:restart-alert",
+        "water_pressure_low": "mdi:water-alert-outline",
+        "appliance_pump_on": "mdi:pump",
+        "three_way_valve_open": "mdi:pipe-valve",
+        "three_way_valve": "mdi:pipe-valve",
+        "three_way_valve_closed": "mdi:pipe-valve",
+        "dhw_active": "mdi:water-boiler-auto",
+        "ch_active": "mdi:heating-coil",
+        "cooling_active": "mdi:coolant-temperature"
+      }
     }
   }
 }

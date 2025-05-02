@@ -70,12 +70,13 @@ class RemehaSensorEntity(CoordinatorEntity, SensorEntity):
             _LOGGER.warning("Sensor [%s] not attached to a parent device.", variable.name)
         else:
             self._parent_device_id = parent_device_id
-            self._variable = variable
-            self._attr_name = description.name
-            self._attr_unique_id = variable.name
-            self._attr_device_class = description.device_class
-            self._attr_native_unit_of_measurement = description.native_unit_of_measurement
-            self._attr_state_class = description.state_class
+
+        self._variable = variable
+        self._attr_name = description.name
+        self._attr_unique_id = variable.name
+        self._attr_device_class = description.device_class
+        self._attr_native_unit_of_measurement = description.native_unit_of_measurement
+        self._attr_state_class = description.state_class
 
     @property
     def native_value(self):

@@ -10,6 +10,11 @@ from .api import (
     RemehaApi,  # noqa: F401
     SerialConnectionMethod,  # noqa: F401
 )
+from .appliance import (
+    Appliance,  # noqa: F401
+    ApplianceErrorPriority,  # noqa: F401
+    ApplianceStatus,  # noqa: F401
+)
 from .climate_zone import (
     ClimateZone,  # noqa: F401
     ClimateZoneFunction,  # noqa: F401

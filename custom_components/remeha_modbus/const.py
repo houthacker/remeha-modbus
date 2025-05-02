@@ -215,6 +215,22 @@ class MetaRegisters:
         start_address=384, name="varApTOutside", data_type=DataType.INT16, scale=0.01
     )
 
+    CURRENT_ERROR: Final[ModbusVariableDescription] = ModbusVariableDescription(
+        start_address=277, name="applianceCurrentError", data_type=DataType.UINT16
+    )
+
+    ERROR_PRIORITY: Final[ModbusVariableDescription] = ModbusVariableDescription(
+        start_address=278, name="applianceErrorPriority", data_type=DataType.UINT8
+    )
+
+    APPLIANCE_STATUS_1: Final[ModbusVariableDescription] = ModbusVariableDescription(
+        start_address=279, name="applilanceStatus1", data_type=DataType.UINT8
+    )
+
+    APPLIANCE_STATUS_2: Final[ModbusVariableDescription] = ModbusVariableDescription(
+        start_address=280, name="applilanceStatus2", data_type=DataType.UINT8
+    )
+
     FLOW_TEMPERATURE: Final[ModbusVariableDescription] = ModbusVariableDescription(
         start_address=400, name="varApTFlow", data_type=DataType.INT16, scale=0.01
     )
@@ -423,6 +439,12 @@ class ZoneRegisters:
 
 
 REMEHA_SENSORS: Final[dict[ModbusVariableDescription, SensorEntityDescription]] = {
+    MetaRegisters.CURRENT_ERROR: SensorEntityDescription(  # 277
+        key=MetaRegisters.CURRENT_ERROR.name, name="current_error"
+    ),
+    MetaRegisters.ERROR_PRIORITY: SensorEntityDescription(  # 278
+        key=MetaRegisters.ERROR_PRIORITY.name, name="error_priority"
+    ),
     MetaRegisters.OUTSIDE_TEMPERATURE: SensorEntityDescription(  # 384
         key=MetaRegisters.OUTSIDE_TEMPERATURE.name,
         device_class=SensorDeviceClass.TEMPERATURE,
@@ -440,7 +462,7 @@ REMEHA_SENSORS: Final[dict[ModbusVariableDescription, SensorEntityDescription]] 
     MetaRegisters.RETURN_TEMPERATURE: SensorEntityDescription(  # 401
         key=MetaRegisters.RETURN_TEMPERATURE.name,
         device_class=SensorDeviceClass.TEMPERATURE,
-        name="reteurn_temperature",
+        name="return_temperature",
         native_unit_of_measurement="°C",
         state_class=SensorStateClass.MEASUREMENT,
     ),
