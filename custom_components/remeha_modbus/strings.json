@@ -13,6 +13,24 @@
           "slave": "The GTW-08 modbus address"
         }
       },
+      "auto_scheduling": {
+        "title": "Auto scheduling configuration",
+        "description": "Select a weather entity and provide PV system configuration.",
+        "data": {
+          "weather_entity_id": "Weather entity",
+          "nominal_power_wp": "Nominal power (Wp)",
+          "orientation": "Orientation",
+          "tilt": "Tilt (degrees)",
+          "annual_efficiency_decrease": "Annual efficiency decrease (%)",
+          "installation_date": "Installation date"
+        },
+        "data_description": {
+          "nominal_power_wp": "The total Wp of the PV system",
+          "orientation": "Select the direction the PV panels are facing towards. For panels that are placed East/West, select 'EW' for 50/50 distribution of the total Wp.",
+          "annual_efficiency_decrease": "Enter the annual efficiency decrease in percent. Leave at `0` if unknown.",
+          "installation_date": "The (approximate) installation date to calculate the current system efficiency."
+        }
+      },
       "modbus_serial": {
         "data": {
           "baudrate": "baudrate",

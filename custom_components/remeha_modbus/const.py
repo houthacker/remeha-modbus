@@ -20,7 +20,35 @@ DOMAIN: Final[str] = "remeha_modbus"
 
 # Versioning for the config flow.
 HA_CONFIG_VERSION = 1
-HA_CONFIG_MINOR_VERSION = 0
+HA_CONFIG_MINOR_VERSION = 1
+
+# DHW auto scheduling
+CONFIG_AUTO_SCHEDULE: Final[str] = "auto_schedule"
+WEATHER_ENTITY_ID: Final[str] = "weather_entity_id"
+PV_NOMINAL_POWER_WP: Final[str] = "nominal_power_wp"
+PV_ORIENTATION: Final[str] = "orientation"
+PV_ORIENTATIONS: Final[list[str]] = [
+    "EW",  # East-West: 50% of nominal_power_wp E, 50% W
+    "N",
+    "NNE",
+    "NE",
+    "ENE",
+    "E",
+    "ESE",
+    "SE",
+    "ESS",
+    "S",
+    "SSW",
+    "SW",
+    "WSW",
+    "W",
+    "WNW",
+    "NW",
+    "NWW",
+]
+PV_TILT: Final[str] = "tilt"
+PV_ANNUAL_EFFICIENCY_DECREASE: Final[str] = "annual_efficiency_decrease"
+PV_INSTALLATION_DATE: Final[str] = "installation_date"
 
 # Modbus connection types
 CONNECTION_TCP: Final[str] = "tcp"

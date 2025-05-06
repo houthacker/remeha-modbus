@@ -2,28 +2,48 @@
 
 import uuid
 from collections.abc import Generator
+from datetime import tzinfo
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import pytest
+from homeassistant.components.weather import WeatherEntity
 from homeassistant.const import CONF_HOST, CONF_NAME, CONF_PORT, CONF_TYPE
 from homeassistant.core import HomeAssistant
+from homeassistant.util import dt
 from homeassistant.util.json import JsonObjectType
 from pymodbus.client import ModbusBaseClient
 from pytest_homeassistant_custom_component.common import (
     MockConfigEntry,
+    MockEntity,
     load_json_object_fixture,
 )
 
 from custom_components.remeha_modbus.api import ConnectionType, RemehaApi
 from custom_components.remeha_modbus.const import (
+    CONFIG_AUTO_SCHEDULE,
     CONNECTION_RTU_OVER_TCP,
     DOMAIN,
     HA_CONFIG_MINOR_VERSION,
     HA_CONFIG_VERSION,
     MODBUS_DEVICE_ADDRESS,
+    PV_ANNUAL_EFFICIENCY_DECREASE,
+    PV_INSTALLATION_DATE,
+    PV_NOMINAL_POWER_WP,
+    PV_ORIENTATION,
+    PV_TILT,
     REMEHA_ZONE_RESERVED_REGISTERS,
+    WEATHER_ENTITY_ID,
     ZoneRegisters,
 )
+
+
+class MockWeatherEntity(MockEntity, WeatherEntity):
+    """Mock weather entity."""
+
+    def __init__(self, **values):
+        """Create a new MockWeatherEntity."""
+        super().__init__(**values)
 
 
 def get_api(
@@ -95,8 +115,8 @@ def mock_modbus_client(request) -> Generator[AsyncMock]:
 
             return read_pdu
 
-        async def close():
-            return AsyncMock()
+        def close():
+            return Mock()
 
         async def write_to_store(address: int, values: list[int], **kwargs):
             for idx, r in enumerate(values):
@@ -124,10 +144,40 @@ def mock_modbus_client(request) -> Generator[AsyncMock]:
         yield mock
 
 
-async def setup_platform(hass: HomeAssistant):
+@pytest.fixture
+def mock_config_entry(request) -> Generator[MockConfigEntry]:
+    """Create a mocked config entry.
+
+    If `version` and `version_minor` are provided, arguments introduced after this version are ignored.
+
+    `request.param` is an optional dict with the following keys:
+    * `version` (int): The config entry major version, defaults to current major version.
+    * `version_minor` (int): The config entry minor version, defaults to current minor version.
+    * `hub_name` (str): The modbus hub name, defaults to `test_hub`.
+    * `device_address` (int): The modbus device address, defaults to `100`.
+    * `auto_scheduling` (bool): Whether to enable auto scheduling, defaults to `False`. Since config v1.1
+    * `time_zone` (tzinfo): The time zone. Defaults to `None`. Since config v1.1
+    """
+
+    if not hasattr(request, "param"):
+        yield _create_config_entry()
+    else:
+        args: dict[str, Any] = request.param
+        yield _create_config_entry(
+            version=(
+                args.get("version", HA_CONFIG_VERSION),
+                args.get("minor_version", HA_CONFIG_MINOR_VERSION),
+            ),
+            hub_name=args.get("hub_name", "test_hub"),
+            device_address=args.get("device_address", 100),
+            auto_scheduling=args.get("auto_scheduling", False),
+            time_zone=args.get("time_zone"),
+        )
+
+
+async def setup_platform(hass: HomeAssistant, config_entry: MockConfigEntry):
     """Set up the platform."""
 
-    config_entry = create_config_entry()
     config_entry.add_to_hass(hass=hass)
 
     # We don't want lingering timers after the tests are done, so disable the updates of the update coordinator.
@@ -139,20 +189,43 @@ async def setup_platform(hass: HomeAssistant):
         await hass.async_block_till_done()
 
 
-def create_config_entry(hub_name: str = "test_hub", device_address: int = 100) -> MockConfigEntry:
+def _create_config_entry(
+    version: tuple[int, int] = (HA_CONFIG_VERSION, HA_CONFIG_MINOR_VERSION),
+    hub_name: str = "test_hub",
+    device_address: int = 100,
+    auto_scheduling: bool = False,
+    time_zone: tzinfo | None = None,
+) -> MockConfigEntry:
     """Mock a config entry for Remeha Modbus integration."""
+
+    # v1.0
+    entry_data = {
+        CONF_NAME: hub_name,
+        CONF_TYPE: CONNECTION_RTU_OVER_TCP,
+        MODBUS_DEVICE_ADDRESS: device_address,
+        CONF_HOST: "does.not.matter",
+        CONF_PORT: 8899,
+    }
+
+    # v1.1
+    if version[1] == 1:
+        entry_data |= {CONFIG_AUTO_SCHEDULE: auto_scheduling}
+
+        if auto_scheduling is True:
+            entry_data = entry_data | {
+                WEATHER_ENTITY_ID: "fake_weather",
+                PV_NOMINAL_POWER_WP: 5720,
+                PV_ORIENTATION: "S",
+                PV_TILT: 30.0,
+                PV_ANNUAL_EFFICIENCY_DECREASE: 0.42,
+                PV_INSTALLATION_DATE: dt.now(time_zone=time_zone),
+            }
 
     return MockConfigEntry(
         domain=DOMAIN,
         title=f"Remeha Modbus {hub_name}",
         unique_id=str(uuid.uuid4()),
-        data={
-            CONF_NAME: hub_name,
-            CONF_TYPE: CONNECTION_RTU_OVER_TCP,
-            MODBUS_DEVICE_ADDRESS: device_address,
-            CONF_HOST: "does.not.matter",
-            CONF_PORT: 8899,
-        },
-        version=HA_CONFIG_VERSION,
-        minor_version=HA_CONFIG_MINOR_VERSION,
+        data=entry_data,
+        version=version[0],
+        minor_version=version[1],
     )

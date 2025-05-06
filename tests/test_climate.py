@@ -29,7 +29,7 @@ from .conftest import get_api, setup_platform
 
 
 @pytest.mark.parametrize("mock_modbus_client", ["modbus_store.json"], indirect=True)
-async def test_climates(hass: HomeAssistant, mock_modbus_client):
+async def test_climates(hass: HomeAssistant, mock_modbus_client, mock_config_entry):
     """Test climates."""
 
     api = get_api(mock_modbus_client=mock_modbus_client)
@@ -37,14 +37,14 @@ async def test_climates(hass: HomeAssistant, mock_modbus_client):
         "custom_components.remeha_modbus.api.RemehaApi.create",
         new=lambda name, config: api,
     ):
-        await setup_platform(hass=hass)
+        await setup_platform(hass=hass, config_entry=mock_config_entry)
         await hass.async_block_till_done()
 
         assert len(hass.states.async_all(domain_filter="climate")) == 2
 
 
 @pytest.mark.parametrize("mock_modbus_client", ["modbus_store.json"], indirect=True)
-async def test_dhw_climate(hass: HomeAssistant, mock_modbus_client):
+async def test_dhw_climate(hass: HomeAssistant, mock_modbus_client, mock_config_entry):
     """Test DHW climate entity."""
 
     api = get_api(mock_modbus_client=mock_modbus_client)
@@ -52,7 +52,7 @@ async def test_dhw_climate(hass: HomeAssistant, mock_modbus_client):
         "custom_components.remeha_modbus.api.RemehaApi.create",
         new=lambda name, config: api,
     ):
-        await setup_platform(hass=hass)
+        await setup_platform(hass=hass, config_entry=mock_config_entry)
         await hass.async_block_till_done()
 
         dhw = hass.states.get(entity_id="climate.remeha_modbus_test_hub_dhw")
@@ -142,7 +142,7 @@ async def test_dhw_climate(hass: HomeAssistant, mock_modbus_client):
 
 
 @pytest.mark.parametrize("mock_modbus_client", ["modbus_store.json"], indirect=True)
-async def test_ch_climate(hass: HomeAssistant, mock_modbus_client):
+async def test_ch_climate(hass: HomeAssistant, mock_modbus_client, mock_config_entry):
     """Test CH climate entity."""
 
     api = get_api(mock_modbus_client=mock_modbus_client)
@@ -150,7 +150,7 @@ async def test_ch_climate(hass: HomeAssistant, mock_modbus_client):
         "custom_components.remeha_modbus.api.RemehaApi.create",
         new=lambda name, config: api,
     ):
-        await setup_platform(hass=hass)
+        await setup_platform(hass=hass, config_entry=mock_config_entry)
         await hass.async_block_till_done()
 
         circa1 = hass.states.get(entity_id="climate.remeha_modbus_test_hub_circa1")
@@ -249,7 +249,9 @@ async def test_ch_climate(hass: HomeAssistant, mock_modbus_client):
 
 
 @pytest.mark.parametrize("mock_modbus_client", ["modbus_store.json"], indirect=True)
-async def test_dhw_climate_hvac_mode_off(hass: HomeAssistant, mock_modbus_client):
+async def test_dhw_climate_hvac_mode_off(
+    hass: HomeAssistant, mock_modbus_client, mock_config_entry
+):
     """Test setting HVACMode.OFF.
 
     This must put it in preset 'ECO' and return the correct (lowered) temperature setpoint.
@@ -260,7 +262,7 @@ async def test_dhw_climate_hvac_mode_off(hass: HomeAssistant, mock_modbus_client
         "custom_components.remeha_modbus.api.RemehaApi.create",
         new=lambda name, config: api,
     ):
-        await setup_platform(hass=hass)
+        await setup_platform(hass=hass, config_entry=mock_config_entry)
         await hass.async_block_till_done()
 
         dhw = hass.states.get(entity_id="climate.remeha_modbus_test_hub_dhw")
@@ -282,7 +284,9 @@ async def test_dhw_climate_hvac_mode_off(hass: HomeAssistant, mock_modbus_client
 
 
 @pytest.mark.parametrize("mock_modbus_client", ["modbus_store.json"], indirect=True)
-async def test_dhw_climate_hvac_mode_heat(hass: HomeAssistant, mock_modbus_client):
+async def test_dhw_climate_hvac_mode_heat(
+    hass: HomeAssistant, mock_modbus_client, mock_config_entry
+):
     """Test setting HVACMode.HEAT.
 
     This must put it in preset 'ECO' and return the correct (lowered) temperature setpoint.
@@ -299,7 +303,7 @@ async def test_dhw_climate_hvac_mode_heat(hass: HomeAssistant, mock_modbus_clien
         await mock_modbus_client.set_zone_pump_state(zone_id=2, state=True)
 
         # Then setup the platform and start testing.
-        await setup_platform(hass=hass)
+        await setup_platform(hass=hass, config_entry=mock_config_entry)
         await hass.async_block_till_done()
 
         dhw = hass.states.get(entity_id="climate.remeha_modbus_test_hub_dhw")
@@ -321,7 +325,9 @@ async def test_dhw_climate_hvac_mode_heat(hass: HomeAssistant, mock_modbus_clien
 
 
 @pytest.mark.parametrize("mock_modbus_client", ["modbus_store.json"], indirect=True)
-async def test_dhw_climate_hvac_mode_auto(hass: HomeAssistant, mock_modbus_client):
+async def test_dhw_climate_hvac_mode_auto(
+    hass: HomeAssistant, mock_modbus_client, mock_config_entry
+):
     """Test setting HVACMode.AUTO.
 
     This must put it in preset 'SCHEDULE_x' and return the correct temperature setpoint,
@@ -337,7 +343,7 @@ async def test_dhw_climate_hvac_mode_auto(hass: HomeAssistant, mock_modbus_clien
         await mock_modbus_client.set_zone_pump_state(zone_id=2, state=True)
 
         # Then setup platform.
-        await setup_platform(hass=hass)
+        await setup_platform(hass=hass, config_entry=mock_config_entry)
         await hass.async_block_till_done()
 
         dhw = hass.states.get(entity_id="climate.remeha_modbus_test_hub_dhw")
@@ -373,7 +379,9 @@ async def test_dhw_climate_hvac_mode_auto(hass: HomeAssistant, mock_modbus_clien
 
 
 @pytest.mark.parametrize("mock_modbus_client", ["modbus_store.json"], indirect=True)
-async def test_dhw_climate_preset_mode_schedule(hass: HomeAssistant, mock_modbus_client):
+async def test_dhw_climate_preset_mode_schedule(
+    hass: HomeAssistant, mock_modbus_client, mock_config_entry
+):
     """Test setting preset_mode to SCHEDULE_x (1-3).
 
     This must put it in hvac_mode 'AUTO' and return the correct (lowered) temperature setpoint.
@@ -388,7 +396,7 @@ async def test_dhw_climate_preset_mode_schedule(hass: HomeAssistant, mock_modbus
         await mock_modbus_client.set_zone_pump_state(zone_id=2, state=True)
 
         # Then setup platform.
-        await setup_platform(hass=hass)
+        await setup_platform(hass=hass, config_entry=mock_config_entry)
         await hass.async_block_till_done()
 
         dhw = hass.states.get(entity_id="climate.remeha_modbus_test_hub_dhw")
@@ -415,7 +423,9 @@ async def test_dhw_climate_preset_mode_schedule(hass: HomeAssistant, mock_modbus
 
 
 @pytest.mark.parametrize("mock_modbus_client", ["modbus_store.json"], indirect=True)
-async def test_dhw_climate_preset_mode_eco(hass: HomeAssistant, mock_modbus_client):
+async def test_dhw_climate_preset_mode_eco(
+    hass: HomeAssistant, mock_modbus_client, mock_config_entry
+):
     """Test setting preset_mode to ECO.
 
     This must put it in hvac_mode 'OFF' and return the correct (lowered) temperature setpoint.
@@ -427,7 +437,7 @@ async def test_dhw_climate_preset_mode_eco(hass: HomeAssistant, mock_modbus_clie
         new=lambda name, config: api,
     ):
         # Then setup platform.
-        await setup_platform(hass=hass)
+        await setup_platform(hass=hass, config_entry=mock_config_entry)
         await hass.async_block_till_done()
 
         dhw = hass.states.get(entity_id="climate.remeha_modbus_test_hub_dhw")
@@ -452,7 +462,9 @@ async def test_dhw_climate_preset_mode_eco(hass: HomeAssistant, mock_modbus_clie
 
 
 @pytest.mark.parametrize("mock_modbus_client", ["modbus_store.json"], indirect=True)
-async def test_dhw_climate_preset_mode_comfort(hass: HomeAssistant, mock_modbus_client):
+async def test_dhw_climate_preset_mode_comfort(
+    hass: HomeAssistant, mock_modbus_client, mock_config_entry
+):
     """Test setting preset_mode to COMFORT.
 
     This must put it in hvac_mode 'HEAT' and return the correct temperature setpoint.
@@ -467,7 +479,7 @@ async def test_dhw_climate_preset_mode_comfort(hass: HomeAssistant, mock_modbus_
         await mock_modbus_client.set_zone_pump_state(zone_id=2, state=True)
 
         # Then setup platform.
-        await setup_platform(hass=hass)
+        await setup_platform(hass=hass, config_entry=mock_config_entry)
         await hass.async_block_till_done()
 
         dhw = hass.states.get(entity_id="climate.remeha_modbus_test_hub_dhw")
@@ -492,7 +504,9 @@ async def test_dhw_climate_preset_mode_comfort(hass: HomeAssistant, mock_modbus_
 
 
 @pytest.mark.parametrize("mock_modbus_client", ["modbus_store.json"], indirect=True)
-async def test_dhw_climate_preset_mode_none(hass: HomeAssistant, mock_modbus_client):
+async def test_dhw_climate_preset_mode_none(
+    hass: HomeAssistant, mock_modbus_client, mock_config_entry
+):
     """Test setting preset_mode to NONE.
 
     This must raise an exception since the NONE preset can only be set implicitly.
@@ -508,7 +522,7 @@ async def test_dhw_climate_preset_mode_none(hass: HomeAssistant, mock_modbus_cli
         await mock_modbus_client.set_zone_pump_state(zone_id=2, state=True)
 
         # Then setup platform.
-        await setup_platform(hass=hass)
+        await setup_platform(hass=hass, config_entry=mock_config_entry)
         await hass.async_block_till_done()
 
         dhw = hass.states.get(entity_id="climate.remeha_modbus_test_hub_dhw")

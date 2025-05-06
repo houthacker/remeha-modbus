@@ -6,6 +6,7 @@ import logging
 from typing import Any
 
 import voluptuous as vol
+from homeassistant.components.weather.const import DOMAIN as WeatherDomain
 from homeassistant.config_entries import (
     SOURCE_RECONFIGURE,
     ConfigEntry,
@@ -13,10 +14,11 @@ from homeassistant.config_entries import (
     ConfigFlowResult,
 )
 from homeassistant.const import CONF_HOST, CONF_NAME, CONF_PORT, CONF_TYPE
-from homeassistant.core import HomeAssistant
 from homeassistant.helpers import config_validation as cv
+from homeassistant.helpers.selector import selector
 
 from .const import (
+    CONFIG_AUTO_SCHEDULE,
     CONNECTION_RTU_OVER_TCP,
     CONNECTION_SERIAL,
     CONNECTION_TCP,
@@ -35,6 +37,13 @@ from .const import (
     MODBUS_SERIAL_PARITY_NONE,
     MODBUS_SERIAL_PARITY_ODD,
     MODBUS_SERIAL_STOPBITS,
+    PV_ANNUAL_EFFICIENCY_DECREASE,
+    PV_INSTALLATION_DATE,
+    PV_NOMINAL_POWER_WP,
+    PV_ORIENTATION,
+    PV_ORIENTATIONS,
+    PV_TILT,
+    WEATHER_ENTITY_ID,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -47,6 +56,7 @@ STEP_MODBUS_GENERIC_SCHEMA = vol.Schema(
             [CONNECTION_TCP, CONNECTION_UDP, CONNECTION_RTU_OVER_TCP, CONNECTION_SERIAL]
         ),
         vol.Required(MODBUS_DEVICE_ADDRESS, default=100): cv.positive_int,
+        vol.Optional(CONFIG_AUTO_SCHEDULE, default=False): cv.boolean,
     }
 )
 
@@ -56,11 +66,26 @@ STEP_RECONFIGURE_GENERIC_DATA = vol.Schema(
             [CONNECTION_TCP, CONNECTION_UDP, CONNECTION_RTU_OVER_TCP, CONNECTION_SERIAL]
         ),
         vol.Required(MODBUS_DEVICE_ADDRESS, default=100): cv.positive_int,
+        vol.Required(CONFIG_AUTO_SCHEDULE, default=False): cv.boolean,
+    }
+)
+
+# Schema for auto scheduling support
+STEP_AUTO_SCHEDULING = vol.Schema(
+    {
+        vol.Required(WEATHER_ENTITY_ID): selector(
+            {"entity": {"filter": {"domain": WeatherDomain}}}
+        ),
+        vol.Required(PV_NOMINAL_POWER_WP): cv.positive_int,
+        vol.Optional(PV_ORIENTATION, default="S"): vol.In(PV_ORIENTATIONS),
+        vol.Optional(PV_TILT, default=30.0): cv.positive_float,
+        vol.Optional(PV_ANNUAL_EFFICIENCY_DECREASE, default=0.0): cv.positive_float,
+        vol.Optional(PV_INSTALLATION_DATE): cv.date,
     }
 )
 
 # Schema for modbus serial connections.
-MODBUS_SERIAL_SCHEMA = vol.Schema(
+STEP_MODBUS_SERIAL_SCHEMA = vol.Schema(
     {
         vol.Required(MODBUS_SERIAL_BAUDRATE, default=115200): cv.positive_int,
         vol.Required(MODBUS_SERIAL_BYTESIZE, default=8): vol.All(int, vol.In([5, 6, 7, 8])),
@@ -80,20 +105,32 @@ MODBUS_SERIAL_SCHEMA = vol.Schema(
 )
 
 # Schema for modbus socket connections.
-MODBUS_SOCKET_SCHEMA = vol.Schema(
+STEP_MODBUS_SOCKET_SCHEMA = vol.Schema(
     {vol.Required(CONF_HOST): cv.string, vol.Required(CONF_PORT): cv.port}
 )
 
 
-async def validate_modbus_generic_config(
-    hass: HomeAssistant, data: dict[str, Any]
-) -> dict[str, Any]:
+def _validate_modbus_generic_config(data: dict[str, Any]) -> dict[str, Any]:
     """Validate the user input that should contain the gemeric modbus configuration."""
 
     return {
         CONF_NAME: data[CONF_NAME],
         CONF_TYPE: data[CONF_TYPE],
         MODBUS_DEVICE_ADDRESS: int(data[MODBUS_DEVICE_ADDRESS]),
+        CONFIG_AUTO_SCHEDULE: bool(data[CONFIG_AUTO_SCHEDULE]),
+    }
+
+
+def _validate_auto_scheduling_config(data: dict[str, Any]) -> dict[str, Any]:
+    """Validate the user input that selects the weather entity and provides pv info."""
+
+    return {
+        WEATHER_ENTITY_ID: data[WEATHER_ENTITY_ID],
+        PV_NOMINAL_POWER_WP: data[PV_NOMINAL_POWER_WP],
+        PV_ORIENTATION: data[PV_ORIENTATION],
+        PV_TILT: data[PV_TILT],
+        PV_ANNUAL_EFFICIENCY_DECREASE: data[PV_ANNUAL_EFFICIENCY_DECREASE],
+        PV_INSTALLATION_DATE: data.get(PV_INSTALLATION_DATE),
     }
 
 
@@ -110,7 +147,7 @@ class ConfigFlow(ConfigFlow, domain=DOMAIN):
         self.data: dict[str, Any] = {}
         if user_input is not None:
             try:
-                self.data = await validate_modbus_generic_config(self.hass, user_input)
+                self.data = _validate_modbus_generic_config(user_input)
 
                 # Assign a unique id to force a single config entry for this device.
                 await self.async_set_unique_id(self.data[CONF_NAME])
@@ -123,21 +160,56 @@ class ConfigFlow(ConfigFlow, domain=DOMAIN):
                 )
                 errors["base"] = "unknown"
             else:
+                if self.data[CONFIG_AUTO_SCHEDULE] is True:
+                    return self.async_show_form(
+                        step_id="auto_scheduling", data_schema=STEP_AUTO_SCHEDULING, errors=errors
+                    )
+
                 if self.data[CONF_TYPE] == CONNECTION_SERIAL:
                     return self.async_show_form(
                         step_id="modbus_serial",
-                        data_schema=MODBUS_SERIAL_SCHEMA,
+                        data_schema=STEP_MODBUS_SERIAL_SCHEMA,
                         errors=errors,
                     )
 
                 return self.async_show_form(
                     step_id="modbus_socket",
-                    data_schema=MODBUS_SOCKET_SCHEMA,
+                    data_schema=STEP_MODBUS_SOCKET_SCHEMA,
                     errors=errors,
                 )
 
         return self.async_show_form(
             step_id="user", data_schema=STEP_MODBUS_GENERIC_SCHEMA, errors=errors
+        )
+
+    async def async_step_auto_scheduling(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Select a weather entity and configure solar system."""
+
+        errors: dict[str, str] = {}
+        if user_input is not None:
+            try:
+                self.data |= _validate_auto_scheduling_config(user_input)
+            except Exception:
+                _LOGGER.exception(
+                    "Unexpected exception while creating auto scheduling configuration."
+                )
+                errors["base"] = "unknown"
+
+            if self.data[CONF_TYPE] == CONNECTION_SERIAL:
+                return self.async_show_form(
+                    step_id="modbus_serial", data_schema=STEP_MODBUS_SERIAL_SCHEMA, errors=errors
+                )
+
+            return self.async_show_form(
+                step_id="modbus_socket",
+                data_schema=STEP_MODBUS_SOCKET_SCHEMA,
+                errors=errors,
+            )
+
+        return self.async_show_form(
+            step_id="auto_scheduling", data_schema=STEP_AUTO_SCHEDULING, errors=errors
         )
 
     async def async_step_modbus_serial(
@@ -152,7 +224,7 @@ class ConfigFlow(ConfigFlow, domain=DOMAIN):
                 )
             return self.async_create_entry(title="Remeha Modbus", data=self.data | user_input)
 
-        return self.async_show_form(step_id="modbus_serial", data_schema=MODBUS_SERIAL_SCHEMA)
+        return self.async_show_form(step_id="modbus_serial", data_schema=STEP_MODBUS_SERIAL_SCHEMA)
 
     async def async_step_modbus_socket(
         self, user_input: dict[str, Any] | None = None
@@ -168,7 +240,7 @@ class ConfigFlow(ConfigFlow, domain=DOMAIN):
             return self.async_create_entry(title="Remeha Modbus", data=self.data | user_input)
 
         return self.async_show_form(
-            step_id="modbus_socket", data_schema=MODBUS_SOCKET_SCHEMA, errors=errors
+            step_id="modbus_socket", data_schema=STEP_MODBUS_SOCKET_SCHEMA, errors=errors
         )
 
     async def async_step_reconfigure(self: ConfigFlow, user_input: dict[str, Any] | None = None):
@@ -179,20 +251,25 @@ class ConfigFlow(ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             reconf_entry: ConfigEntry = self._get_reconfigure_entry()
 
-            self.data = await validate_modbus_generic_config(
-                self.hass, user_input | {CONF_NAME: reconf_entry.data[CONF_NAME]}
+            self.data = _validate_modbus_generic_config(
+                user_input | {CONF_NAME: reconf_entry.data[CONF_NAME]}
             )
             await self.async_set_unique_id(reconf_entry.unique_id)
             self._abort_if_unique_id_mismatch()
 
+            if self.data[CONFIG_AUTO_SCHEDULE] is True:
+                return self.async_show_form(
+                    step_id="auto_scheduling", data_schema=STEP_AUTO_SCHEDULING, errors=errors
+                )
+
             # Forward to either serial or socket settings.
             if self.data[CONF_TYPE] == CONNECTION_SERIAL:
                 return self.async_show_form(
-                    step_id="modbus_serial", data_schema=MODBUS_SERIAL_SCHEMA, errors=errors
+                    step_id="modbus_serial", data_schema=STEP_MODBUS_SERIAL_SCHEMA, errors=errors
                 )
 
             return self.async_show_form(
-                step_id="modbus_socket", data_schema=MODBUS_SOCKET_SCHEMA, errors=errors
+                step_id="modbus_socket", data_schema=STEP_MODBUS_SOCKET_SCHEMA, errors=errors
             )
 
         return self.async_show_form(

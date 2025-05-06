@@ -35,6 +35,9 @@ class RemehaUpdateCoordinator(DataUpdateCoordinator):
         self._api: RemehaApi = api
         self._device_instances: dict[int, DeviceInstance] = {}
 
+    def _before_first_update(self) -> bool:
+        return not self.data or "climates" not in self.data
+
     async def _async_setup(self):
         try:
             self._device_instances = {
@@ -49,7 +52,7 @@ class RemehaUpdateCoordinator(DataUpdateCoordinator):
             is_cooling_forced: bool = await self._api.async_is_cooling_forced
             appliance: Appliance = await self._api.async_read_appliance()
             sensors = await self._api.async_read_sensor_values(REMEHA_SENSORS)
-            if not self.data or "climates" not in self.data:
+            if self._before_first_update():
                 zones = await self._api.async_read_zones()
             else:
                 zones = [
