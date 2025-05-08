@@ -37,8 +37,12 @@
           "dhw_boiler_energy_label": "DHW boiler energy label. Use if heat loss rate is unknown"
         },
         "sections": {
-          "pv_options": "PV system configuration",
-          "dhw_boiler_options": "DHW boiler configuration"
+          "pv_options": {
+            "name": "PV system configuration"
+          },
+          "dhw_boiler_options": {
+            "name": "DHW boiler configuration"
+          }
         }
       },
       "modbus_serial": {

@@ -44,8 +44,12 @@
           "dhw_boiler_energy_label": "Het energielabel van de SWW boiler. Gebruik dit veld als het stilstandverlies onbekend is"
         },
         "sections": {
-          "pv_options": "PV systeem configuratie",
-          "dhw_boiler_options": "SWW boiler configuratie"
+          "pv_options": {
+            "name": "PV systeem configuratie"
+          },
+          "dhw_boiler_options": {
+            "name": "SWW boiler configuratie"
+          }
         }
       },
       "modbus_serial": {
