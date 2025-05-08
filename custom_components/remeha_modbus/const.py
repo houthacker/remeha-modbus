@@ -22,33 +22,79 @@ DOMAIN: Final[str] = "remeha_modbus"
 HA_CONFIG_VERSION = 1
 HA_CONFIG_MINOR_VERSION = 1
 
+
 # DHW auto scheduling
+class ForecastField(StrEnum):
+    """Describe the weather forecast action response field names that are relevant for this integration."""
+
+    DATETIME = "datetime"
+    CONDITION = "condition"
+    TEMPERATURE = "temperature"
+    PRECIPITATION = "precipitation"
+    SOLAR_IRRADIANCE = "solar_irradiance"
+    """Solar irradiance is not a field that's available by default"""
+
+
+class PVSystemOrientation(StrEnum):
+    """Describe the PV system orientations."""
+
+    EAST_WEST = "EW"
+    """East/West evenly distributes total PV power over east and west."""
+    NORTH = "N"
+    NORTH_NORTH_EAST = "NNE"
+    NORTH_EAST = "NE"
+    EAST_NORTH_EAST = "ENE"
+    EAST = "E"
+    EAST_SOUTH_EAST = "ESE"
+    SOUTH_EAST = "SE"
+    EAST_SOUTH_SOUTH = "ESS"
+    SOUTH = "S"
+    SOUTH_SOUTH_WEST = "SSW"
+    SOUTH_WEST = "SW"
+    WEST_SOUTH_WEST = "WSW"
+    WEST = "W"
+    WEST_NORTH_WEST = "WNW"
+    NORTH_WEST = "NW"
+    NORTH_WEST_WEST = "NWW"
+
+
+class BoilerEnergyLabel(StrEnum):
+    """Energy label for DHW boiler.
+
+    The energy label is used to provide an alternative method of calculating heat loss rate.
+    See also https://www.energielabel.nl/apparaten/boiler-en-geiser (Dutch)
+    """
+
+    A_PLUS = "A+"
+    A = "A"
+    B = "B"
+    C = "C"
+    D = "D"
+    E = "E"
+    F = "F"
+
+
 CONFIG_AUTO_SCHEDULE: Final[str] = "auto_schedule"
+
+# Keep in sync with services.yaml service name.
+AUTO_SCHEDULE_SERVICE_NAME: Final[str] = "dhw_auto_schedule"
+
 WEATHER_ENTITY_ID: Final[str] = "weather_entity_id"
+"""Weather entity to retrieve the forecast of."""
+
+# PV system parameters
+PV_CONFIG_SECTION: Final[str] = "pv_options"
 PV_NOMINAL_POWER_WP: Final[str] = "nominal_power_wp"
 PV_ORIENTATION: Final[str] = "orientation"
-PV_ORIENTATIONS: Final[list[str]] = [
-    "EW",  # East-West: 50% of nominal_power_wp E, 50% W
-    "N",
-    "NNE",
-    "NE",
-    "ENE",
-    "E",
-    "ESE",
-    "SE",
-    "ESS",
-    "S",
-    "SSW",
-    "SW",
-    "WSW",
-    "W",
-    "WNW",
-    "NW",
-    "NWW",
-]
 PV_TILT: Final[str] = "tilt"
 PV_ANNUAL_EFFICIENCY_DECREASE: Final[str] = "annual_efficiency_decrease"
 PV_INSTALLATION_DATE: Final[str] = "installation_date"
+
+# DHW boiler parameters
+DHW_BOILER_CONFIG_SECTION: Final[str] = "dhw_boiler_options"
+DHW_BOILER_VOLUME: Final[str] = "dhw_boiler_volume"
+DHW_BOILER_HEAT_LOSS_RATE: Final[str] = "dhw_heat_loss_rate"
+DHW_BOILER_ENERGY_LABEL: Final[str] = "dhw_boiler_energy_label"
 
 # Modbus connection types
 CONNECTION_TCP: Final[str] = "tcp"

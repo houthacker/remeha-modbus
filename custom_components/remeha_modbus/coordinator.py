@@ -11,7 +11,11 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, Upda
 from pymodbus import ModbusException
 
 from custom_components.remeha_modbus.api import Appliance, ClimateZone, DeviceInstance, RemehaApi
-from custom_components.remeha_modbus.const import DOMAIN, REMEHA_SENSORS, ModbusVariableDescription
+from custom_components.remeha_modbus.const import (
+    DOMAIN,
+    REMEHA_SENSORS,
+    ModbusVariableDescription,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -123,6 +127,11 @@ class RemehaUpdateCoordinator(DataUpdateCoordinator):
         """Get the current value of a sensor."""
 
         return self.data["sensors"][variable]
+
+    async def async_dhw_auto_schedule(self, forecast: list[dict]) -> None:
+        """Schedule it."""
+
+        _LOGGER.debug("Starting DHW autoschedule")
 
     async def async_shutdown(self):
         """Shutdown this coordinator."""

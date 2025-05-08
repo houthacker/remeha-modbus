@@ -14,15 +14,20 @@ from homeassistant.config_entries import (
     ConfigFlowResult,
 )
 from homeassistant.const import CONF_HOST, CONF_NAME, CONF_PORT, CONF_TYPE
+from homeassistant.data_entry_flow import section
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.selector import selector
 
-from .const import (
+from custom_components.remeha_modbus.const import (
     CONFIG_AUTO_SCHEDULE,
     CONNECTION_RTU_OVER_TCP,
     CONNECTION_SERIAL,
     CONNECTION_TCP,
     CONNECTION_UDP,
+    DHW_BOILER_CONFIG_SECTION,
+    DHW_BOILER_ENERGY_LABEL,
+    DHW_BOILER_HEAT_LOSS_RATE,
+    DHW_BOILER_VOLUME,
     DOMAIN,
     HA_CONFIG_MINOR_VERSION,
     HA_CONFIG_VERSION,
@@ -38,13 +43,16 @@ from .const import (
     MODBUS_SERIAL_PARITY_ODD,
     MODBUS_SERIAL_STOPBITS,
     PV_ANNUAL_EFFICIENCY_DECREASE,
+    PV_CONFIG_SECTION,
     PV_INSTALLATION_DATE,
     PV_NOMINAL_POWER_WP,
     PV_ORIENTATION,
-    PV_ORIENTATIONS,
     PV_TILT,
     WEATHER_ENTITY_ID,
+    BoilerEnergyLabel,
+    PVSystemOrientation,
 )
+from custom_components.remeha_modbus.helpers import config_validation as remeha_cv
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -76,11 +84,30 @@ STEP_AUTO_SCHEDULING = vol.Schema(
         vol.Required(WEATHER_ENTITY_ID): selector(
             {"entity": {"filter": {"domain": WeatherDomain}}}
         ),
-        vol.Required(PV_NOMINAL_POWER_WP): cv.positive_int,
-        vol.Optional(PV_ORIENTATION, default="S"): vol.In(PV_ORIENTATIONS),
-        vol.Optional(PV_TILT, default=30.0): cv.positive_float,
-        vol.Optional(PV_ANNUAL_EFFICIENCY_DECREASE, default=0.0): cv.positive_float,
-        vol.Optional(PV_INSTALLATION_DATE): cv.date,
+        vol.Required(PV_CONFIG_SECTION): section(
+            vol.Schema(
+                {
+                    vol.Required(PV_NOMINAL_POWER_WP): cv.positive_int,
+                    vol.Optional(PV_ORIENTATION, default="S"): remeha_cv.str_enum(
+                        PVSystemOrientation
+                    ),
+                    vol.Optional(PV_TILT, default=30.0): cv.positive_float,
+                    vol.Optional(PV_ANNUAL_EFFICIENCY_DECREASE, default=0.0): cv.positive_float,
+                    vol.Optional(PV_INSTALLATION_DATE): cv.date,
+                }
+            ),
+            {"collapsed": False},
+        ),
+        vol.Required(DHW_BOILER_CONFIG_SECTION): section(
+            vol.Schema(
+                {
+                    vol.Required(DHW_BOILER_VOLUME): cv.positive_int,
+                    vol.Optional(DHW_BOILER_HEAT_LOSS_RATE, default=0.0): cv.positive_float,
+                    vol.Optional(DHW_BOILER_ENERGY_LABEL): remeha_cv.str_enum(BoilerEnergyLabel),
+                }
+            ),
+            {"collapsed": False},
+        ),
     }
 )
 
@@ -124,13 +151,22 @@ def _validate_modbus_generic_config(data: dict[str, Any]) -> dict[str, Any]:
 def _validate_auto_scheduling_config(data: dict[str, Any]) -> dict[str, Any]:
     """Validate the user input that selects the weather entity and provides pv info."""
 
+    pv_options: dict[str, Any] = data[PV_CONFIG_SECTION]
+    dhw_options: dict[str, Any] = data[DHW_BOILER_CONFIG_SECTION]
     return {
         WEATHER_ENTITY_ID: data[WEATHER_ENTITY_ID],
-        PV_NOMINAL_POWER_WP: data[PV_NOMINAL_POWER_WP],
-        PV_ORIENTATION: data[PV_ORIENTATION],
-        PV_TILT: data[PV_TILT],
-        PV_ANNUAL_EFFICIENCY_DECREASE: data[PV_ANNUAL_EFFICIENCY_DECREASE],
-        PV_INSTALLATION_DATE: data.get(PV_INSTALLATION_DATE),
+        PV_CONFIG_SECTION: {
+            PV_NOMINAL_POWER_WP: pv_options[PV_NOMINAL_POWER_WP],
+            PV_ORIENTATION: pv_options[PV_ORIENTATION],
+            PV_TILT: pv_options[PV_TILT],
+            PV_ANNUAL_EFFICIENCY_DECREASE: pv_options[PV_ANNUAL_EFFICIENCY_DECREASE],
+            PV_INSTALLATION_DATE: pv_options.get(PV_INSTALLATION_DATE),
+        },
+        DHW_BOILER_CONFIG_SECTION: {
+            DHW_BOILER_VOLUME: dhw_options.get(DHW_BOILER_VOLUME),
+            DHW_BOILER_HEAT_LOSS_RATE: dhw_options.get(DHW_BOILER_HEAT_LOSS_RATE),
+            DHW_BOILER_ENERGY_LABEL: dhw_options.get(DHW_BOILER_ENERGY_LABEL),
+        },
     }
 
 

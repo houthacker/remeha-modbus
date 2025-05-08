@@ -23,17 +23,23 @@ from custom_components.remeha_modbus.api import ConnectionType, RemehaApi
 from custom_components.remeha_modbus.const import (
     CONFIG_AUTO_SCHEDULE,
     CONNECTION_RTU_OVER_TCP,
+    DHW_BOILER_CONFIG_SECTION,
+    DHW_BOILER_ENERGY_LABEL,
+    DHW_BOILER_HEAT_LOSS_RATE,
+    DHW_BOILER_VOLUME,
     DOMAIN,
     HA_CONFIG_MINOR_VERSION,
     HA_CONFIG_VERSION,
     MODBUS_DEVICE_ADDRESS,
     PV_ANNUAL_EFFICIENCY_DECREASE,
+    PV_CONFIG_SECTION,
     PV_INSTALLATION_DATE,
     PV_NOMINAL_POWER_WP,
     PV_ORIENTATION,
     PV_TILT,
     REMEHA_ZONE_RESERVED_REGISTERS,
     WEATHER_ENTITY_ID,
+    BoilerEnergyLabel,
     ZoneRegisters,
 )
 
@@ -157,6 +163,9 @@ def mock_config_entry(request) -> Generator[MockConfigEntry]:
     * `device_address` (int): The modbus device address, defaults to `100`.
     * `auto_scheduling` (bool): Whether to enable auto scheduling, defaults to `False`. Since config v1.1
     * `time_zone` (tzinfo): The time zone. Defaults to `None`. Since config v1.1
+    * `dhw_boiler_volume` (float): The DHW boiler volume in L. Defaults to 300. Since config v1.1
+    * `dhw_boiler_heat_loss_rate (float): The DHW boiler heat loss rate in Watts. Defaults to 2.19. Since config v1.1
+    * `dhw_energy_label (BoilerEnergyLabel | None): The DHW boiler energy label. Defaults to `None`. Since config v1.1
     """
 
     if not hasattr(request, "param"):
@@ -172,6 +181,9 @@ def mock_config_entry(request) -> Generator[MockConfigEntry]:
             device_address=args.get("device_address", 100),
             auto_scheduling=args.get("auto_scheduling", False),
             time_zone=args.get("time_zone"),
+            dhw_boiler_volume=args.get("dhw_boiler_volume", 300),
+            dhw_boiler_heat_loss_rate=args.get("dhw_boiler_heat_loss_rate", 2.19),
+            dhw_energy_label=args.get("dhw_energy_label"),
         )
 
 
@@ -195,6 +207,9 @@ def _create_config_entry(
     device_address: int = 100,
     auto_scheduling: bool = False,
     time_zone: tzinfo | None = None,
+    dhw_boiler_volume: float = 300,
+    dhw_boiler_heat_loss_rate: float = 2.19,
+    dhw_energy_label: BoilerEnergyLabel | None = None,
 ) -> MockConfigEntry:
     """Mock a config entry for Remeha Modbus integration."""
 
@@ -212,14 +227,23 @@ def _create_config_entry(
         entry_data |= {CONFIG_AUTO_SCHEDULE: auto_scheduling}
 
         if auto_scheduling is True:
-            entry_data = entry_data | {
+            entry_data |= {
                 WEATHER_ENTITY_ID: "fake_weather",
-                PV_NOMINAL_POWER_WP: 5720,
-                PV_ORIENTATION: "S",
-                PV_TILT: 30.0,
-                PV_ANNUAL_EFFICIENCY_DECREASE: 0.42,
-                PV_INSTALLATION_DATE: dt.now(time_zone=time_zone),
+                PV_CONFIG_SECTION: {
+                    PV_NOMINAL_POWER_WP: 5720,
+                    PV_ORIENTATION: "S",
+                    PV_TILT: 30.0,
+                    PV_ANNUAL_EFFICIENCY_DECREASE: 0.42,
+                    PV_INSTALLATION_DATE: dt.now(time_zone=time_zone),
+                },
+                DHW_BOILER_CONFIG_SECTION: {
+                    DHW_BOILER_VOLUME: dhw_boiler_volume,
+                    DHW_BOILER_HEAT_LOSS_RATE: dhw_boiler_heat_loss_rate,
+                },
             }
+
+            if dhw_energy_label is not None:
+                entry_data[DHW_BOILER_CONFIG_SECTION] |= {DHW_BOILER_ENERGY_LABEL: dhw_energy_label}
 
     return MockConfigEntry(
         domain=DOMAIN,

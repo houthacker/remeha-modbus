@@ -19,6 +19,10 @@ from custom_components.remeha_modbus.const import (
     CONNECTION_RTU_OVER_TCP,
     CONNECTION_SERIAL,
     CONNECTION_TCP,
+    DHW_BOILER_CONFIG_SECTION,
+    DHW_BOILER_ENERGY_LABEL,
+    DHW_BOILER_HEAT_LOSS_RATE,
+    DHW_BOILER_VOLUME,
     DOMAIN,
     HA_CONFIG_MINOR_VERSION,
     HA_CONFIG_VERSION,
@@ -31,11 +35,13 @@ from custom_components.remeha_modbus.const import (
     MODBUS_SERIAL_PARITY_NONE,
     MODBUS_SERIAL_STOPBITS,
     PV_ANNUAL_EFFICIENCY_DECREASE,
+    PV_CONFIG_SECTION,
     PV_INSTALLATION_DATE,
     PV_NOMINAL_POWER_WP,
     PV_ORIENTATION,
     PV_TILT,
     WEATHER_ENTITY_ID,
+    PVSystemOrientation,
 )
 from tests.conftest import MockWeatherEntity, get_api, setup_platform
 
@@ -197,19 +203,25 @@ async def test_config_auto_scheduling(hass: HomeAssistant, mock_setup_entry: Asy
         result["flow_id"],
         {
             WEATHER_ENTITY_ID: "weather.fake_weather",
-            PV_NOMINAL_POWER_WP: 1375,
-            PV_ORIENTATION: "S",
-            PV_TILT: 30,
-            PV_ANNUAL_EFFICIENCY_DECREASE: 0.54,
-            PV_INSTALLATION_DATE: datetime(
-                year=2025,
-                month=3,
-                day=14,
-                hour=15,
-                minute=6,
-                second=26,
-                tzinfo=tz.gettz(hass.config.time_zone),
-            ),
+            PV_CONFIG_SECTION: {
+                PV_NOMINAL_POWER_WP: 1375,
+                PV_ORIENTATION: PVSystemOrientation.SOUTH,
+                PV_TILT: 30,
+                PV_ANNUAL_EFFICIENCY_DECREASE: 0.54,
+                PV_INSTALLATION_DATE: datetime(
+                    year=2025,
+                    month=3,
+                    day=14,
+                    hour=15,
+                    minute=6,
+                    second=26,
+                    tzinfo=tz.gettz(hass.config.time_zone),
+                ),
+            },
+            DHW_BOILER_CONFIG_SECTION: {
+                DHW_BOILER_VOLUME: 300,
+                DHW_BOILER_HEAT_LOSS_RATE: 2.19,
+            },
         },
     )
 
@@ -233,19 +245,26 @@ async def test_config_auto_scheduling(hass: HomeAssistant, mock_setup_entry: Asy
         CONF_PORT: 502,
         CONFIG_AUTO_SCHEDULE: True,
         WEATHER_ENTITY_ID: "weather.fake_weather",
-        PV_NOMINAL_POWER_WP: 1375,
-        PV_ORIENTATION: "S",
-        PV_TILT: 30,
-        PV_ANNUAL_EFFICIENCY_DECREASE: 0.54,
-        PV_INSTALLATION_DATE: datetime(
-            year=2025,
-            month=3,
-            day=14,
-            hour=15,
-            minute=6,
-            second=26,
-            tzinfo=tz.gettz(hass.config.time_zone),
-        ),
+        PV_CONFIG_SECTION: {
+            PV_NOMINAL_POWER_WP: 1375,
+            PV_ORIENTATION: PVSystemOrientation.SOUTH,
+            PV_TILT: 30,
+            PV_ANNUAL_EFFICIENCY_DECREASE: 0.54,
+            PV_INSTALLATION_DATE: datetime(
+                year=2025,
+                month=3,
+                day=14,
+                hour=15,
+                minute=6,
+                second=26,
+                tzinfo=tz.gettz(hass.config.time_zone),
+            ),
+        },
+        DHW_BOILER_CONFIG_SECTION: {
+            DHW_BOILER_VOLUME: 300,
+            DHW_BOILER_HEAT_LOSS_RATE: 2.19,
+            DHW_BOILER_ENERGY_LABEL: None,
+        },
     }
     assert len(mock_setup_entry.mock_calls) == 1
 
@@ -296,10 +315,16 @@ async def test_config_auto_scheduling_no_installation_date(
         result["flow_id"],
         {
             WEATHER_ENTITY_ID: "weather.fake_weather",
-            PV_NOMINAL_POWER_WP: 1375,
-            PV_ORIENTATION: "S",
-            PV_TILT: 30,
-            PV_ANNUAL_EFFICIENCY_DECREASE: 0.54,
+            PV_CONFIG_SECTION: {
+                PV_NOMINAL_POWER_WP: 1375,
+                PV_ORIENTATION: PVSystemOrientation.SOUTH,
+                PV_TILT: 30,
+                PV_ANNUAL_EFFICIENCY_DECREASE: 0.54,
+            },
+            DHW_BOILER_CONFIG_SECTION: {
+                DHW_BOILER_VOLUME: 300,
+                DHW_BOILER_HEAT_LOSS_RATE: 2.19,
+            },
         },
     )
 
@@ -323,11 +348,18 @@ async def test_config_auto_scheduling_no_installation_date(
         CONF_PORT: 502,
         CONFIG_AUTO_SCHEDULE: True,
         WEATHER_ENTITY_ID: "weather.fake_weather",
-        PV_NOMINAL_POWER_WP: 1375,
-        PV_ORIENTATION: "S",
-        PV_TILT: 30,
-        PV_ANNUAL_EFFICIENCY_DECREASE: 0.54,
-        PV_INSTALLATION_DATE: None,
+        PV_CONFIG_SECTION: {
+            PV_NOMINAL_POWER_WP: 1375,
+            PV_ORIENTATION: "S",
+            PV_TILT: 30,
+            PV_ANNUAL_EFFICIENCY_DECREASE: 0.54,
+            PV_INSTALLATION_DATE: None,
+        },
+        DHW_BOILER_CONFIG_SECTION: {
+            DHW_BOILER_VOLUME: 300,
+            DHW_BOILER_HEAT_LOSS_RATE: 2.19,
+            DHW_BOILER_ENERGY_LABEL: None,
+        },
     }
     assert len(mock_setup_entry.mock_calls) == 1
 

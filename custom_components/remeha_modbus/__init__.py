@@ -17,6 +17,7 @@ from custom_components.remeha_modbus.api import (
 )
 from custom_components.remeha_modbus.const import CONFIG_AUTO_SCHEDULE
 from custom_components.remeha_modbus.coordinator import RemehaUpdateCoordinator
+from custom_components.remeha_modbus.services import register_services
 
 PLATFORMS: list[Platform] = [
     Platform.CLIMATE,
@@ -57,6 +58,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     entry.runtime_data = {"api": api, "coordinator": coordinator}
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+
+    # Register services only if everything else has been set up ssuccessfully.
+    register_services(hass=hass, config=entry)
 
     return True
 
