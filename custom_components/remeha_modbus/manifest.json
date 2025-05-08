@@ -10,10 +10,6 @@
   "issue_tracker": "https://github.com/houthacker/remeha_modbus/issues",
   "loggers": ["remeha_modbus"],
   "quality_scale": "bronze",
-  "requirements": [
-    "pymodbus==3.9.2",
-    "pydantic==2.10.6",
-    "python-dateutil==2.9.0.post0"
-  ],
+  "requirements": ["pymodbus==3.9.2", "python-dateutil==2.9.0.post0"],
   "version": "0.5.0"
 }
