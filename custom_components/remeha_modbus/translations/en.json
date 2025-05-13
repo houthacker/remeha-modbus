@@ -40,12 +40,56 @@
         "data": {
           "name": "Name",
           "slave": "Modbus address",
-          "type": "Connection type"
+          "type": "Connection type",
+          "auto_schedule": "DHW scheduling"
         },
         "data_description": {
           "name": "The name of the modbus hub. Must be unique.",
           "slave": "The GTW-08 modbus address",
-          "type": "The type of modbus connection."
+          "type": "The type of modbus connection.",
+          "auto_schedule": "Set up automatic DHW scheduling"
+        }
+      },
+      "auto_scheduling": {
+        "title": "Auto scheduling configuration",
+        "description": "Select a weather entity and provide PV system configuration.",
+        "data": {
+          "weather_entity_id": "Weather entity"
+        },
+        "data_description": {
+          "weather_entity_id": "Weather entity of which to retrieve the forecast."
+        },
+        "sections": {
+          "pv_options": {
+            "name": "PV system configuration",
+            "data": {
+              "weather_entity_id": "Weather entity",
+              "nominal_power_wp": "Nominal power (Wp)",
+              "orientation": "Orientation",
+              "tilt": "Tilt (degrees)",
+              "annual_efficiency_decrease": "Annual efficiency decrease (%)",
+              "installation_date": "Installation date"
+            },
+            "data_description": {
+              "nominal_power_wp": "The total Wp of the PV system",
+              "orientation": "Select the direction the PV panels are facing towards. For panels that are placed East/West, select 'EW' for 50/50 distribution of the total Wp.",
+              "annual_efficiency_decrease": "Enter the annual efficiency decrease in percent. Leave at `0` if unknown.",
+              "installation_date": "The (approximate) installation date to calculate the current system efficiency."
+            }
+          },
+          "dhw_boiler_options": {
+            "name": "DHW boiler configuration",
+            "data": {
+              "dhw_boiler_volume": "DHW boiler volume",
+              "dhw_heat_loss_rate": "DHW boiler heat loss rate",
+              "dhw_boiler_energy_label": "DHW boiler energy label"
+            },
+            "data_description": {
+              "dhw_boiler_volume": "The DHW boiler volume in L",
+              "dhw_heat_loss_rate": "The DHW boiler heat loss rate in Watts",
+              "dhw_boiler_energy_label": "DHW boiler energy label. Used if heat loss rate is `0`, otherwise ignored."
+            }
+          }
         }
       }
     }

@@ -39,16 +39,18 @@ def register_services(
         forecasts: dict = await hass.services.async_call(
             domain=WeatherDomain,
             service=SERVICE_GET_FORECASTS,
-            target={"entity_id": config.data[WEATHER_ENTITY_ID]},
+            target={"entity_id": config.data[WEATHER_ENTITY_ID], "type": "hourly"},
             blocking=True,
             return_response=True,
         )
 
+        weather_entity_id: str = config.data[WEATHER_ENTITY_ID]
+
         await coordinator.async_dhw_auto_schedule(
-            forecast=forecasts.get(WEATHER_ENTITY_ID, {}).get("forecast", [])
+            forecast=forecasts.get(weather_entity_id, {}).get("forecast", [])
         )
 
-    hass.services.register(
+    hass.services.async_register(
         domain=DOMAIN,
         service=AUTO_SCHEDULE_SERVICE_NAME,
         service_func=dhw_auto_schedule,

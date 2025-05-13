@@ -12,43 +12,54 @@
         "data": {
           "name": "Naam",
           "type": "Type verbinding",
-          "slave": "Modbus adres"
+          "slave": "Modbus adres",
+          "auto_schedule": "DHW planning"
         },
         "data_description": {
           "name": "De unieke naam van de modbus hub.",
           "type": "Het type modbus verbinding.",
-          "slave": "Het GTW-08 modbus adres."
+          "slave": "Het GTW-08 modbus adres.",
+          "auto_schedule": "Configureer geautomatiseerde DHW planning."
         }
       },
       "auto_scheduling": {
         "title": "Automatisch schema voor SWW",
         "description": "Kies een 'weather' entiteit en vul informatie over je zonnepanelen in.",
         "data": {
-          "weather_entity_id": "Weather entiteit",
-          "nominal_power_wp": "Nominaal piekvermogen (Wp)",
-          "orientation": "Oriëntatie",
-          "tilt": "Hellingshoek (graden)",
-          "annual_efficiency_decrease": "Jaarlijkse afname efficiëntie (%)",
-          "installation_date": "Installatiedatum",
-          "dhw_boiler_volume": "SWW boiler volume",
-          "dhw_heat_loss_rate": "SWW boiler stilstandverlies",
-          "dhw_boiler_energy_label": "SWW boiler energie label"
+          "weather_entity_id": "Weer-entiteit"
         },
         "data_description": {
-          "nominal_power_wp": "Het totale piekvermogen van het PV systeem.",
-          "orientation": "Selecteer de oriëntatie van de zonnepanelen. Zonnepanelen die oost/west (EW) zijn geplaatst verdelen het piekvermogen 50/50.",
-          "annual_efficiency_decrease": "Vul de jaarlijkse efficiëntie-afname in, in procenten. Indien onbekend, vul dan 0 in.",
-          "installation_date": "De installatiedatum (hoeft niet exact) van het PV systeem wordt gebruikt om de huidige efficiëntie te berekenen.",
-          "dhw_boiler_volume": "Het volume in L van de SWW boiler",
-          "dhw_heat_loss_rate": "Het stilstandverlies van de SWW boiler in Watt",
-          "dhw_boiler_energy_label": "Het energielabel van de SWW boiler. Gebruik dit veld als het stilstandverlies onbekend is"
+          "weather_entity_id": "Weer-entiteit die gebruikt wordt om de voospelling op te halen."
         },
         "sections": {
           "pv_options": {
-            "name": "PV systeem configuratie"
+            "name": "PV systeem configuratie",
+            "data": {
+              "nominal_power_wp": "Nominaal piekvermogen (Wp)",
+              "orientation": "Oriëntatie",
+              "tilt": "Hellingshoek (graden)",
+              "annual_efficiency_decrease": "Jaarlijkse afname efficiëntie (%)",
+              "installation_date": "Installatiedatum"
+            },
+            "data_description": {
+              "nominal_power_wp": "Het totale piekvermogen van het PV systeem.",
+              "orientation": "Selecteer de oriëntatie van de zonnepanelen. Zonnepanelen die oost/west (EW) zijn geplaatst verdelen het piekvermogen 50/50.",
+              "annual_efficiency_decrease": "Vul de jaarlijkse efficiëntie-afname in, in procenten. Indien onbekend, vul dan 0 in.",
+              "installation_date": "De installatiedatum (hoeft niet exact) van het PV systeem wordt gebruikt om de huidige efficiëntie te berekenen."
+            }
           },
           "dhw_boiler_options": {
-            "name": "SWW boiler configuratie"
+            "name": "SWW boiler configuratie",
+            "data": {
+              "dhw_boiler_volume": "SWW boiler volume",
+              "dhw_heat_loss_rate": "SWW boiler stilstandverlies",
+              "dhw_boiler_energy_label": "SWW boiler energie label"
+            },
+            "data_description": {
+              "dhw_boiler_volume": "Het volume in L van de SWW boiler",
+              "dhw_heat_loss_rate": "Het stilstandverlies van de SWW boiler in Watt",
+              "dhw_boiler_energy_label": "Het energielabel van de SWW boiler. Gebruik dit veld als het stilstandverlies onbekend is"
+            }
           }
         }
       },

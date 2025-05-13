@@ -88,12 +88,12 @@ STEP_AUTO_SCHEDULING = vol.Schema(
             vol.Schema(
                 {
                     vol.Required(PV_NOMINAL_POWER_WP): cv.positive_int,
-                    vol.Optional(PV_ORIENTATION, default="S"): remeha_cv.str_enum(
-                        PVSystemOrientation
-                    ),
+                    vol.Optional(
+                        PV_ORIENTATION, default=PVSystemOrientation.SOUTH
+                    ): remeha_cv.str_enum(PVSystemOrientation),
                     vol.Optional(PV_TILT, default=30.0): cv.positive_float,
                     vol.Optional(PV_ANNUAL_EFFICIENCY_DECREASE, default=0.0): cv.positive_float,
-                    vol.Optional(PV_INSTALLATION_DATE): cv.date,
+                    vol.Optional(PV_INSTALLATION_DATE): vol.Date(),
                 }
             ),
             {"collapsed": False},

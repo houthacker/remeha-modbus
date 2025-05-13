@@ -60,7 +60,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     # Register services only if everything else has been set up ssuccessfully.
-    register_services(hass=hass, config=entry)
+    register_services(hass=hass, config=entry, coordinator=coordinator)
 
     return True
 

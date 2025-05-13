@@ -1,11 +1,10 @@
 """Test the Remeha Modbus config flow."""
 
 import logging
-from datetime import datetime, timedelta
+from datetime import timedelta
 from unittest.mock import AsyncMock, patch
 
 import pytest
-from dateutil import tz
 from homeassistant import config_entries
 from homeassistant.components.weather.const import DOMAIN as WeatherDomain
 from homeassistant.config_entries import ConfigEntry
@@ -208,15 +207,7 @@ async def test_config_auto_scheduling(hass: HomeAssistant, mock_setup_entry: Asy
                 PV_ORIENTATION: PVSystemOrientation.SOUTH,
                 PV_TILT: 30,
                 PV_ANNUAL_EFFICIENCY_DECREASE: 0.54,
-                PV_INSTALLATION_DATE: datetime(
-                    year=2025,
-                    month=3,
-                    day=14,
-                    hour=15,
-                    minute=6,
-                    second=26,
-                    tzinfo=tz.gettz(hass.config.time_zone),
-                ),
+                PV_INSTALLATION_DATE: "2025-03-14",
             },
             DHW_BOILER_CONFIG_SECTION: {
                 DHW_BOILER_VOLUME: 300,
@@ -250,15 +241,7 @@ async def test_config_auto_scheduling(hass: HomeAssistant, mock_setup_entry: Asy
             PV_ORIENTATION: PVSystemOrientation.SOUTH,
             PV_TILT: 30,
             PV_ANNUAL_EFFICIENCY_DECREASE: 0.54,
-            PV_INSTALLATION_DATE: datetime(
-                year=2025,
-                month=3,
-                day=14,
-                hour=15,
-                minute=6,
-                second=26,
-                tzinfo=tz.gettz(hass.config.time_zone),
-            ),
+            PV_INSTALLATION_DATE: "2025-03-14",
         },
         DHW_BOILER_CONFIG_SECTION: {
             DHW_BOILER_VOLUME: 300,
