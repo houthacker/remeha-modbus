@@ -161,21 +161,6 @@ async def test_config_modbus_socket(hass: HomeAssistant, mock_setup_entry: Async
 async def test_config_auto_scheduling(hass: HomeAssistant, mock_setup_entry: AsyncMock) -> None:
     """Test for modbus socket configuration setup with auto scheduling."""
 
-    # Prepare hass by adding a weather entity.
-    component = EntityComponent(
-        logger=logging.getLogger("weather"),
-        domain=WeatherDomain,
-        hass=hass,
-        scan_interval=timedelta(seconds=-1),
-    )
-
-    # Stop timers when HA stops.
-    component.register_shutdown()
-
-    # Add fake weather entity.
-    entity = MockWeatherEntity(entity_id="weather.fake_weather")
-    await component.async_add_entities([entity])
-
     result = await hass.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )

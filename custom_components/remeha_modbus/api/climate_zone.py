@@ -204,6 +204,8 @@ class ClimateZone:
                     _LOGGER.warning("Ignoring requested DHW setpoint, adjust schedule to do this.")
                 case ClimateZoneMode.MANUAL:
                     self.room_setpoint = value
+                case _:
+                    pass
 
         elif self.is_domestic_hot_water():
             match self.mode:

@@ -2,24 +2,34 @@
 
 __all__ = []
 
-from .api import (
-    ConnectionType,  # noqa: F401
-    DeviceBoardCategory,  # noqa: F401
-    DeviceBoardType,  # noqa: F401
-    DeviceInstance,  # noqa: F401
-    RemehaApi,  # noqa: F401
-    SerialConnectionMethod,  # noqa: F401
+from .api import (  # noqa: F401
+    ConnectionType,
+    DeviceBoardCategory,
+    DeviceBoardType,
+    DeviceInstance,
+    RemehaApi,
+    SerialConnectionMethod,
 )
-from .appliance import (
-    Appliance,  # noqa: F401
-    ApplianceErrorPriority,  # noqa: F401
-    ApplianceStatus,  # noqa: F401
+from .appliance import (  # noqa: F401
+    Appliance,
+    ApplianceErrorPriority,
+    ApplianceStatus,
+    SeasonalMode,
 )
-from .climate_zone import (
-    ClimateZone,  # noqa: F401
-    ClimateZoneFunction,  # noqa: F401
-    ClimateZoneHeatingMode,  # noqa: F401
-    ClimateZoneMode,  # noqa: F401
-    ClimateZoneScheduleId,  # noqa: F401
-    ClimateZoneType,  # noqa: F401
+from .climate_zone import (  # noqa: F401
+    ClimateZone,
+    ClimateZoneFunction,
+    ClimateZoneHeatingMode,
+    ClimateZoneMode,
+    ClimateZoneScheduleId,
+    ClimateZoneType,
+)
+from .schedule import (  # noqa: F401
+    HourlyForecast,
+    Timeslot,
+    TimeslotActivity,
+    TimeslotSetpointType,
+    WeatherForecast,
+    Weekday,
+    ZoneSchedule,
 )

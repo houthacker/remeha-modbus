@@ -121,6 +121,15 @@
     },
     "climate_unsupported_preset_mode": {
       "message": "Aanvraagde voorkeuzemodus {preset_mode} wordt niet ondersteund."
+    },
+    "auto_schedule_unsupported_temperature_unit": {
+      "message": "Entiteit '{entity_id}' gebruikt een niet-ondersteunde temperatuureenheid '{unit_of_temperature}'."
+    },
+    "auto_schedule_no_dhw_climate": {
+      "message": "Kan geen automatische planning maken: er is geen SWW entiteit in de Remeha Modbus integratie."
+    },
+    "auto_schedule_no_forecasts": {
+      "message": "Kan geen automatische planning maken: er is geen uurlijkse weersverwachting beschikbaar."
     }
   }
 }

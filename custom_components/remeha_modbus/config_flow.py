@@ -45,6 +45,8 @@ from custom_components.remeha_modbus.const import (
     PV_ANNUAL_EFFICIENCY_DECREASE,
     PV_CONFIG_SECTION,
     PV_INSTALLATION_DATE,
+    PV_MAX_TILT_DEGREES,
+    PV_MIN_TILT_DEGREES,
     PV_NOMINAL_POWER_WP,
     PV_ORIENTATION,
     PV_TILT,
@@ -91,7 +93,10 @@ STEP_AUTO_SCHEDULING = vol.Schema(
                     vol.Optional(
                         PV_ORIENTATION, default=PVSystemOrientation.SOUTH
                     ): remeha_cv.str_enum(PVSystemOrientation),
-                    vol.Optional(PV_TILT, default=30.0): cv.positive_float,
+                    vol.Optional(PV_TILT, default=30.0): vol.All(
+                        vol.Coerce(float),
+                        vol.Range(min=PV_MIN_TILT_DEGREES, max=PV_MAX_TILT_DEGREES),
+                    ),
                     vol.Optional(PV_ANNUAL_EFFICIENCY_DECREASE, default=0.0): cv.positive_float,
                     vol.Optional(PV_INSTALLATION_DATE): vol.Date(),
                 }

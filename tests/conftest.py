@@ -1,22 +1,33 @@
 """Fixtures for testing."""
 
+import logging
 import uuid
 from collections.abc import Generator
-from datetime import tzinfo
+from datetime import timedelta, tzinfo
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import pytest
-from homeassistant.components.weather import WeatherEntity
+import voluptuous as vol
+from homeassistant.components.weather import (
+    SERVICE_GET_FORECASTS,
+    Forecast,
+    WeatherEntity,
+    WeatherEntityFeature,
+    async_get_forecasts_service,
+)
+from homeassistant.components.weather.const import DOMAIN as WeatherDomain
 from homeassistant.const import CONF_HOST, CONF_NAME, CONF_PORT, CONF_TYPE
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, SupportsResponse
+from homeassistant.helpers.entity_component import EntityComponent
 from homeassistant.util import dt
-from homeassistant.util.json import JsonObjectType
+from homeassistant.util.json import JsonObjectType, JsonValueType
 from pymodbus.client import ModbusBaseClient
 from pytest_homeassistant_custom_component.common import (
     MockConfigEntry,
     MockEntity,
     load_json_object_fixture,
+    load_json_value_fixture,
 )
 
 from custom_components.remeha_modbus.api import ConnectionType, RemehaApi
@@ -51,6 +62,15 @@ class MockWeatherEntity(MockEntity, WeatherEntity):
         """Create a new MockWeatherEntity."""
         super().__init__(**values)
 
+    @property
+    def supported_features(self) -> int | None:
+        """Return the features of this entity."""
+        return WeatherEntityFeature.FORECAST_HOURLY
+
+    async def async_forecast_hourly(self) -> list[Forecast] | None:
+        """Return the hourly forecast in native units."""
+        return load_json_value_fixture("forecast.json")
+
 
 def get_api(
     mock_modbus_client: ModbusBaseClient,
@@ -71,6 +91,12 @@ def get_api(
         client=mock_modbus_client,
         device_address=device_address,
     )
+
+
+@pytest.fixture
+def json_fixture(request) -> JsonValueType:
+    """Read a fixture and return it as a `JsonValueType`."""
+    return load_json_value_fixture(filename=request.param)
 
 
 @pytest.fixture(autouse=True)
@@ -105,7 +131,9 @@ def mock_modbus_client(request) -> Generator[AsyncMock]:
             "pymodbus.pdu.register_message.WriteMultipleRegistersRequest", autospec=True
         ) as write_pdu,
     ):
-        store: JsonObjectType = load_json_object_fixture(request.param)
+        store: JsonObjectType = load_json_object_fixture(
+            request.param if hasattr(request, "param") else "modbus_store.json"
+        )
 
         def get_registers(address: int, count: int) -> list[int]:
             return [
@@ -190,6 +218,33 @@ def mock_config_entry(request) -> Generator[MockConfigEntry]:
 async def setup_platform(hass: HomeAssistant, config_entry: MockConfigEntry):
     """Set up the platform."""
 
+    # Prepare hass by adding a weather entity.
+    component = EntityComponent[WeatherEntity](
+        logger=logging.getLogger("weather"),
+        domain=WeatherDomain,
+        hass=hass,
+        scan_interval=timedelta(seconds=-1),
+    )
+
+    # Stop timers when HA stops.
+    component.register_shutdown()
+
+    # Add fake weather entity.
+    entity: WeatherEntity = MockWeatherEntity(entity_id="weather.fake_weather")
+    await component.async_add_entities([entity])
+
+    component.async_register_entity_service(
+        name=SERVICE_GET_FORECASTS,
+        schema={vol.Required("type"): vol.In(("daily", "hourly", "twice_daily"))},
+        func=async_get_forecasts_service,
+        required_features=[
+            WeatherEntityFeature.FORECAST_DAILY,
+            WeatherEntityFeature.FORECAST_HOURLY,
+            WeatherEntityFeature.FORECAST_TWICE_DAILY,
+        ],
+        supports_response=SupportsResponse.ONLY,
+    )
+
     config_entry.add_to_hass(hass=hass)
 
     # We don't want lingering timers after the tests are done, so disable the updates of the update coordinator.
@@ -228,13 +283,13 @@ def _create_config_entry(
 
         if auto_scheduling is True:
             entry_data |= {
-                WEATHER_ENTITY_ID: "fake_weather",
+                WEATHER_ENTITY_ID: "weather.fake_weather",
                 PV_CONFIG_SECTION: {
                     PV_NOMINAL_POWER_WP: 5720,
                     PV_ORIENTATION: "S",
                     PV_TILT: 30.0,
                     PV_ANNUAL_EFFICIENCY_DECREASE: 0.42,
-                    PV_INSTALLATION_DATE: dt.now(time_zone=time_zone),
+                    PV_INSTALLATION_DATE: dt.now(time_zone=time_zone).date(),
                 },
                 DHW_BOILER_CONFIG_SECTION: {
                     DHW_BOILER_VOLUME: dhw_boiler_volume,

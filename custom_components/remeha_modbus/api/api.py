@@ -37,7 +37,7 @@ from custom_components.remeha_modbus.const import (
 from custom_components.remeha_modbus.helpers.gtw08 import TimeOfDay
 from custom_components.remeha_modbus.helpers.modbus import from_registers, to_registers
 
-from .appliance import Appliance, ApplianceErrorPriority, ApplianceStatus
+from .appliance import Appliance, ApplianceErrorPriority, ApplianceStatus, SeasonalMode
 from .climate_zone import (
     ClimateZone,
     ClimateZoneFunction,
@@ -573,8 +573,18 @@ class RemehaApi:
             )
         )
 
+        season_mode: SeasonalMode = SeasonalMode(
+            from_registers(
+                registers=await self._async_read_registers(variable=MetaRegisters.SEASON_MODE),
+                destination_variable=MetaRegisters.SEASON_MODE,
+            )
+        )
+
         return Appliance(
-            current_error=current_error, error_priority=error_priority, status=appliance_status
+            current_error=current_error,
+            error_priority=error_priority,
+            status=appliance_status,
+            season_mode=season_mode,
         )
 
     async def async_read_sensor_values(
