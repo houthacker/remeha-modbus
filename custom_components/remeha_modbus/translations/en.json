@@ -124,7 +124,7 @@
       "message": "Requested preset mode {preset_mode} is unsupported."
     },
     "auto_schedule_unsupported_temperature_unit": {
-      "message": "Entity '{entity_id}' uses an unsupported temperature unit '{unit_of_temperature}'."
+      "message": "Entity {entity_id} uses an unsupported temperature unit {unit_of_temperature}."
     },
     "auto_schedule_no_dhw_climate": {
       "message": "Cannot auto schedule: no DHW entity exists in Remeha Modbus integration."
