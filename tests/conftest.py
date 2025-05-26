@@ -69,7 +69,9 @@ class MockWeatherEntity(MockEntity, WeatherEntity):
 
     async def async_forecast_hourly(self) -> list[Forecast] | None:
         """Return the hourly forecast in native units."""
-        return load_json_value_fixture("forecast.json")
+
+        # TODO Update timestamps to now() + relative hours.
+        return load_json_value_fixture("weather_forecast.json")
 
 
 def get_api(

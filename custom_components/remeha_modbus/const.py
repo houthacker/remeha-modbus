@@ -318,6 +318,18 @@ class BoilerConfiguration:
     """The boiler energy label, if the heat loss rate is not available."""
 
 
+class Weekday(Enum):
+    """Enumeration for days of the week."""
+
+    MONDAY = 0
+    TUESDAY = 1
+    WEDNESDAY = 2
+    THURSDAY = 3
+    FRIDAY = 4
+    SATURDAY = 6
+    SUNDAY = 7
+
+
 CONFIG_AUTO_SCHEDULE: Final[str] = "auto_schedule"
 
 # Keep in sync with services.yaml service name.
@@ -421,6 +433,9 @@ class DataType(StrEnum):
     TUPLE16 = "tuple16"
     """A `tuple[int, int]` read from a single register."""
 
+    ZONE_TIME_PROGRAM = "zone_time_program"
+    """A zone time program for a single day, encoded in bytes as defined in the GTW-08 parameter list."""
+
 
 class Limits(float, Enum):
     """Forced limits users must not exceed."""
@@ -498,6 +513,8 @@ class ModbusVariableDescription:
                     return 3
                 case DataType.UINT64 | DataType.INT64 | DataType.FLOAT64:
                     return 4
+                case DataType.ZONE_TIME_PROGRAM:
+                    return 10
                 case _:
                     # Raise an error if self.count cannot be calculated.
                     raise ValueError(
@@ -688,44 +705,37 @@ class ZoneRegisters:
     TIME_PROGRAM_MONDAY: Final[ModbusVariableDescription] = ModbusVariableDescription(
         start_address=689,
         name="parZoneTimeProgramMonday",
-        data_type=DataType.STRING,
-        count=10,
+        data_type=DataType.ZONE_TIME_PROGRAM,
     )
     TIME_PROGRAM_TUESDAY: Final[ModbusVariableDescription] = ModbusVariableDescription(
         start_address=699,
         name="parZoneTimeProgramTuesday",
-        data_type=DataType.STRING,
-        count=10,
+        data_type=DataType.ZONE_TIME_PROGRAM,
     )
     TIME_PROGRAM_WEDNESDAY: Final[ModbusVariableDescription] = ModbusVariableDescription(
         start_address=709,
         name="parZoneTimeProgramWednesday",
-        data_type=DataType.STRING,
-        count=10,
+        data_type=DataType.ZONE_TIME_PROGRAM,
     )
     TIME_PROGRAM_THURSDAY: Final[ModbusVariableDescription] = ModbusVariableDescription(
         start_address=719,
         name="parZoneTimeProgramThursday",
-        data_type=DataType.STRING,
-        count=10,
+        data_type=DataType.ZONE_TIME_PROGRAM,
     )
     TIME_PROGRAM_FRIDAY: Final[ModbusVariableDescription] = ModbusVariableDescription(
         start_address=729,
         name="parZoneTimeProgramFriday",
-        data_type=DataType.STRING,
-        count=10,
+        data_type=DataType.ZONE_TIME_PROGRAM,
     )
     TIME_PROGRAM_SATURDAY: Final[ModbusVariableDescription] = ModbusVariableDescription(
         start_address=739,
         name="parZoneTimeProgramSaturday",
-        data_type=DataType.STRING,
-        count=10,
+        data_type=DataType.ZONE_TIME_PROGRAM,
     )
     TIME_PROGRAM_SUNDAY: Final[ModbusVariableDescription] = ModbusVariableDescription(
         start_address=749,
         name="parZoneTimeProgramSunday",
-        data_type=DataType.STRING,
-        count=10,
+        data_type=DataType.ZONE_TIME_PROGRAM,
     )
     END_TIME_MODE_CHANGE: Final[ModbusVariableDescription] = ModbusVariableDescription(
         start_address=978,
@@ -759,6 +769,16 @@ class ZoneRegisters:
         friendly_name="CM040",
     )
 
+
+WEEKDAY_TO_MODBUS_VARIABLE: Final[dict[Weekday, ModbusVariableDescription]] = {
+    Weekday.MONDAY: ZoneRegisters.TIME_PROGRAM_MONDAY,
+    Weekday.TUESDAY: ZoneRegisters.TIME_PROGRAM_TUESDAY,
+    Weekday.WEDNESDAY: ZoneRegisters.TIME_PROGRAM_WEDNESDAY,
+    Weekday.THURSDAY: ZoneRegisters.TIME_PROGRAM_THURSDAY,
+    Weekday.FRIDAY: ZoneRegisters.TIME_PROGRAM_FRIDAY,
+    Weekday.SATURDAY: ZoneRegisters.TIME_PROGRAM_SATURDAY,
+    Weekday.SUNDAY: ZoneRegisters.TIME_PROGRAM_SUNDAY,
+}
 
 REMEHA_SENSORS: Final[dict[ModbusVariableDescription, SensorEntityDescription]] = {
     MetaRegisters.CURRENT_ERROR: SensorEntityDescription(  # 277

@@ -33,6 +33,7 @@ from custom_components.remeha_modbus.const import (
     PV_ORIENTATION,
     PV_TILT,
     REMEHA_SENSORS,
+    WEEKDAY_TO_MODBUS_VARIABLE,
     BoilerConfiguration,
     BoilerEnergyLabel,
     ModbusVariableDescription,
@@ -207,20 +208,20 @@ class RemehaUpdateCoordinator(DataUpdateCoordinator):
             temperature_unit (UnitOfTemperature): The temperature of the weather unit providing the forecast. Converted to `UnitOfTemperature.CELSIUS` if necessary.
         """
 
-        dhw_entities: list[ClimateZone] = self.get_climates(
-            lambda zone: zone.is_domestic_hot_water()
-        )
+        _LOGGER.debug("Searching for DHW zones")
+        dhw_zones: list[ClimateZone] = self.get_climates(lambda zone: zone.is_domestic_hot_water())
 
-        if not dhw_entities:
+        if not dhw_zones:
             raise RemehaIncorrectServiceCall(
                 translation_domain=DOMAIN, translation_key="auto_schedule_no_dhw_climate"
             )
-        if len(dhw_entities) > 1:
+        if len(dhw_zones) > 1:
             _LOGGER.warning(
                 "Found multiple DHW climate entities, using the first for auto scheduling."
             )
 
-        dhw_entity: ClimateZone = dhw_entities[0]
+        dhw_zone: ClimateZone = dhw_zones[0]
+        _LOGGER.debug("Using DHW zone with id=%d", dhw_zone.id)
 
         weather_forecast: WeatherForecast = WeatherForecast(
             unit_of_temperature=temperature_unit,
@@ -232,14 +233,22 @@ class RemehaUpdateCoordinator(DataUpdateCoordinator):
                 weather_forecast=weather_forecast,
                 pv_system=_config_to_pv_config(self.config_entry),
                 boiler_config=_config_to_boiler_config(self.config_entry),
-                boiler_zone=dhw_entity,
+                boiler_zone=dhw_zone,
                 appliance_seasonal_mode=self.get_appliance().season_mode,
             )
         except Exception as e:
             raise RemehaServiceException from e
 
-        _LOGGER.info("Proposing schedule: %s", schedule)
-        _LOGGER.debug("Starting DHW autoschedule")
+        _LOGGER.debug("Schedule generated:\n\n%s\n\n, now pushing it to the appliance.", schedule)
+
+        try:
+            await self._api.async_write_variable(
+                variable=WEEKDAY_TO_MODBUS_VARIABLE[schedule.day],
+                value=schedule,
+                offset=self._api.get_zone_register_offset(zone=dhw_zone),
+            )
+        except ValueError as e:
+            raise RemehaServiceException from e
 
     async def async_shutdown(self):
         """Shutdown this coordinator."""

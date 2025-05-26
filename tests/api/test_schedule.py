@@ -12,7 +12,6 @@ from custom_components.remeha_modbus.api.schedule import (
     Timeslot,
     TimeslotActivity,
     TimeslotSetpointType,
-    Weekday,
     ZoneSchedule,
 )
 from custom_components.remeha_modbus.const import (
@@ -20,6 +19,7 @@ from custom_components.remeha_modbus.const import (
     BoilerEnergyLabel,
     PVSystem,
     PVSystemOrientation,
+    Weekday,
 )
 from tests.conftest import get_api
 
@@ -104,7 +104,7 @@ def test_encode_time_schedule():
     assert schedule.encode() == expected
 
 
-@pytest.mark.parametrize("json_fixture", ["forecast.json"], indirect=True)
+@pytest.mark.parametrize("json_fixture", ["weather_forecast.json"], indirect=True)
 async def test_generate_dhw_time_schedule(json_fixture, mock_modbus_client):
     """Test generating a time schedule for heating the DHW boiler."""
 

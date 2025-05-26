@@ -10,7 +10,6 @@ from typing import Any, Self, cast
 from dateutil import parser, relativedelta
 from homeassistant.const import UnitOfTemperature
 
-from custom_components.remeha_modbus.api import ClimateZone, ClimateZoneScheduleId, SeasonalMode
 from custom_components.remeha_modbus.const import (
     AUTO_SCHEDULE_MINIMAL_END_HOUR,
     BOILER_MAX_ALLOWED_HEAT_DURATION,
@@ -25,10 +24,14 @@ from custom_components.remeha_modbus.const import (
     BoilerEnergyLabel,
     ForecastField,
     PVSystem,
+    Weekday,
 )
 from custom_components.remeha_modbus.const import REMEHA_TIME_PROGRAM_SLOT_SIZE as SLOT_SIZE
 from custom_components.remeha_modbus.errors import AutoSchedulingError
 from custom_components.remeha_modbus.helpers.iterators import consecutive_groups
+
+from .appliance import SeasonalMode
+from .climate_zone import ClimateZone, ClimateZoneScheduleId
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -93,18 +96,6 @@ class WeatherForecast:
 
     forecasts: list[HourlyForecast]
     """A list containing the hourly forecasts for the next 24 hours."""
-
-
-class Weekday(Enum):
-    """Enumeration for days of the week."""
-
-    MONDAY = 0
-    TUESDAY = 1
-    WEDNESDAY = 2
-    THURSDAY = 3
-    FRIDAY = 4
-    SATURDAY = 6
-    SUNDAY = 7
 
 
 class TimeslotActivity(Enum):

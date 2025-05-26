@@ -28,10 +28,12 @@ from custom_components.remeha_modbus.const import (
     MODBUS_SERIAL_STOPBITS,
     REMEHA_DEVICE_INSTANCE_RESERVED_REGISTERS,
     REMEHA_ZONE_RESERVED_REGISTERS,
+    WEEKDAY_TO_MODBUS_VARIABLE,
     DataType,
     DeviceInstanceRegisters,
     MetaRegisters,
     ModbusVariableDescription,
+    Weekday,
     ZoneRegisters,
 )
 from custom_components.remeha_modbus.helpers.gtw08 import TimeOfDay
@@ -46,6 +48,7 @@ from .climate_zone import (
     ClimateZoneScheduleId,
     ClimateZoneType,
 )
+from .schedule import ZoneSchedule
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -955,39 +958,51 @@ class RemehaApi:
             dhw_tank_temperature=dhw_tank_temperature,
         )
 
-    async def async_write_enum(
-        self, variable: ModbusVariableDescription, value: Enum | None, offset: int = 0
-    ) -> None:
-        """Write the given enum value to the modbus device.
+    async def async_read_zone_schedule(
+        self, zone: ClimateZone | int, schedule_id: ClimateZoneScheduleId, day: Weekday
+    ) -> ZoneSchedule:
+        """Read a single climate zone schedule from the modbus interface.
 
         Args:
-            variable (ModbusVariableDescription): The description of the variable to write.
-            value (Enum | None): The value to write. If `None`, the GTW-08 NULL value is written instead.
-            offset (int): The offset in registers of `variable.start_address`. Used for zone- and device objects.
+            zone (ClimateZone | int): The `ClimateZone` or its one-based id the time program is for.
+            schedule_id (ClimateZoneScheduleId): The id of the schedule to read.
+            day (Weekday): The weekday of the requested schedule.
+
+        Returns:
+            `ZoneSchedule`: The requested zone schedule, or `None` if it has not been configured.
 
         Raises:
-            TypeError: If `value` is not an `Enum` or `None`.
-            ModbusException: If the connection to the modbus device is lost or if the write request fails.
-            ValueError:
-                * If no conversion path exists between `variable.data_type` and `value`
-                * If conversion to a numeric type fails.
-                * If `value` is a `tuple` which does not contain exactly two elements.
+            `ModbusException`: If the required registers cannot be read.
+            `ValueError`: If deserializing the registers to a `ZoneSchedule` fails.
 
         """
-        if value is None:
-            await self.async_write_primitive(variable=variable, value=None, offset=offset)
-        elif isinstance(value, Enum):
-            await self.async_write_primitive(variable=variable, value=value.value, offset=offset)
-        else:
-            raise TypeError(f"Expect value to be an Enum or None, but got {type(value).__name__}")
 
-    async def async_write_primitive(
+        zone_id: int = zone.id if isinstance(zone, ClimateZone) else zone
+        variable: ModbusVariableDescription = WEEKDAY_TO_MODBUS_VARIABLE[day]
+        zone_register_offset = self.get_zone_register_offset(zone)
+
+        schedule_bytes: bytes = from_registers(
+            registers=await self._async_read_registers(
+                variable=variable, offset=zone_register_offset
+            ),
+            destination_variable=variable,
+        )
+
+        return (
+            None
+            if schedule_bytes is None
+            else ZoneSchedule.decode(
+                id=schedule_id, zone_id=zone_id, day=day, encoded_schedule=schedule_bytes
+            )
+        )
+
+    async def async_write_variable(
         self,
         variable: ModbusVariableDescription,
-        value: str | float | bool | tuple[int, int] | datetime | None,
+        value: str | float | bool | tuple[int, int] | datetime | Enum | ZoneSchedule | None,
         offset: int = 0,
     ) -> None:
-        """Write a single primitive value to the modbus device.
+        """Write a single variable to the modbus device.
 
         ### Notes:
             * If `value` is a tuple, the whole tuple must fit in a single register, contain exactly two elements that are both treated as unsigned bytes.
@@ -996,8 +1011,8 @@ class RemehaApi:
 
         Args:
             variable (ModbusVariableDescription): The description of the variable to write.
-            value (str|float|bool|tuple[int,int]|datetime|None): The value to write. If `None`, the GTW-08 NULL value is written instead.
-            offset (int): The offset in registers of `variable.start_address`. Used for zone- and device objects.
+            value (str|float|bool|tuple[int,int]|datetime|Enum|ZoneSchedule|None): The value to write. If `None`, the GTW-08 NULL value is written instead.
+            offset (int): The offset in registers of `variable.start_address`. Used for zone-, device and schedule objects.
 
         Raises:
             ModbusException: If the connection to the modbus device is lost or if the write request fails.
@@ -1016,6 +1031,12 @@ class RemehaApi:
                 )
 
             value = TimeOfDay.to_bytes(value)
+
+        if isinstance(value, Enum):
+            value = value.value
+
+        if isinstance(value, ZoneSchedule):
+            value = value.encode()
 
         await self._async_write_registers(
             variable=variable,

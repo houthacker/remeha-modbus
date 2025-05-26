@@ -262,7 +262,7 @@ class RemehaDhwEntity(RemehaClimateEntity):
         zone_offset: int = self.api.get_zone_register_offset(zone)
         if hvac_mode == HVACMode.OFF:
             # There is no real 'off' mode, but 'eco' mode comes as close as possible to it.
-            await self.api.async_write_enum(
+            await self.api.async_write_variable(
                 variable=ZoneRegisters.MODE,
                 value=ClimateZoneMode.ANTI_FROST,
                 offset=zone_offset,
@@ -273,14 +273,14 @@ class RemehaDhwEntity(RemehaClimateEntity):
             # although you could play with setpoint and hysteresis in comfort mode.
             # HVACMode.HEAT translates best to 'comfort' mode since that keeps the DHW boiler
             # at the configured comfort(able) temperature.
-            await self.api.async_write_enum(
+            await self.api.async_write_variable(
                 variable=ZoneRegisters.MODE,
                 value=ClimateZoneMode.MANUAL,
                 offset=zone_offset,
             )
             zone.mode = ClimateZoneMode.MANUAL
         elif hvac_mode == HVACMode.AUTO:
-            await self.api.async_write_enum(
+            await self.api.async_write_variable(
                 variable=ZoneRegisters.MODE,
                 value=ClimateZoneMode.SCHEDULING,
                 offset=zone_offset,
@@ -309,7 +309,7 @@ class RemehaDhwEntity(RemehaClimateEntity):
         zone_offset: int = self.api.get_zone_register_offset(zone)
         if preset_mode in [PRESET_COMFORT, PRESET_ECO]:
             zone_mode: ClimateZoneMode = HA_CLIMATE_PRESET_TO_REMEHA_ZONE_MODE[preset_mode]
-            await self.api.async_write_enum(
+            await self.api.async_write_variable(
                 variable=ZoneRegisters.MODE, value=zone_mode, offset=zone_offset
             )
 
@@ -319,12 +319,12 @@ class RemehaDhwEntity(RemehaClimateEntity):
             # This prevents the user ending up with an invalid zone state if the latter fails.
             schedule_id: ClimateZoneScheduleId = HA_SCHEDULE_TO_REMEHA_SCHEDULE[preset_mode]
 
-            await self.api.async_write_enum(
+            await self.api.async_write_variable(
                 variable=ZoneRegisters.SELECTED_TIME_PROGRAM,
                 value=schedule_id,
                 offset=zone_offset,
             )
-            await self.api.async_write_enum(
+            await self.api.async_write_variable(
                 variable=ZoneRegisters.MODE,
                 value=ClimateZoneMode.SCHEDULING,
                 offset=zone_offset,
@@ -349,13 +349,13 @@ class RemehaDhwEntity(RemehaClimateEntity):
         zone_offset: int = self.api.get_zone_register_offset(zone)
         target_temperature: float = float(kwargs[ATTR_TEMPERATURE])
         if self.preset_mode == PRESET_COMFORT:
-            await self.api.async_write_primitive(
+            await self.api.async_write_variable(
                 variable=ZoneRegisters.DHW_COMFORT_SETPOINT,
                 value=target_temperature,
                 offset=zone_offset,
             )
         elif self.preset_mode == PRESET_ECO:
-            await self.api.async_write_primitive(
+            await self.api.async_write_variable(
                 variable=ZoneRegisters.DHW_REDUCED_SETPOINT,
                 value=target_temperature,
                 offset=zone_offset,
@@ -463,24 +463,24 @@ class RemehaChEntity(RemehaClimateEntity):
         zone: ClimateZone = self._zone
         zone_offset: int = self.api.get_zone_register_offset(zone)
         if hvac_mode == HVACMode.AUTO:
-            await self.api.async_write_enum(
+            await self.api.async_write_variable(
                 variable=ZoneRegisters.MODE,
                 value=ClimateZoneMode.SCHEDULING,
                 offset=zone_offset,
             )
             zone.mode = ClimateZoneMode.SCHEDULING
         elif hvac_mode in [HVACMode.HEAT_COOL, HVACMode.COOL]:
-            await self.api.async_write_enum(
+            await self.api.async_write_variable(
                 variable=ZoneRegisters.MODE, value=ClimateZoneMode.MANUAL, offset=zone_offset
             )
-            await self.api.async_write_primitive(
+            await self.api.async_write_variable(
                 variable=MetaRegisters.COOLING_FORCED,
                 value=bool(hvac_mode == HVACMode.COOL),
                 offset=zone_offset,
             )
             zone.mode = ClimateZoneMode.MANUAL
         elif hvac_mode == HVACMode.OFF:
-            await self.api.async_write_enum(
+            await self.api.async_write_variable(
                 variable=ZoneRegisters.MODE,
                 value=ClimateZoneMode.ANTI_FROST,
                 offset=zone_offset,
@@ -510,7 +510,7 @@ class RemehaChEntity(RemehaClimateEntity):
         zone_offset: int = self.api.get_zone_register_offset(zone)
         if preset_mode in [HA_PRESET_MANUAL, HA_PRESET_ANTI_FROST]:
             zone_mode: ClimateZoneMode = HA_CLIMATE_PRESET_TO_REMEHA_ZONE_MODE[preset_mode]
-            await self.api.async_write_enum(
+            await self.api.async_write_variable(
                 variable=ZoneRegisters.MODE, value=zone_mode, offset=zone_offset
             )
             zone.mode = zone_mode
@@ -519,12 +519,12 @@ class RemehaChEntity(RemehaClimateEntity):
             # This prevents the user ending up with an invalid zone state if the latter fails.
             schedule_id: ClimateZoneScheduleId = HA_SCHEDULE_TO_REMEHA_SCHEDULE[preset_mode]
 
-            await self.api.async_write_enum(
+            await self.api.async_write_variable(
                 variable=ZoneRegisters.SELECTED_TIME_PROGRAM,
                 value=schedule_id,
                 offset=zone_offset,
             )
-            await self.api.async_write_enum(
+            await self.api.async_write_variable(
                 variable=ZoneRegisters.MODE,
                 value=ClimateZoneMode.SCHEDULING,
                 offset=zone_offset,
@@ -558,7 +558,7 @@ class RemehaChEntity(RemehaClimateEntity):
             )
 
         target_temperature: float = float(kwargs[ATTR_TEMPERATURE])
-        await self.api.async_write_primitive(
+        await self.api.async_write_variable(
             variable=ZoneRegisters.ROOM_MANUAL_SETPOINT,
             value=target_temperature,
             offset=zone_offset,
@@ -576,7 +576,7 @@ class RemehaChEntity(RemehaClimateEntity):
         zone: ClimateZone = self._zone
         zone_offset: int = self.api.get_zone_register_offset(zone)
         if self.preset_mode != HA_PRESET_ANTI_FROST:
-            await self.api.async_write_enum(
+            await self.api.async_write_variable(
                 variable=ZoneRegisters.MODE,
                 value=ClimateZoneMode.ANTI_FROST,
                 offset=zone_offset,

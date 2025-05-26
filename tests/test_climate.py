@@ -247,6 +247,19 @@ async def test_ch_climate(hass: HomeAssistant, mock_modbus_client, mock_config_e
         circa1 = hass.states.get(entity_id="climate.remeha_modbus_test_hub_circa1")
         assert circa1.attributes["preset_mode"] == ClimateZoneMode.MANUAL.name.lower()
 
+        # Change preset to schedule
+        await hass.services.async_call(
+            domain=ClimateDomain,
+            service="set_preset_mode",
+            service_data={
+                "entity_id": circa1.entity_id,
+                "preset_mode": REMEHA_PRESET_SCHEDULE_1,
+            },
+            blocking=True,
+        )
+        circa1 = hass.states.get(entity_id="climate.remeha_modbus_test_hub_circa1")
+        assert circa1.attributes["preset_mode"] == REMEHA_PRESET_SCHEDULE_1
+
 
 @pytest.mark.parametrize("mock_modbus_client", ["modbus_store.json"], indirect=True)
 async def test_dhw_climate_hvac_mode_off(

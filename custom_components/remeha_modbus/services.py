@@ -38,7 +38,8 @@ def register_services(
             "DHW auto scheduling is not required by configuration, but service is still registered since manual calls are also allowed."
         )
 
-    async def dhw_auto_schedule(call: ServiceCall) -> None:
+    async def dhw_auto_schedule(_: ServiceCall) -> None:
+        _LOGGER.debug("Retrieving weather forecast...")
         forecasts: dict = await hass.services.async_call(
             domain=WeatherDomain,
             service=SERVICE_GET_FORECASTS,
@@ -46,6 +47,7 @@ def register_services(
             blocking=True,
             return_response=True,
         )
+        _LOGGER.debug("Weather forecast retrieved.")
 
         weather_entity_id: str = config.data[WEATHER_ENTITY_ID]
         temperature_unit: str = hass.states.get(weather_entity_id).attributes[
