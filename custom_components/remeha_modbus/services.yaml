@@ -1,0 +1,3 @@
+
+# Keep service name in sync with const.AUTO_SCHEDULE_SERVICE_NAME
+dhw_auto_schedule:

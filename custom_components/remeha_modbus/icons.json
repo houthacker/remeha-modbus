@@ -32,5 +32,8 @@
       "ch_active": { "default": "mdi:heating-coil" },
       "cooling_active": { "default": "mdi:coolant-temperature" }
     }
+  },
+  "services": {
+    "dhw_auto_schedule": { "service": "mdi:auto-mode" }
   }
 }

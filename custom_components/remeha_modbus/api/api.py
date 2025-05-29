@@ -3,7 +3,7 @@
 import asyncio
 import logging
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, tzinfo
 from enum import Enum, StrEnum, auto
 from types import MappingProxyType
 from typing import Any, Self
@@ -27,17 +27,20 @@ from custom_components.remeha_modbus.const import (
     MODBUS_SERIAL_PARITY,
     MODBUS_SERIAL_STOPBITS,
     REMEHA_DEVICE_INSTANCE_RESERVED_REGISTERS,
+    REMEHA_TIME_PROGRAM_RESERVED_REGISTERS,
     REMEHA_ZONE_RESERVED_REGISTERS,
+    WEEKDAY_TO_MODBUS_VARIABLE,
     DataType,
     DeviceInstanceRegisters,
     MetaRegisters,
     ModbusVariableDescription,
+    Weekday,
     ZoneRegisters,
 )
 from custom_components.remeha_modbus.helpers.gtw08 import TimeOfDay
 from custom_components.remeha_modbus.helpers.modbus import from_registers, to_registers
 
-from .appliance import Appliance, ApplianceErrorPriority, ApplianceStatus
+from .appliance import Appliance, ApplianceErrorPriority, ApplianceStatus, SeasonalMode
 from .climate_zone import (
     ClimateZone,
     ClimateZoneFunction,
@@ -46,6 +49,7 @@ from .climate_zone import (
     ClimateZoneScheduleId,
     ClimateZoneType,
 )
+from .schedule import ZoneSchedule
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -221,6 +225,7 @@ class RemehaApi:
         connection_type: ConnectionType,
         client: ModbusClient.ModbusBaseClient,
         device_address: int = 1,
+        time_zone: tzinfo | None = None,
     ):
         """Create a new API instance."""
         self._client: ModbusClient.ModbusBaseClient = client
@@ -230,14 +235,18 @@ class RemehaApi:
         self._device_address = device_address
         self._lock = asyncio.Lock()
         self._message_delay_seconds: int | None = 10 / 1000  # 10ms
+        self._time_zone = time_zone
 
     @classmethod
-    def create(cls, name: str, config: MappingProxyType[str, Any]) -> Self:
+    def create(
+        cls, name: str, config: MappingProxyType[str, Any], time_zone: tzinfo | None = None
+    ) -> Self:
         """Create a new `RemehaApi` instance.
 
         Args:
             name (str): The name of the modbus hub name.
             config (MappingProxyType[str, Any]): The dict containing the configuration of the related `ConfigEntry`.
+            time_zone (tzinfo|None): The time zone of the Remeha appliance. If `None`, local system time is used..
 
         """
         connection_type: ConnectionType = config[CONF_TYPE]
@@ -279,6 +288,7 @@ class RemehaApi:
             connection_type=connection_type,
             client=client,
             device_address=config[MODBUS_DEVICE_ADDRESS],
+            time_zone=time_zone,
         )
 
     @property
@@ -410,6 +420,13 @@ class RemehaApi:
 
         device_id: int = device.id if isinstance(device, DeviceInstance) else device
         return device_id * REMEHA_DEVICE_INSTANCE_RESERVED_REGISTERS
+
+    def get_schedule_register_offset(self, schedule: ClimateZoneScheduleId | int) -> int:
+        """Get the offset in registers for the given `ClimateZoneScheduleId | int."""
+        schedule_id: int = (
+            schedule.value if isinstance(schedule, ClimateZoneScheduleId) else int(schedule)
+        )
+        return schedule_id * REMEHA_TIME_PROGRAM_RESERVED_REGISTERS
 
     async def async_health_check(self) -> None:
         """Attempt to check the system health by reading a single register (128 - numberOfDevices).
@@ -573,8 +590,17 @@ class RemehaApi:
             )
         )
 
+        sm_value: int | None = from_registers(
+            registers=await self._async_read_registers(variable=MetaRegisters.SEASON_MODE),
+            destination_variable=MetaRegisters.SEASON_MODE,
+        )
+        season_mode: SeasonalMode = SeasonalMode(sm_value) if sm_value is not None else None
+
         return Appliance(
-            current_error=current_error, error_priority=error_priority, status=appliance_status
+            current_error=current_error,
+            error_priority=error_priority,
+            status=appliance_status,
+            season_mode=season_mode,
         )
 
     async def async_read_sensor_values(
@@ -788,6 +814,18 @@ class RemehaApi:
             destination_variable=ZoneRegisters.DHW_TANK_TEMPERATURE,
         )
 
+        # Read zone schedules
+        current_schedule: dict[Weekday, ZoneSchedule] = (
+            {
+                day: await self.async_read_zone_schedule(
+                    zone=id, schedule_id=ClimateZoneScheduleId(selected_schedule), day=day
+                )
+                for day in Weekday
+            }
+            if selected_schedule is not None
+            else {}
+        )
+
         return ClimateZone(
             id=id,
             type=ClimateZoneType(zone_type),
@@ -804,10 +842,16 @@ class RemehaApi:
             dhw_comfort_setpoint=dhw_comfort_setpoint,
             dhw_reduced_setpoint=dhw_reduced_setpoint,
             dhw_calorifier_hysteresis=dhw_calorifier_hysteresis,
-            temporary_setpoint_end_time=end_time_temporary_override,
+            temporary_setpoint_end_time=TimeOfDay.from_bytes(
+                data=end_time_temporary_override, time_zone=self._time_zone
+            )
+            if end_time_temporary_override is not None
+            else None,
             room_temperature=room_temperature,
             pump_running=bool(pump_running),
             dhw_tank_temperature=dhw_tank_temperature,
+            time_zone=self._time_zone,
+            current_schedule=current_schedule,
         )
 
     async def async_read_zone_update(self, zone: ClimateZone) -> ClimateZone:
@@ -922,6 +966,18 @@ class RemehaApi:
             destination_variable=ZoneRegisters.DHW_TANK_TEMPERATURE,
         )
 
+        # Read zone schedules
+        current_schedule: dict[Weekday, ZoneSchedule] = (
+            {
+                day: await self.async_read_zone_schedule(
+                    zone=id, schedule_id=selected_schedule, day=day
+                )
+                for day in Weekday
+            }
+            if selected_schedule
+            else {}
+        )
+
         # Merge old and new zone.
         return ClimateZone(
             id=zone.id,
@@ -939,45 +995,64 @@ class RemehaApi:
             dhw_comfort_setpoint=dhw_comfort_setpoint,
             dhw_reduced_setpoint=dhw_reduced_setpoint,
             dhw_calorifier_hysteresis=dhw_calorifier_hysteresis,
-            temporary_setpoint_end_time=end_time_temporary_override,
+            temporary_setpoint_end_time=TimeOfDay.from_bytes(
+                data=end_time_temporary_override, time_zone=self._time_zone
+            )
+            if end_time_temporary_override is not None
+            else None,
             room_temperature=room_temperature,
             pump_running=bool(pump_running),
             dhw_tank_temperature=dhw_tank_temperature,
+            time_zone=self._time_zone,
+            current_schedule=current_schedule,
         )
 
-    async def async_write_enum(
-        self, variable: ModbusVariableDescription, value: Enum | None, offset: int = 0
-    ) -> None:
-        """Write the given enum value to the modbus device.
+    async def async_read_zone_schedule(
+        self, zone: ClimateZone | int, schedule_id: ClimateZoneScheduleId, day: Weekday
+    ) -> ZoneSchedule:
+        """Read a single climate zone schedule from the modbus interface.
 
         Args:
-            variable (ModbusVariableDescription): The description of the variable to write.
-            value (Enum | None): The value to write. If `None`, the GTW-08 NULL value is written instead.
-            offset (int): The offset in registers of `variable.start_address`. Used for zone- and device objects.
+            zone (ClimateZone | int): The `ClimateZone` or its one-based id the time program is for.
+            schedule_id (ClimateZoneScheduleId): The id of the schedule to read.
+            day (Weekday): The weekday of the requested schedule.
+
+        Returns:
+            `ZoneSchedule`: The requested zone schedule, or `None` if it has not been configured.
 
         Raises:
-            TypeError: If `value` is not an `Enum` or `None`.
-            ModbusException: If the connection to the modbus device is lost or if the write request fails.
-            ValueError:
-                * If no conversion path exists between `variable.data_type` and `value`
-                * If conversion to a numeric type fails.
-                * If `value` is a `tuple` which does not contain exactly two elements.
+            `ModbusException`: If the required registers cannot be read.
+            `ValueError`: If deserializing the registers to a `ZoneSchedule` fails.
 
         """
-        if value is None:
-            await self.async_write_primitive(variable=variable, value=None, offset=offset)
-        elif isinstance(value, Enum):
-            await self.async_write_primitive(variable=variable, value=value.value, offset=offset)
-        else:
-            raise TypeError(f"Expect value to be an Enum or None, but got {type(value).__name__}")
 
-    async def async_write_primitive(
+        zone_id: int = zone.id if isinstance(zone, ClimateZone) else zone
+        variable: ModbusVariableDescription = WEEKDAY_TO_MODBUS_VARIABLE[day]
+        zone_register_offset = self.get_zone_register_offset(zone)
+        schedule_register_offset = self.get_schedule_register_offset(schedule=schedule_id)
+
+        schedule_bytes: bytes = from_registers(
+            registers=await self._async_read_registers(
+                variable=variable, offset=zone_register_offset + schedule_register_offset
+            ),
+            destination_variable=variable,
+        )
+
+        return (
+            None
+            if schedule_bytes is None
+            else ZoneSchedule.decode(
+                id=schedule_id, zone_id=zone_id, day=day, encoded_schedule=schedule_bytes
+            )
+        )
+
+    async def async_write_variable(
         self,
         variable: ModbusVariableDescription,
-        value: str | float | bool | tuple[int, int] | datetime | None,
+        value: str | float | bool | tuple[int, int] | datetime | Enum | ZoneSchedule | None,
         offset: int = 0,
     ) -> None:
-        """Write a single primitive value to the modbus device.
+        """Write a single variable to the modbus device.
 
         ### Notes:
             * If `value` is a tuple, the whole tuple must fit in a single register, contain exactly two elements that are both treated as unsigned bytes.
@@ -986,8 +1061,8 @@ class RemehaApi:
 
         Args:
             variable (ModbusVariableDescription): The description of the variable to write.
-            value (str|float|bool|tuple[int,int]|datetime|None): The value to write. If `None`, the GTW-08 NULL value is written instead.
-            offset (int): The offset in registers of `variable.start_address`. Used for zone- and device objects.
+            value (str|float|bool|tuple[int,int]|datetime|Enum|ZoneSchedule|None): The value to write. If `None`, the GTW-08 NULL value is written instead.
+            offset (int): The offset in registers of `variable.start_address`. Used for zone-, device and schedule objects.
 
         Raises:
             ModbusException: If the connection to the modbus device is lost or if the write request fails.
@@ -1006,6 +1081,12 @@ class RemehaApi:
                 )
 
             value = TimeOfDay.to_bytes(value)
+
+        if isinstance(value, Enum):
+            value = value.value
+
+        if isinstance(value, ZoneSchedule):
+            value = value.encode()
 
         await self._async_write_registers(
             variable=variable,

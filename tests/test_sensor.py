@@ -12,15 +12,15 @@ from .conftest import get_api, setup_platform
 
 
 @pytest.mark.parametrize("mock_modbus_client", ["modbus_store.json"], indirect=True)
-async def test_sensors(hass: HomeAssistant, mock_modbus_client):
+async def test_sensors(hass: HomeAssistant, mock_modbus_client, mock_config_entry):
     """Test available sensors."""
 
     api = get_api(mock_modbus_client=mock_modbus_client)
     with patch(
         "custom_components.remeha_modbus.api.RemehaApi.create",
-        new=lambda name, config: api,
+        new=lambda *args, **kwargs: api,
     ):
-        await setup_platform(hass=hass)
+        await setup_platform(hass=hass, config_entry=mock_config_entry)
         await hass.async_block_till_done()
 
         assert len(hass.states.async_all(domain_filter=SensorDomain)) == 9

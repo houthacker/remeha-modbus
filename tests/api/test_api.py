@@ -1,5 +1,7 @@
 """Tests for RemehaApi."""
 
+from datetime import datetime, time
+
 import pytest
 
 from custom_components.remeha_modbus.api import (
@@ -7,15 +9,25 @@ from custom_components.remeha_modbus.api import (
     ApplianceErrorPriority,
     ApplianceStatus,
     ClimateZone,
+    ConnectionType,
+    DeviceInstance,
+    Timeslot,
+    TimeslotActivity,
+    TimeslotSetpointType,
+    ZoneSchedule,
+)
+from custom_components.remeha_modbus.const import (
+    REMEHA_SENSORS,
     ClimateZoneFunction,
     ClimateZoneHeatingMode,
     ClimateZoneMode,
     ClimateZoneScheduleId,
     ClimateZoneType,
-    ConnectionType,
-    DeviceInstance,
+    DataType,
+    ModbusVariableDescription,
+    Weekday,
+    ZoneRegisters,
 )
-from custom_components.remeha_modbus.const import REMEHA_SENSORS, ZoneRegisters
 from tests.conftest import get_api
 
 
@@ -108,7 +120,7 @@ async def test_read_zone(mock_modbus_client):
     assert zone.pump_running is True
     assert zone.room_setpoint == 20.0
     assert zone.room_temperature == 23.2
-    assert zone.selected_schedule == ClimateZoneScheduleId.SCHEDULE_1
+    assert zone.selected_schedule is ClimateZoneScheduleId.SCHEDULE_1
     assert zone.short_name == "CIRCA1"
     assert zone.type == ClimateZoneType.OTHER
 
@@ -137,7 +149,7 @@ async def test_read_zone_update(mock_modbus_client):
 
     # Update a variable directly at the modbus interface
     new_setpoint: float = zone.current_setpoint + 2
-    await api.async_write_primitive(
+    await api.async_write_variable(
         variable=ZoneRegisters.ROOM_MANUAL_SETPOINT,
         value=new_setpoint,
         offset=api.get_zone_register_offset(zone=zone),
@@ -172,23 +184,17 @@ async def test_read_zones(mock_modbus_client):
 
 
 @pytest.mark.parametrize("mock_modbus_client", ["modbus_store.json"], indirect=True)
-async def test_write_primitive(mock_modbus_client):
+async def test_write_variable(mock_modbus_client):
     """Test that the API can write a single register."""
 
     api = get_api(mock_modbus_client=mock_modbus_client)
-    await api.async_write_primitive(ZoneRegisters.ROOM_MANUAL_SETPOINT, 20.5)
+    await api.async_write_variable(ZoneRegisters.ROOM_MANUAL_SETPOINT, 20.5)
 
-
-@pytest.mark.parametrize("mock_modbus_client", ["modbus_store.json"], indirect=True)
-async def test_write_enum(mock_modbus_client):
-    """Test that the API can write an enum value to the modbus device."""
-
-    # Retrieve a single zone.
-    api = get_api(mock_modbus_client=mock_modbus_client)
+    # Retrieve a single zone
     zone: ClimateZone = await api.async_read_zone(1)
 
     # None
-    await api.async_write_enum(
+    await api.async_write_variable(
         variable=ZoneRegisters.CURRENT_HEATING_MODE,
         value=None,
         offset=api.get_zone_register_offset(zone),
@@ -197,19 +203,8 @@ async def test_write_enum(mock_modbus_client):
     update = await api.async_read_zone_update(zone=zone)
     assert update.heating_mode is None
 
-    # non-enum
-    with pytest.raises(
-        expected_exception=TypeError,
-        match=f"Expect value to be an Enum or None, but got {int.__name__}",
-    ):
-        await api.async_write_enum(
-            variable=ZoneRegisters.CURRENT_HEATING_MODE,
-            value=42,
-            offset=api.get_zone_register_offset(zone),
-        )
-
     # Enum
-    await api.async_write_enum(
+    await api.async_write_variable(
         variable=ZoneRegisters.CURRENT_HEATING_MODE,
         value=ClimateZoneHeatingMode.HEATING,
         offset=api.get_zone_register_offset(zone),
@@ -218,8 +213,16 @@ async def test_write_enum(mock_modbus_client):
     update = await api.async_read_zone_update(zone=zone)
     assert update.heating_mode is ClimateZoneHeatingMode.HEATING
 
+    # Try to write a datetime to a variable type which cannot handle it.
+    with pytest.raises(ValueError):
+        await api.async_write_variable(
+            variable=ModbusVariableDescription(
+                start_address=1, name="datetime_test", data_type=DataType.INT64
+            ),
+            value=datetime.now(),
+        )
 
-@pytest.mark.parametrize("mock_modbus_client", ["modbus_store.json"], indirect=True)
+
 async def test_read_appliance(mock_modbus_client):
     """Test that the API can read the appliance status from the modbus device."""
 
@@ -245,3 +248,63 @@ async def test_read_appliance(mock_modbus_client):
     assert not status.dhw_active
     assert not status.ch_active
     assert status.cooling_active
+
+
+async def test_write_zone_schedule(mock_modbus_client):
+    """Test that a time program can be written to the modbus device."""
+
+    api = get_api(mock_modbus_client=mock_modbus_client)
+
+    expected_schedule = ZoneSchedule(
+        id=ClimateZoneScheduleId.SCHEDULE_2,
+        zone_id=2,
+        day=Weekday.FRIDAY,
+        time_slots=[
+            Timeslot(
+                setpoint_type=TimeslotSetpointType.ECO,
+                activity=TimeslotActivity.DHW,
+                switch_time=time.fromisoformat("00:00"),
+            ),
+            Timeslot(
+                setpoint_type=TimeslotSetpointType.COMFORT,
+                activity=TimeslotActivity.DHW,
+                switch_time=time.fromisoformat("10:00"),
+            ),
+            Timeslot(
+                setpoint_type=TimeslotSetpointType.ECO,
+                activity=TimeslotActivity.DHW,
+                switch_time=time.fromisoformat("13:00"),
+            ),
+            Timeslot(
+                setpoint_type=TimeslotSetpointType.COMFORT,
+                activity=TimeslotActivity.DHW,
+                switch_time=time.fromisoformat("18:00"),
+            ),
+            Timeslot(
+                setpoint_type=TimeslotSetpointType.ECO,
+                activity=TimeslotActivity.DHW,
+                switch_time=time.fromisoformat("21:00"),
+            ),
+        ],
+    )
+
+    # Retrieve schedule from modbus, must be None.
+    actual_schedule: ZoneSchedule = await api.async_read_zone_schedule(
+        zone=2, schedule_id=ClimateZoneScheduleId.SCHEDULE_2, day=Weekday.FRIDAY
+    )
+    assert actual_schedule is None
+
+    # Now write the schedule
+    await api.async_write_variable(
+        variable=ZoneRegisters.TIME_PROGRAM_FRIDAY,
+        value=expected_schedule,
+        offset=api.get_zone_register_offset(zone=2)
+        + api.get_schedule_register_offset(schedule=ClimateZoneScheduleId.SCHEDULE_2),
+    )
+
+    # Read it back and check if it was successful.
+    actual_schedule = await api.async_read_zone_schedule(
+        zone=2, schedule_id=ClimateZoneScheduleId.SCHEDULE_2, day=Weekday.FRIDAY
+    )
+
+    assert actual_schedule == expected_schedule

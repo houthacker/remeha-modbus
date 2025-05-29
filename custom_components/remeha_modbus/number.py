@@ -74,7 +74,7 @@ class DhwHysteresisEntity(CoordinatorEntity, NumberEntity):
 
         zone: ClimateZone = self._zone
         offset: int = self._api.get_zone_register_offset(zone=zone)
-        await self._api.async_write_primitive(
+        await self._api.async_write_variable(
             variable=ZoneRegisters.DHW_CALORIFIER_HYSTERESIS, value=value, offset=offset
         )
 

@@ -16,6 +16,7 @@ NULL_VALUES: Final[dict[DataType, int | bytes]] = {
     DataType.INT16: int.from_bytes(b"\x80\x00", signed=True, byteorder="little"),
     DataType.INT32: int.from_bytes(b"\x80\x00\x00\x00", signed=True, byteorder="little"),
     DataType.CIA_301_TIME_OF_DAY: b"\xff\x00\xff\x00\xff\x00",
+    DataType.ZONE_TIME_PROGRAM: b"\xff\x00\xff\x00\xff\x00\xff\x00\xff\x00\xff\x00\xff\x00\xff\x00\xff\x00\xff\x00",
 }
 
 
@@ -54,7 +55,7 @@ def _from_registers(
     # If variable requires a bytes result, use our own conversion since the ModbusClientMixin doesn't support them.
     val = (
         b"".join([x.to_bytes(2) for x in registers])
-        if variable.data_type == DataType.CIA_301_TIME_OF_DAY
+        if variable.data_type in [DataType.CIA_301_TIME_OF_DAY, DataType.ZONE_TIME_PROGRAM]
         else ModbusClientMixin.convert_from_registers(
             registers=registers, data_type=HA_TO_PYMODBUS_TYPE[variable.data_type]
         )
@@ -72,7 +73,7 @@ def _from_registers(
     # Apply scale
     if variable.scale is not None:
         # Always round to 3 decimals when scaling.
-        # HA frontend can always choose to show a less precies value.
+        # HA frontend can always choose to show a less precise value.
         val = round(val * variable.scale, 3)
 
     return val
@@ -86,7 +87,10 @@ def _to_registers(
         source_variable.data_type, None
     )
 
-    if mixin_data_type is None and source_variable.data_type != DataType.CIA_301_TIME_OF_DAY:
+    if mixin_data_type is None and source_variable.data_type not in [
+        DataType.CIA_301_TIME_OF_DAY,
+        DataType.ZONE_TIME_PROGRAM,
+    ]:
         raise ValueError(
             f"No conversion path from {source_variable.data_type.name} to a modbus data type."
         )
@@ -104,8 +108,11 @@ def _to_registers(
     if value is None:
         value = _to_gtw08_null_value(source_variable.data_type)
 
-    # bytes to registers does not go through the ModbusClientMixin, since is has no bytes support.
-    if isinstance(value, bytes) and source_variable.data_type == DataType.CIA_301_TIME_OF_DAY:
+    # bytes to registers does not go through the ModbusClientMixin, since it has no bytes support.
+    if isinstance(value, bytes) and source_variable.data_type in [
+        DataType.CIA_301_TIME_OF_DAY,
+        DataType.ZONE_TIME_PROGRAM,
+    ]:
         return [int.from_bytes(value[i : i + 2]) for i in range(0, len(value), 2)]
 
     return ModbusClientMixin.convert_to_registers(value=value, data_type=mixin_data_type)

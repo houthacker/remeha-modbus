@@ -40,4 +40,4 @@ def test_time_of_day_decode():
     )
 
     byte_string: bytes = b"\xc5\x00\x03\xdc\x3a\xf5"
-    assert TimeOfDay.from_bytes(byte_string, "Europe/Amsterdam") == expected
+    assert TimeOfDay.from_bytes(byte_string, tz.gettz(name="Europe/Amsterdam")) == expected

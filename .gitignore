@@ -260,3 +260,6 @@ pyrightconfig.json
 config/blueprints/**
 pytest-coverage.txt
 junit-coverage.xml
+config/custom_components
+custom_components/hacs
+custom_components/knmi

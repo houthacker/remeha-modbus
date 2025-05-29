@@ -4,6 +4,18 @@ from dataclasses import dataclass
 from enum import Enum
 
 
+class SeasonalMode(Enum):
+    """Defines the current seasonal mode of the appliance."""
+
+    WINTER = 0
+
+    WINTER_FROST_PROTECTION = 1
+
+    SUMMER_NEUTRAL_BAND = 2
+
+    SUMMER = 3
+
+
 class ApplianceErrorPriority(Enum):
     """Defines the current error state of the appliance."""
 
@@ -119,6 +131,9 @@ class Appliance:
 
     status: ApplianceStatus
     """Shows various status fields."""
+
+    season_mode: SeasonalMode
+    """The current seasonal mode of the appliance."""
 
     def error_as_str(self) -> str:
         """Return a user-friendly string representing the error."""

@@ -1,0 +1,243 @@
+[
+  {
+    "datetime": "2025-05-22T23:00:00+02:00",
+    "condition": "cloudy",
+    "temperature": 9,
+    "precipitation": 0,
+    "wind_bearing": 210,
+    "wind_speed": 7,
+    "wind_speed_bft": 2,
+    "solar_irradiance": 0
+  },
+  {
+    "datetime": "2025-05-23T00:00:00+02:00",
+    "condition": "cloudy",
+    "temperature": 9,
+    "precipitation": 0,
+    "wind_bearing": 205,
+    "wind_speed": 7,
+    "wind_speed_bft": 2,
+    "solar_irradiance": 0
+  },
+  {
+    "datetime": "2025-05-23T01:00:00+02:00",
+    "condition": "cloudy",
+    "temperature": 9,
+    "precipitation": 0,
+    "wind_bearing": 201,
+    "wind_speed": 7,
+    "wind_speed_bft": 2,
+    "solar_irradiance": 0
+  },
+  {
+    "datetime": "2025-05-23T02:00:00+02:00",
+    "condition": "cloudy",
+    "temperature": 9,
+    "precipitation": 0,
+    "wind_bearing": 199,
+    "wind_speed": 10,
+    "wind_speed_bft": 2,
+    "solar_irradiance": 0
+  },
+  {
+    "datetime": "2025-05-23T03:00:00+02:00",
+    "condition": "cloudy",
+    "temperature": 9,
+    "precipitation": 0,
+    "wind_bearing": 210,
+    "wind_speed": 14,
+    "wind_speed_bft": 3,
+    "solar_irradiance": 0
+  },
+  {
+    "datetime": "2025-05-23T04:00:00+02:00",
+    "condition": "cloudy",
+    "temperature": 9,
+    "precipitation": 0,
+    "wind_bearing": 214,
+    "wind_speed": 14,
+    "wind_speed_bft": 3,
+    "solar_irradiance": 0
+  },
+  {
+    "datetime": "2025-05-23T05:00:00+02:00",
+    "condition": "cloudy",
+    "temperature": 9,
+    "precipitation": 0,
+    "wind_bearing": 213,
+    "wind_speed": 14,
+    "wind_speed_bft": 3,
+    "solar_irradiance": 3
+  },
+  {
+    "datetime": "2025-05-23T06:00:00+02:00",
+    "condition": "cloudy",
+    "temperature": 10,
+    "precipitation": 0,
+    "wind_bearing": 211,
+    "wind_speed": 14,
+    "wind_speed_bft": 3,
+    "solar_irradiance": 36
+  },
+  {
+    "datetime": "2025-05-23T07:00:00+02:00",
+    "condition": "cloudy",
+    "temperature": 11,
+    "precipitation": 0,
+    "wind_bearing": 224,
+    "wind_speed": 18,
+    "wind_speed_bft": 3,
+    "solar_irradiance": 127
+  },
+  {
+    "datetime": "2025-05-23T08:00:00+02:00",
+    "condition": "cloudy",
+    "temperature": 12,
+    "precipitation": 0,
+    "wind_bearing": 231,
+    "wind_speed": 18,
+    "wind_speed_bft": 3,
+    "solar_irradiance": 166
+  },
+  {
+    "datetime": "2025-05-23T09:00:00+02:00",
+    "condition": "cloudy",
+    "temperature": 13,
+    "precipitation": 0,
+    "wind_bearing": 231,
+    "wind_speed": 18,
+    "wind_speed_bft": 3,
+    "solar_irradiance": 235
+  },
+  {
+    "datetime": "2025-05-23T10:00:00+02:00",
+    "condition": "cloudy",
+    "temperature": 14,
+    "precipitation": 0,
+    "wind_bearing": 238,
+    "wind_speed": 18,
+    "wind_speed_bft": 3,
+    "solar_irradiance": 463
+  },
+  {
+    "datetime": "2025-05-23T11:00:00+02:00",
+    "condition": "pouring",
+    "temperature": 10,
+    "precipitation": 0.3,
+    "wind_bearing": 303,
+    "wind_speed": 14,
+    "wind_speed_bft": 3,
+    "solar_irradiance": 346
+  },
+  {
+    "datetime": "2025-05-23T12:00:00+02:00",
+    "condition": "cloudy",
+    "temperature": 11,
+    "precipitation": 0,
+    "wind_bearing": 303,
+    "wind_speed": 18,
+    "wind_speed_bft": 3,
+    "solar_irradiance": 609
+  },
+  {
+    "datetime": "2025-05-23T13:00:00+02:00",
+    "condition": "pouring",
+    "temperature": 12,
+    "precipitation": 0.1,
+    "wind_bearing": 304,
+    "wind_speed": 21,
+    "wind_speed_bft": 4,
+    "solar_irradiance": 488
+  },
+  {
+    "datetime": "2025-05-23T14:00:00+02:00",
+    "condition": "cloudy",
+    "temperature": 12,
+    "precipitation": 0,
+    "wind_bearing": 309,
+    "wind_speed": 21,
+    "wind_speed_bft": 4,
+    "solar_irradiance": 391
+  },
+  {
+    "datetime": "2025-05-23T15:00:00+02:00",
+    "condition": "partlycloudy",
+    "temperature": 12,
+    "precipitation": 0,
+    "wind_bearing": 305,
+    "wind_speed": 21,
+    "wind_speed_bft": 4,
+    "solar_irradiance": 532
+  },
+  {
+    "datetime": "2025-05-23T16:00:00+02:00",
+    "condition": "cloudy",
+    "temperature": 12,
+    "precipitation": 0,
+    "wind_bearing": 310,
+    "wind_speed": 18,
+    "wind_speed_bft": 3,
+    "solar_irradiance": 548
+  },
+  {
+    "datetime": "2025-05-23T17:00:00+02:00",
+    "condition": "partlycloudy",
+    "temperature": 12,
+    "precipitation": 0,
+    "wind_bearing": 312,
+    "wind_speed": 18,
+    "wind_speed_bft": 3,
+    "solar_irradiance": 512
+  },
+  {
+    "datetime": "2025-05-23T18:00:00+02:00",
+    "condition": "sunny",
+    "temperature": 12,
+    "precipitation": 0,
+    "wind_bearing": 314,
+    "wind_speed": 14,
+    "wind_speed_bft": 3,
+    "solar_irradiance": 404
+  },
+  {
+    "datetime": "2025-05-23T19:00:00+02:00",
+    "condition": "sunny",
+    "temperature": 12,
+    "precipitation": 0,
+    "wind_bearing": 301,
+    "wind_speed": 14,
+    "wind_speed_bft": 3,
+    "solar_irradiance": 249
+  },
+  {
+    "datetime": "2025-05-23T20:00:00+02:00",
+    "condition": "sunny",
+    "temperature": 11,
+    "precipitation": 0,
+    "wind_bearing": 283,
+    "wind_speed": 10,
+    "wind_speed_bft": 2,
+    "solar_irradiance": 105
+  },
+  {
+    "datetime": "2025-05-23T21:00:00+02:00",
+    "condition": "cloudy",
+    "temperature": 10,
+    "precipitation": 0,
+    "wind_bearing": 252,
+    "wind_speed": 10,
+    "wind_speed_bft": 2,
+    "solar_irradiance": 11
+  },
+  {
+    "datetime": "2025-05-23T22:00:00+02:00",
+    "condition": "cloudy",
+    "temperature": 10,
+    "precipitation": 0,
+    "wind_bearing": 237,
+    "wind_speed": 3,
+    "wind_speed_bft": 1,
+    "solar_irradiance": 0
+  }
+
+]

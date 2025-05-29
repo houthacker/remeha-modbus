@@ -39,6 +39,7 @@
 				"files.trimTrailingWhitespace": true,
 				"extensions.verifySignature": false,
 				"[python]": {
+					"editor.formatOnSave": true,
 					"editor.codeActionsOnSave": {
 						"source.organizeImports": "explicit"
 					},
