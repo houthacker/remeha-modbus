@@ -48,9 +48,36 @@ Planned features and features under discussion are available in the [issues](htt
     - Automatically discovered once the integration has been set up.
     - Linked to a device, showing the type of board in the Remeha appliance, including its soft- and hardware versions.
     - Climate features are enabled depending on the climate zone type (for instance, a DHW zone is only able to heat, not cool).
+- DHW auto scheduling:
+    - This integration exposes a service called `dhw_auto_schedule` that can be used in automations or scripts. A detailed explanation follows below.
 
 ### Installation
 To install this integration, you need to have [HACS](https://hacs.xyz/docs/use) installed in your Home Assistant.
 
 [![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=houthacker&repository=remeha-modbus&category=integration)
 
+### DHW auto scheduling
+*First and foremost: use this feature at your own risk.*
+
+Having said that, DHW auto scheduling is a feature allowing efficient heating of your DHW boiler by using as much solar power as possible while keeping the
+interference to a minimum with other devices also using (direct) solar power.
+
+#### How to use
+To start using the auto scheduling feature, execute the following steps:
+##### Install KNMI weather integration
+- Request an API key at [weerlive.nl](https://weerlive.nl/api/toegang/index.php)
+- Install the KNMI weather integration using the button below and enter the obtained API key during installation.
+
+[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=golles&repository=ha-knmi&category=integration)
+
+##### Reconfigure this integration
+- Reconfigure this integration and provide the required information about your PV system and DHW boiler. Select the KNMI weather
+  entity to retrieve the weather forecast.
+
+##### Create an automation
+- Then just create a new automation with the following properties:
+    - Trigger at any time between 22:00 and 23:59
+    - Call the Remeha Modbus action `dhw_auto_schedule`
+
+#### Set the correct DHW preset mode
+After creating the automation, a new schedule for the next day will automatically be created. To actually use it, change the preset mode of your DHW boiler to `Schedule 3`.
