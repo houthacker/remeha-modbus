@@ -1,1 +1,18 @@
-[]
+- id: '1748535121028'
+  alias: Daily DHW scheduling
+  description: ''
+  triggers:
+  - trigger: time
+    at: '22:10:00'
+  conditions: []
+  actions:
+  - action: remeha_modbus.dhw_auto_schedule
+    metadata: {}
+    data: {}
+  - action: climate.set_preset_mode
+    metadata: {}
+    data:
+      preset_mode: schedule_3
+    target:
+      entity_id: climate.remeha_modbus_circa
+  mode: single

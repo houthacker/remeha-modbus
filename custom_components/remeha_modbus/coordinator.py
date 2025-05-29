@@ -234,16 +234,13 @@ class RemehaUpdateCoordinator(DataUpdateCoordinator):
                 translation_domain=DOMAIN, translation_key="auto_schedule_no_solar_irradiance"
             )
 
-        try:
-            schedule: ZoneSchedule = ZoneSchedule.generate(
-                weather_forecast=weather_forecast,
-                pv_system=_config_to_pv_config(self.config_entry),
-                boiler_config=_config_to_boiler_config(self.config_entry),
-                boiler_zone=dhw_zone,
-                appliance_seasonal_mode=self.get_appliance().season_mode,
-            )
-        except Exception as e:
-            raise RemehaServiceException from e
+        schedule: ZoneSchedule = ZoneSchedule.generate(
+            weather_forecast=weather_forecast,
+            pv_system=_config_to_pv_config(self.config_entry),
+            boiler_config=_config_to_boiler_config(self.config_entry),
+            boiler_zone=dhw_zone,
+            appliance_seasonal_mode=self.get_appliance().season_mode,
+        )
 
         _LOGGER.debug("Schedule generated:\n\n%s\n\n, now pushing it to the appliance.", schedule)
 

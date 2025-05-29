@@ -139,7 +139,7 @@
       "message": "Cannot auto schedule: no weather forecasts available."
     },
     "auto_schedule_forecast_not_enough_hours": {
-      "message": "Cannot auto schedule: latest available forecast time is {max_forecast_time}, but to schedule a day ahead this must be at least {min_required_end_time}"
+      "message": "Cannot auto schedule: latest available forecast time is {max_forecast_time}, but to schedule a day ahead this must be at least {min_required_end_time}. Please wait until this time and try again."
     },
     "auto_schedule_no_solar_irradiance": {
       "message": "Cannot auto schedule: `solar_irradiance` is a required field in the hourly weather forecast. Please use a weather integration that supports this."
