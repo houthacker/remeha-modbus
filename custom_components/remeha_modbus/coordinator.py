@@ -55,7 +55,7 @@ def _config_to_boiler_config(config: ConfigEntry) -> BoilerConfiguration:
         volume=section.get(DHW_BOILER_VOLUME, None),
         heat_loss_rate=section.get(DHW_BOILER_HEAT_LOSS_RATE, None),
         energy_label=BoilerEnergyLabel(section[DHW_BOILER_ENERGY_LABEL])
-        if DHW_BOILER_ENERGY_LABEL in section
+        if DHW_BOILER_ENERGY_LABEL in section and section[DHW_BOILER_ENERGY_LABEL] is not None
         else None,
     )
 
@@ -236,6 +236,9 @@ class RemehaUpdateCoordinator(DataUpdateCoordinator):
                 boiler_zone=dhw_zone,
                 appliance_seasonal_mode=self.get_appliance().season_mode,
             )
+        except ValueError as e:
+            raise RemehaIncorrectServiceCall from e
+
         except Exception as e:
             raise RemehaServiceException from e
 
