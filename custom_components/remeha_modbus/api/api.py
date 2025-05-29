@@ -590,12 +590,11 @@ class RemehaApi:
             )
         )
 
-        season_mode: SeasonalMode = SeasonalMode(
-            from_registers(
-                registers=await self._async_read_registers(variable=MetaRegisters.SEASON_MODE),
-                destination_variable=MetaRegisters.SEASON_MODE,
-            )
+        sm_value: int | None = from_registers(
+            registers=await self._async_read_registers(variable=MetaRegisters.SEASON_MODE),
+            destination_variable=MetaRegisters.SEASON_MODE,
         )
+        season_mode: SeasonalMode = SeasonalMode(sm_value) if sm_value is not None else None
 
         return Appliance(
             current_error=current_error,
