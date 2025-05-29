@@ -405,6 +405,7 @@ class ZoneSchedule:
         #
         # This prevents heating at night when there's no solar power, and also when
         # central heating or cooling should have priority.
+        # TODO make configurable?
         usable_hours = (
             [range(10, 23)]
             if appliance_seasonal_mode in [SeasonalMode.SUMMER_NEUTRAL_BAND, SeasonalMode.SUMMER]
@@ -467,11 +468,16 @@ class ZoneSchedule:
                     )
 
         # Take two timeslots, allowing for both morning- and afternoon heating.
+        # If no timeslots are available, use all usable hours: heating is allowed at any time during the day.
         acceptable_hour_blocks: list[list[int]] = list(_generate_acceptable_hour_blocks())
         accepted_hour_blocks: list[list[int]] = (
-            [acceptable_hour_blocks[0]]
-            if len(acceptable_hour_blocks) == 1
-            else [acceptable_hour_blocks[0], acceptable_hour_blocks[-1]]
+            (
+                [acceptable_hour_blocks[0]]
+                if len(acceptable_hour_blocks) == 1
+                else [acceptable_hour_blocks[0], acceptable_hour_blocks[-1]]
+            )
+            if acceptable_hour_blocks
+            else [list(usable_hours[0])]
         )
 
         # The remaining hours are unaccepted.

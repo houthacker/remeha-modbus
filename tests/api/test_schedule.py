@@ -222,3 +222,63 @@ async def test_generate_dhw_time_schedule(json_fixture, mock_modbus_client):
                 ),
             ],
         )
+
+
+@pytest.mark.parametrize("json_fixture", ["weather_forecast_no_sun.json"], indirect=True)
+async def test_generate_dhw_time_schedule_without_solar_yield(json_fixture, mock_modbus_client):
+    """Test generating a time schedule for heating the DHW boiler on a day there is no solar yield."""
+
+    weather_forecast: WeatherForecast = WeatherForecast(
+        unit_of_temperature=UnitOfTemperature.CELSIUS,
+        forecasts=[HourlyForecast.from_dict(native_forecast) for native_forecast in json_fixture],
+    )
+
+    pv_system: PVSystem = PVSystem(
+        nominal_power=5720,
+        orientation=PVSystemOrientation.SOUTH,
+        annual_efficiency_decrease=0.42,
+        installation_date=date.today(),
+        tilt=30.0,
+    )
+
+    boiler_config: BoilerConfiguration = BoilerConfiguration(
+        volume=300, heat_loss_rate=91.3, energy_label=None
+    )
+
+    api = get_api(mock_modbus_client=mock_modbus_client)
+    with patch(
+        "custom_components.remeha_modbus.api.RemehaApi.create",
+        new=lambda *args, **kwargs: api,
+    ):
+        appliance = await api.async_read_appliance()
+        zone = await api.async_read_zone(id=2)
+        schedule: ZoneSchedule = ZoneSchedule.generate(
+            weather_forecast=weather_forecast,
+            pv_system=pv_system,
+            boiler_config=boiler_config,
+            boiler_zone=zone,
+            appliance_seasonal_mode=appliance.season_mode,
+        )
+
+        assert schedule == ZoneSchedule(
+            id=ClimateZoneScheduleId.SCHEDULE_3,
+            zone_id=zone.id,
+            day=Weekday.FRIDAY,
+            time_slots=[
+                Timeslot(
+                    setpoint_type=TimeslotSetpointType.ECO,
+                    activity=TimeslotActivity.DHW,
+                    switch_time=time.fromisoformat("00:00"),
+                ),
+                Timeslot(
+                    setpoint_type=TimeslotSetpointType.COMFORT,
+                    activity=TimeslotActivity.DHW,
+                    switch_time=time.fromisoformat("10:00"),
+                ),
+                Timeslot(
+                    setpoint_type=TimeslotSetpointType.ECO,
+                    activity=TimeslotActivity.DHW,
+                    switch_time=time.fromisoformat("23:00"),
+                ),
+            ],
+        )
