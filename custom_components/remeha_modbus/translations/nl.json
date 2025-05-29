@@ -130,6 +130,18 @@
     },
     "auto_schedule_no_forecasts": {
       "message": "Kan geen automatische planning maken: er is geen uurlijkse weersverwachting beschikbaar."
+    },
+    "auto_schedule_forecast_not_enough_hours": {
+      "message": "Kan geen automatische planning maken: laatst beschikbare voorspellingstijd is {max_forecast_time}, maar voor een volldige planning moet dat minimaal {min_required_end_time} zijn."
+    },
+    "auto_schedule_no_solar_irradiance": {
+      "message": "Kan geen automatische planning maken: `solar_irradiance` is een verplicht veldin de uurlijkse weersvoorspelling. Gebruik a.u.b. een integratie die dit ondersteunt."
+    },
+    "auto_schedule_modbus_error": {
+      "message": "Kan geen automatische planning maken: fout in modbus-communicatie, zie logs voor details. Probeer het later opnieuw."
+    },
+    "auto_schedule_value_error": {
+      "message": "Kan geen automatische planning maken: fout tijdens het deserializeren van het modbus bericht, zie logs voor details."
     }
   }
 }

@@ -228,6 +228,12 @@ class RemehaUpdateCoordinator(DataUpdateCoordinator):
             forecasts=[HourlyForecast.from_dict(e) for e in hourly_forecasts],
         )
 
+        # Exit if weather_forecast does not contain a `solar_irradiance` field.
+        if not weather_forecast.forecasts or weather_forecast.forecasts[0].solar_irradiance is None:
+            raise RemehaIncorrectServiceCall(
+                translation_domain=DOMAIN, translation_key="auto_schedule_no_solar_irradiance"
+            )
+
         try:
             schedule: ZoneSchedule = ZoneSchedule.generate(
                 weather_forecast=weather_forecast,
@@ -236,9 +242,6 @@ class RemehaUpdateCoordinator(DataUpdateCoordinator):
                 boiler_zone=dhw_zone,
                 appliance_seasonal_mode=self.get_appliance().season_mode,
             )
-        except ValueError as e:
-            raise RemehaIncorrectServiceCall from e
-
         except Exception as e:
             raise RemehaServiceException from e
 
@@ -251,8 +254,14 @@ class RemehaUpdateCoordinator(DataUpdateCoordinator):
                 offset=self._api.get_zone_register_offset(zone=dhw_zone)
                 + self._api.get_schedule_register_offset(schedule=schedule.id),
             )
+        except ModbusException as e:
+            raise RemehaServiceException(
+                translation_domain=DOMAIN, translation_key="auto_schedule_modbus_error"
+            ) from e
         except ValueError as e:
-            raise RemehaServiceException from e
+            raise RemehaServiceException(
+                translation_domain=DOMAIN, translation_key="auto_schedule_value_error"
+            ) from e
 
     async def async_shutdown(self):
         """Shutdown this coordinator."""

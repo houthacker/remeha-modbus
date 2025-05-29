@@ -131,6 +131,18 @@
     },
     "auto_schedule_no_forecasts": {
       "message": "Cannot auto schedule: no weather forecasts available."
+    },
+    "auto_schedule_forecast_not_enough_hours": {
+      "message": "Cannot auto schedule: latest available forecast time is {max_forecast_time}, but to schedule a day ahead this must be at least {min_required_end_time}"
+    },
+    "auto_schedule_no_solar_irradiance": {
+      "message": "Cannot auto schedule: `solar_irradiance` is a required field in the hourly weather forecast. Please use a weather integration that supports this."
+    },
+    "auto_schedule_modbus_error": {
+      "message": "Cannot auto schedule: a modbus error occurred, see logs for details. Please try again at a later time."
+    },
+    "auto_schedule_value_error": {
+      "message": "Cannot auto schedule: error while deserializing modbus response, see logs for details."
     }
   }
 }

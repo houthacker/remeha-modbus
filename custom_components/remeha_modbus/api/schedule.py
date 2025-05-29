@@ -88,7 +88,9 @@ class HourlyForecast:
         return HourlyForecast(
             start_time=parser.parse(data[ForecastField.DATETIME]),
             temperature=float(data[ForecastField.TEMPERATURE]),
-            solar_irradiance=int(data.get(ForecastField.SOLAR_IRRADIANCE)),
+            solar_irradiance=int(data[ForecastField.SOLAR_IRRADIANCE])
+            if ForecastField.SOLAR_IRRADIANCE in data
+            else None,
         )
 
 
@@ -341,8 +343,13 @@ class ZoneSchedule:
         # end no earlier than 22:00.
         last_forecast: HourlyForecast = weather_forecast.forecasts[-1]
         if last_forecast.start_time.hour < AUTO_SCHEDULE_MINIMAL_END_HOUR:
-            raise ValueError(
-                f"Last retrieved forecast is at {last_forecast.start_time.hour}:00, but to schedule a full day ahead this must be at least {AUTO_SCHEDULE_MINIMAL_END_HOUR}:00"
+            raise AutoSchedulingError(
+                translation_domain=DOMAIN,
+                translation_key="auto_schedule_forecast_not_enough_hours",
+                translation_placeholders={
+                    "max_forecast_time": f"{last_forecast.start_time.hour}:00",
+                    "min_required_end_time": f"{AUTO_SCHEDULE_MINIMAL_END_HOUR}:00",
+                },
             )
 
         # Calculate the amount of kWh required to heat to boiler to its setpoint, once
@@ -505,7 +512,7 @@ class ZoneSchedule:
 
             yield from all_timeslots
 
-        return ZoneSchedule(
+        schedule: ZoneSchedule = ZoneSchedule(
             id=ClimateZoneScheduleId.SCHEDULE_3,
             zone_id=boiler_zone.id,
             # When presented with old data (like in testing), the week day returned here is
@@ -513,6 +520,10 @@ class ZoneSchedule:
             day=Weekday(weather_forecast.forecasts[-1].start_time.weekday()),
             time_slots=list(_generate_timeslots()),
         )
+
+        _LOGGER.debug("Generated schedule:\n%s\n", str(schedule))
+
+        return schedule
 
     def __str__(self):
         """Return a human-readable representation of this schedule."""
