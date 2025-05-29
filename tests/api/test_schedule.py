@@ -15,19 +15,21 @@ from custom_components.remeha_modbus.api.schedule import (
     ZoneSchedule,
 )
 from custom_components.remeha_modbus.const import (
+    WEEKDAY_TO_MODBUS_VARIABLE,
     BoilerConfiguration,
     BoilerEnergyLabel,
     PVSystem,
     PVSystemOrientation,
     Weekday,
 )
+from custom_components.remeha_modbus.helpers.modbus import from_registers
 from tests.conftest import get_api
 
 
 def test_decode_time_schedule():
     """Test decoding a binary schedule."""
 
-    encoded_schedule: bytes = bytes.fromhex("05 10c8 24 30c8 2a 20c8 36 40c8 60 00c8 87 0000 0000")
+    encoded_schedule: bytes = bytes.fromhex("05 c810 24 c830 2a c820 36 c840 60 c800 87 0000 0000")
     schedule = ZoneSchedule.decode(
         id=2, zone_id=1, day=Weekday.MONDAY, encoded_schedule=encoded_schedule
     )
@@ -64,10 +66,58 @@ def test_decode_time_schedule():
     ]
 
 
+def test_decode_time_schedule_from_registers():
+    """Test decoding a time schedule from a set of registers."""
+
+    registers: list[int] = [1480, 12336, 51232, 14024, 4174, 51264, 27848, 135, 0, 0]
+    data = from_registers(
+        registers=registers, destination_variable=WEEKDAY_TO_MODBUS_VARIABLE[Weekday.FRIDAY]
+    )
+    assert data == bytes.fromhex("05 c83030 c82036 c8104e c8406c c80087 00000000")
+    actual: ZoneSchedule = ZoneSchedule.decode(
+        id=ClimateZoneScheduleId.SCHEDULE_1, zone_id=1, day=Weekday.FRIDAY, encoded_schedule=data
+    )
+
+    assert actual == ZoneSchedule(
+        id=ClimateZoneScheduleId.SCHEDULE_1,
+        zone_id=1,
+        day=Weekday.FRIDAY,
+        time_slots=[
+            Timeslot(
+                setpoint_type=TimeslotSetpointType.MORNING,
+                activity=TimeslotActivity.HEAT_COOL,
+                switch_time=time(8, 0, 0),
+            ),
+            Timeslot(
+                setpoint_type=TimeslotSetpointType.AWAY,
+                activity=TimeslotActivity.HEAT_COOL,
+                switch_time=time(9, 0, 0),
+            ),
+            Timeslot(
+                setpoint_type=TimeslotSetpointType.COMFORT,
+                activity=TimeslotActivity.HEAT_COOL,
+                switch_time=time(13, 0, 0),
+            ),
+            Timeslot(
+                setpoint_type=TimeslotSetpointType.EVENING,
+                activity=TimeslotActivity.HEAT_COOL,
+                switch_time=time(18, 0, 0),
+            ),
+            Timeslot(
+                setpoint_type=TimeslotSetpointType.ECO,
+                activity=TimeslotActivity.HEAT_COOL,
+                switch_time=time(22, 30, 0),
+            ),
+        ],
+    )
+
+    assert actual.encode() == data
+
+
 def test_encode_time_schedule():
     """Test encoding a binary schedule."""
 
-    expected: bytes = bytes.fromhex("05 10c8 24 30c8 2a 20c8 36 40c8 60 00c8 87 0000 0000")
+    expected: bytes = bytes.fromhex("05 c81024 c8302a c82036 c84060 c80087 0000 0000")
     schedule: ZoneSchedule = ZoneSchedule(
         id=2,
         zone_id=1,

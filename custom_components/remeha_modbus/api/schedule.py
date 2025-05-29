@@ -154,8 +154,8 @@ class Timeslot:
         )
 
         return (
-            int(self.setpoint_type.value).to_bytes()
-            + int(self.activity.value).to_bytes()
+            int(self.activity.value).to_bytes()
+            + int(self.setpoint_type.value).to_bytes()
             + time_steps.to_bytes()
         )
 
@@ -188,9 +188,9 @@ class Timeslot:
                 f"Cannod decode time program: require time slot of {SLOT_SIZE} bytes but got {len(encoded_time_slot)}."
             )
 
-        setpoint_type = TimeslotSetpointType(int.from_bytes(encoded_time_slot[:1]))
-        activity = TimeslotActivity(int.from_bytes(encoded_time_slot[1:2]))
         time_steps = int.from_bytes(encoded_time_slot[2:3])
+        setpoint_type = TimeslotSetpointType(int.from_bytes(encoded_time_slot[1:2]))
+        activity = TimeslotActivity(int.from_bytes(encoded_time_slot[:1]))
 
         return Timeslot(
             activity=activity,
