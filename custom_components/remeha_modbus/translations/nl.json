@@ -112,6 +112,12 @@
       }
     }
   },
+  "services": {
+    "dhw_auto_schedule": {
+      "name": "SWW automatische planning",
+      "description": "Maak een SWW planning voor de volgende dag, gebaseerd op de weersvoorspelling en de boiler/zonnepanelen configuration. Vereiest een weather integratie die voorziet in zonnestraling (GHI) in de uurlijkse voorspellingen."
+    }
+  },
   "exceptions": {
     "climate_invalid_operation_ctx": {
       "message": "Aangevraagde actie '{operation}' is ongeldig in voorkeuzemodus {preset_mode}."

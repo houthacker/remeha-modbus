@@ -396,7 +396,6 @@ class ZoneSchedule:
         # Emit a warning if the required energy to heat it up again in the morning is too large.
         required_heating_kwh_after_cooling: float = (heat_loss_rate * cooling_time_hours) / 1000
         if required_heating_kwh_after_cooling > default_required_heating_kwh:
-            # TODO log a warning in the system log so the user can see it
             _LOGGER.warning(
                 "DHW boiler is likely going to heat up at night, outside of planning schedule."
             )
@@ -512,7 +511,7 @@ class ZoneSchedule:
 
             yield from all_timeslots
 
-        schedule: ZoneSchedule = ZoneSchedule(
+        return ZoneSchedule(
             id=ClimateZoneScheduleId.SCHEDULE_3,
             zone_id=boiler_zone.id,
             # When presented with old data (like in testing), the week day returned here is
@@ -520,10 +519,6 @@ class ZoneSchedule:
             day=Weekday(weather_forecast.forecasts[-1].start_time.weekday()),
             time_slots=list(_generate_timeslots()),
         )
-
-        _LOGGER.debug("Generated schedule:\n%s\n", str(schedule))
-
-        return schedule
 
     def __str__(self):
         """Return a human-readable representation of this schedule."""
