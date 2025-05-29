@@ -387,7 +387,7 @@ class ZoneSchedule:
         )
         heat_loss_rate: float = (
             boiler_config.heat_loss_rate
-            if boiler_config.heat_loss_rate
+            if boiler_config.heat_loss_rate is not None
             else _energy_label_to_heat_loss_rate(
                 label=boiler_config.energy_label, volume=boiler_config.volume
             )
@@ -401,7 +401,7 @@ class ZoneSchedule:
             )
 
         # In the summer, only allow DHW heating in the morning and the afternoon.
-        # In the winter, only allow DHW heating when it's warmest.
+        # In the winter, only allow DHW heating when it's (possibly) warmest outside.
         #
         # This prevents heating at night when there's no solar power, and also when
         # central heating or cooling should have priority.
