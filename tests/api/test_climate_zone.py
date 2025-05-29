@@ -1,17 +1,18 @@
 """Tests for ClimateZone."""
 
 import pytest
-from homeassistant.core import HomeAssistant
 
 from custom_components.remeha_modbus.api import (
     ClimateZone,
+    DeviceBoardCategory,
+    DeviceBoardType,
+    DeviceInstance,
+)
+from custom_components.remeha_modbus.const import (
     ClimateZoneFunction,
     ClimateZoneMode,
     ClimateZoneScheduleId,
     ClimateZoneType,
-    DeviceBoardCategory,
-    DeviceBoardType,
-    DeviceInstance,
 )
 from tests.conftest import get_api
 
@@ -98,7 +99,7 @@ async def test_climate_zone_get_current_setpoint(mock_modbus_client):
 
     # Validate setpoint in SCHEDULING mode
     zone.mode = ClimateZoneMode.SCHEDULING
-    assert zone.current_setpoint == -1
+    assert zone.current_setpoint != -1
 
     # Validate setpoint in MANUAL mode
     zone.mode = ClimateZoneMode.MANUAL
@@ -124,6 +125,7 @@ async def test_climate_zone_set_current_setpoint(mock_modbus_client):
     zone.room_setpoint = -1
     zone.dhw_comfort_setpoint = -1
     zone.dhw_reduced_setpoint = -1
+    zone.temporary_setpoint = -1
 
     # Validate setpoint for CH zone
     zone.type = ClimateZoneType.OTHER
@@ -134,6 +136,7 @@ async def test_climate_zone_set_current_setpoint(mock_modbus_client):
     assert zone.room_setpoint == 20.5
     assert zone.dhw_comfort_setpoint == -1
     assert zone.dhw_reduced_setpoint == -1
+    assert zone.temporary_setpoint == -1
 
     zone.room_setpoint = -1
 
@@ -147,10 +150,11 @@ async def test_climate_zone_set_current_setpoint(mock_modbus_client):
     assert zone.dhw_comfort_setpoint == 50
     assert zone.dhw_reduced_setpoint == -1
     assert zone.room_setpoint == -1
+    assert zone.temporary_setpoint == -1
 
     zone.dhw_comfort_setpoint = -1
 
-    # Validate setpoint for DHW zone in SCHEDULING mode (unsupported so no changes)
+    # Validate setpoint for DHW zone in SCHEDULING mode
     zone.mode = ClimateZoneMode.SCHEDULING
 
     zone.current_setpoint = 50
@@ -158,8 +162,9 @@ async def test_climate_zone_set_current_setpoint(mock_modbus_client):
     assert zone.dhw_comfort_setpoint == -1
     assert zone.dhw_reduced_setpoint == -1
     assert zone.room_setpoint == -1
+    assert zone.temporary_setpoint == 50
 
-    zone.dhw_comfort_setpoint = -1
+    zone.temporary_setpoint = -1
 
     # Validate setpoint for DHW zone in ANTI_FROST mode
     zone.mode = ClimateZoneMode.ANTI_FROST
@@ -169,6 +174,7 @@ async def test_climate_zone_set_current_setpoint(mock_modbus_client):
     assert zone.dhw_comfort_setpoint == -1
     assert zone.dhw_reduced_setpoint == 25
     assert zone.room_setpoint == -1
+    assert zone.temporary_setpoint == -1
 
     zone.dhw_reduced_setpoint = -1
 
@@ -217,7 +223,7 @@ async def test_climate_zone_equality(mock_modbus_client):
 
 
 @pytest.mark.parametrize("mock_modbus_client", ["modbus_store_ch_scheduling.json"], indirect=True)
-async def test_scheduling_temporary_setpoint(hass: HomeAssistant, mock_modbus_client):
+async def test_scheduling_temporary_setpoint(mock_modbus_client):
     """Test that a temporary setpoint can be set if the zone is in scheduling mode."""
 
     # Retrieve a single zone.
@@ -231,5 +237,5 @@ async def test_scheduling_temporary_setpoint(hass: HomeAssistant, mock_modbus_cl
 
     zone.current_setpoint = temporary_setpoint
 
-    # TODO implement schedule processing, use hass to get time zone.
-    assert zone.current_setpoint == -1  # temporary_setpoint
+    # Scheduling mode for CH zones not yet implemented.
+    assert zone.current_setpoint == -1

@@ -2,77 +2,21 @@
 
 import logging
 from dataclasses import dataclass
-from datetime import datetime
-from enum import Enum
+from datetime import datetime, tzinfo
 
-from custom_components.remeha_modbus.const import Limits
+from custom_components.remeha_modbus.const import (
+    ClimateZoneFunction,
+    ClimateZoneHeatingMode,
+    ClimateZoneMode,
+    ClimateZoneScheduleId,
+    ClimateZoneType,
+    Limits,
+    Weekday,
+)
+
+from .schedule import Timeslot, TimeslotSetpointType, ZoneSchedule, get_current_timeslot
 
 _LOGGER = logging.getLogger(__name__)
-
-
-class ClimateZoneType(Enum):
-    """Enumerates the available zone types."""
-
-    NOT_PRESENT = 0
-    CH_ONLY = 1
-    CH_AND_COOLING = 2
-    DHW = 3
-    PROCESS_HEAT = 4
-    SWIMMING_POOL = 5
-    OTHER = 254
-
-
-class ClimateZoneFunction(Enum):
-    """Enumerates the available zone functions."""
-
-    DISABLED = 0
-    DIRECT = 1
-    MIXING_CIRCUIT = 2
-    SWIMMING_POOL = 3
-    HIGH_TEMPERATURE = 4
-    FAN_CONVECTOR = 5
-    DHW_TANK = 6
-    ELECTRICAL_DHW_TANK = 7
-    TIME_PROGRAM = 8
-    PROCESS_HEAT = 9
-    DHW_LAYERED = 10
-    DHW_BIC = 11
-    DHW_COMMERCIAL_TANK = 12
-    DHW_PRIMARY = 254
-
-    def is_supported(self) -> bool:
-        """Return whether this `ClimateZoneFunction` is currently supported within this integration."""
-        return self in [
-            ClimateZoneFunction.MIXING_CIRCUIT,
-            ClimateZoneFunction.DHW_PRIMARY,
-        ]
-
-
-class ClimateZoneMode(Enum):
-    """Enumerates the modes a zone can be in."""
-
-    SCHEDULING = 0
-    MANUAL = 1
-    ANTI_FROST = 2
-
-
-class ClimateZoneScheduleId(Enum):
-    """The climate zone time program selected by the user.
-
-    Note: After updating the enum values, **ALWAYS** update the mapping to _attr_preset_modes of RemehaModbusClimateEntity!
-    """
-
-    SCHEDULE_1 = 0
-    SCHEDULE_2 = 1
-    SCHEDULE_3 = 2
-
-
-class ClimateZoneHeatingMode(Enum):
-    """The mode the zone is currently functioning in."""
-
-    STANDBY = 0
-    HEATING = 1
-    COOLING = 2
 
 
 @dataclass(eq=False)
@@ -109,6 +53,9 @@ class ClimateZone:
     Although this property is optional, it needn't be `None` if `mode != ClimateZoneMode.SCHEDULING`.
     """
 
+    current_schedule: dict[Weekday, ZoneSchedule]
+    """If `selected_schedule` has a value, `current_schedule` contains the schedule for all week days."""
+
     heating_mode: ClimateZoneHeatingMode
     """The current heating mode of the climate zone"""
 
@@ -139,8 +86,29 @@ class ClimateZone:
     pump_running: bool
     """Whether the zone pump is currently running"""
 
-    dhw_tank_temperature: float | None
-    """The current DHW tank temperature"""
+    time_zone: tzinfo | None
+    """The time zone of the repated appliance"""
+
+    def _current_dhw_scheduling_setpoint(self) -> float:
+        if self.temporary_setpoint_end_time is not None:
+            if (
+                self.temporary_setpoint_end_time is not None
+                and self.temporary_setpoint_end_time >= datetime.now(tz=self.time_zone)
+            ):
+                # A setpoint override is currently active.
+                return self.temporary_setpoint
+
+        current_timeslot: Timeslot | None = get_current_timeslot(
+            schedule=self.current_schedule, time_zone=self.time_zone
+        )
+        if current_timeslot:
+            match current_timeslot.setpoint_type:
+                case TimeslotSetpointType.ECO:
+                    return self.dhw_reduced_setpoint
+                case TimeslotSetpointType.COMFORT:
+                    return self.dhw_comfort_setpoint
+
+        return -1
 
     @property
     def current_setpoint(self) -> float | None:
@@ -150,7 +118,7 @@ class ClimateZone:
         the current zone mode.
 
         Returns:
-            `float`: The current zone setpoint, or `-1` zone type or mode does not support a current setpoint.
+            `float`: The current zone setpoint, or `-1` if zone type or mode does not support a current setpoint.
 
         """
 
@@ -169,11 +137,7 @@ class ClimateZone:
         if self.is_domestic_hot_water():
             match self.mode:
                 case ClimateZoneMode.SCHEDULING:
-                    # TODO get setpoint from schedule
-                    _LOGGER.warning(
-                        "Current setpoint not supported for DHW zones in SCHEDULING mode."
-                    )
-                    return -1
+                    return self._current_dhw_scheduling_setpoint()
                 case ClimateZoneMode.MANUAL:
                     return self.dhw_comfort_setpoint
                 case ClimateZoneMode.ANTI_FROST:
@@ -201,7 +165,9 @@ class ClimateZone:
                 case ClimateZoneMode.SCHEDULING:
                     # Ignore, user must adjust schedule.
                     # TODO implement temporary setpoint override
-                    _LOGGER.warning("Ignoring requested DHW setpoint, adjust schedule to do this.")
+                    _LOGGER.warning(
+                        "Not setting CH climate temporary setpoint, adjust schedule to do this."
+                    )
                 case ClimateZoneMode.MANUAL:
                     self.room_setpoint = value
                 case _:
@@ -210,9 +176,8 @@ class ClimateZone:
         elif self.is_domestic_hot_water():
             match self.mode:
                 case ClimateZoneMode.SCHEDULING:
-                    # Ignore, user must adjust schedule.
-                    # TODO implement temporary setpoint override
-                    _LOGGER.warning("Ignoring requested DHW setpoint, adjust schedule to do this.")
+                    # The required end time is set by the HA climate entity.
+                    self.temporary_setpoint = value
                 case ClimateZoneMode.MANUAL:
                     self.dhw_comfort_setpoint = value
                 case ClimateZoneMode.ANTI_FROST:

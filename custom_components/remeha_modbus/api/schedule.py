@@ -22,6 +22,7 @@ from custom_components.remeha_modbus.const import (
     WATER_SPECIFIC_HEAT_CAPACITY_KJ,
     BoilerConfiguration,
     BoilerEnergyLabel,
+    ClimateZoneScheduleId,
     ForecastField,
     PVSystem,
     Weekday,
@@ -31,7 +32,11 @@ from custom_components.remeha_modbus.errors import AutoSchedulingError
 from custom_components.remeha_modbus.helpers.iterators import consecutive_groups
 
 from .appliance import SeasonalMode
-from .climate_zone import ClimateZone, ClimateZoneScheduleId
+
+
+class ClimateZone:
+    """Forward declaration."""
+
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -386,7 +391,7 @@ class ZoneSchedule:
         if required_heating_kwh_after_cooling > default_required_heating_kwh:
             # TODO log a warning in the system log so the user can see it
             _LOGGER.warning(
-                "DHW boiler is likely going to heat up at night, outside of planning schedule. This "
+                "DHW boiler is likely going to heat up at night, outside of planning schedule."
             )
 
         # In the summer, only allow DHW heating in the morning and the afternoon.
@@ -503,6 +508,8 @@ class ZoneSchedule:
         return ZoneSchedule(
             id=ClimateZoneScheduleId.SCHEDULE_3,
             zone_id=boiler_zone.id,
+            # When presented with old data (like in testing), the week day returned here is
+            # probably not the actual current week day
             day=Weekday(weather_forecast.forecasts[-1].start_time.weekday()),
             time_slots=list(_generate_timeslots()),
         )
@@ -510,3 +517,39 @@ class ZoneSchedule:
     def __str__(self):
         """Return a human-readable representation of this schedule."""
         return f"ZoneSchedule(id={self.id}, zone_id={self.zone_id}, day={self.day.name}, time_slots={self.time_slots})"
+
+
+def get_current_timeslot(
+    schedule: dict[Weekday, ZoneSchedule] | None, time_zone: datetime.tzinfo | None
+) -> Timeslot | None:
+    """Retrieve the current schedule time slot.
+
+    Args:
+        schedule (dict[Weekday, ZoneSchedule]): The selected schedule
+        time_zone (datetime.tzinfo): The appliance time zone
+
+    Returns:
+        The current schedule time slot, or `None` if `schedule` is `None`.
+
+    """
+
+    if schedule is None:
+        return None
+
+    now: datetime.datetime = datetime.datetime.now(time_zone)
+    day_schedule: ZoneSchedule | None = schedule.get(Weekday(now.weekday()), None)
+
+    return (
+        next(
+            reversed(
+                [
+                    time_slot
+                    for time_slot in day_schedule.time_slots
+                    if time_slot.switch_time.hour < now.hour
+                ]
+            ),
+            None,
+        )
+        if day_schedule
+        else None
+    )

@@ -18,11 +18,6 @@ from .appliance import (  # noqa: F401
 )
 from .climate_zone import (  # noqa: F401
     ClimateZone,
-    ClimateZoneFunction,
-    ClimateZoneHeatingMode,
-    ClimateZoneMode,
-    ClimateZoneScheduleId,
-    ClimateZoneType,
 )
 from .schedule import (  # noqa: F401
     HourlyForecast,

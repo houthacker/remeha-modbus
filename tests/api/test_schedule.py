@@ -128,7 +128,7 @@ async def test_generate_dhw_time_schedule(json_fixture, mock_modbus_client):
     api = get_api(mock_modbus_client=mock_modbus_client)
     with patch(
         "custom_components.remeha_modbus.api.RemehaApi.create",
-        new=lambda name, config: api,
+        new=lambda *args, **kwargs: api,
     ):
         appliance = await api.async_read_appliance()
         zone = await api.async_read_zone(id=2)

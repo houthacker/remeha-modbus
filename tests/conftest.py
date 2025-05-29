@@ -4,11 +4,12 @@ import logging
 import uuid
 from collections.abc import Generator
 from datetime import timedelta, tzinfo
-from typing import Any
+from typing import Any, Final
 from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import pytest
 import voluptuous as vol
+from dateutil import tz
 from homeassistant.components.weather import (
     SERVICE_GET_FORECASTS,
     Forecast,
@@ -54,6 +55,8 @@ from custom_components.remeha_modbus.const import (
     ZoneRegisters,
 )
 
+TESTING_TIME_ZONE: Final[str] = "Europe/Amsterdam"
+
 
 class MockWeatherEntity(MockEntity, WeatherEntity):
     """Mock weather entity."""
@@ -78,6 +81,7 @@ def get_api(
     mock_modbus_client: ModbusBaseClient,
     name: str = "test_api",
     device_address: int = 100,
+    time_zone: tzinfo = tz.gettz(TESTING_TIME_ZONE),
 ) -> RemehaApi:
     """Create a new RemehaApi instance with a mocked modbus client."""
 
@@ -92,6 +96,7 @@ def get_api(
         connection_type=ConnectionType.RTU_OVER_TCP,
         client=mock_modbus_client,
         device_address=device_address,
+        time_zone=time_zone,
     )
 
 
@@ -256,6 +261,9 @@ async def setup_platform(hass: HomeAssistant, config_entry: MockConfigEntry):
     ):
         await hass.config_entries.async_setup(entry_id=config_entry.entry_id)
         await hass.async_block_till_done()
+
+    # Ensure hass and RemehaApi are using the same time zone.
+    await hass.config.async_update(time_zone=TESTING_TIME_ZONE)
 
 
 def _create_config_entry(

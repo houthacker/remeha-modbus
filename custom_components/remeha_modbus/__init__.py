@@ -2,6 +2,7 @@
 
 import logging
 
+from dateutil import tz
 from homeassistant.config_entries import (
     ConfigEntry,
     ConfigEntryError,
@@ -41,7 +42,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             f"{modbus_type} is not a valid connection type. Use one of [{connection_types}]"
         )
 
-    api: RemehaApi = RemehaApi.create(name=modbus_hub_name, config=entry.data)
+    api: RemehaApi = RemehaApi.create(
+        name=modbus_hub_name, config=entry.data, time_zone=tz.gettz(name=hass.config.time_zone)
+    )
 
     # Ensure the modbus device is reachable and actually talking Modbus
     # before forwarding setup to other platforms.

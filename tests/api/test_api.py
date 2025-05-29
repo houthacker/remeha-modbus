@@ -9,11 +9,6 @@ from custom_components.remeha_modbus.api import (
     ApplianceErrorPriority,
     ApplianceStatus,
     ClimateZone,
-    ClimateZoneFunction,
-    ClimateZoneHeatingMode,
-    ClimateZoneMode,
-    ClimateZoneScheduleId,
-    ClimateZoneType,
     ConnectionType,
     DeviceInstance,
     Timeslot,
@@ -23,6 +18,11 @@ from custom_components.remeha_modbus.api import (
 )
 from custom_components.remeha_modbus.const import (
     REMEHA_SENSORS,
+    ClimateZoneFunction,
+    ClimateZoneHeatingMode,
+    ClimateZoneMode,
+    ClimateZoneScheduleId,
+    ClimateZoneType,
     DataType,
     ModbusVariableDescription,
     Weekday,
@@ -120,7 +120,7 @@ async def test_read_zone(mock_modbus_client):
     assert zone.pump_running is True
     assert zone.room_setpoint == 20.0
     assert zone.room_temperature == 23.2
-    assert zone.selected_schedule == ClimateZoneScheduleId.SCHEDULE_1
+    assert zone.selected_schedule is ClimateZoneScheduleId.SCHEDULE_1
     assert zone.short_name == "CIRCA1"
     assert zone.type == ClimateZoneType.OTHER
 
@@ -256,7 +256,7 @@ async def test_write_zone_schedule(mock_modbus_client):
     api = get_api(mock_modbus_client=mock_modbus_client)
 
     expected_schedule = ZoneSchedule(
-        id=ClimateZoneScheduleId.SCHEDULE_3,
+        id=ClimateZoneScheduleId.SCHEDULE_2,
         zone_id=2,
         day=Weekday.FRIDAY,
         time_slots=[
@@ -290,7 +290,7 @@ async def test_write_zone_schedule(mock_modbus_client):
 
     # Retrieve schedule from modbus, must be None.
     actual_schedule: ZoneSchedule = await api.async_read_zone_schedule(
-        zone=2, schedule_id=ClimateZoneScheduleId.SCHEDULE_3, day=Weekday.FRIDAY
+        zone=2, schedule_id=ClimateZoneScheduleId.SCHEDULE_2, day=Weekday.FRIDAY
     )
     assert actual_schedule is None
 
@@ -298,12 +298,13 @@ async def test_write_zone_schedule(mock_modbus_client):
     await api.async_write_variable(
         variable=ZoneRegisters.TIME_PROGRAM_FRIDAY,
         value=expected_schedule,
-        offset=api.get_zone_register_offset(zone=2),
+        offset=api.get_zone_register_offset(zone=2)
+        + api.get_schedule_register_offset(schedule=ClimateZoneScheduleId.SCHEDULE_2),
     )
 
     # Read it back and check if it was successful.
     actual_schedule = await api.async_read_zone_schedule(
-        zone=2, schedule_id=ClimateZoneScheduleId.SCHEDULE_3, day=Weekday.FRIDAY
+        zone=2, schedule_id=ClimateZoneScheduleId.SCHEDULE_2, day=Weekday.FRIDAY
     )
 
     assert actual_schedule == expected_schedule

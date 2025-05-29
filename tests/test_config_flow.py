@@ -340,7 +340,7 @@ async def test_reconfigure_non_unique_id(
     api = get_api(mock_modbus_client=mock_modbus_client)
     with patch(
         "custom_components.remeha_modbus.api.RemehaApi.create",
-        new=lambda name, config: api,
+        new=lambda *args, **kwargs: api,
     ):
         # First setup the platform with the mocked ConfigEntry
         await setup_platform(hass=hass, config_entry=mock_config_entry)
@@ -409,7 +409,7 @@ async def test_migrate_from_config_v1_0(
     api = get_api(mock_modbus_client=mock_modbus_client)
     with patch(
         "custom_components.remeha_modbus.api.RemehaApi.create",
-        new=lambda name, config: api,
+        new=lambda *args, **kwargs: api,
     ):
         # First setup the platform with the mocked ConfigEntry
         await setup_platform(hass=hass, config_entry=mock_config_entry)

@@ -245,7 +245,8 @@ class RemehaUpdateCoordinator(DataUpdateCoordinator):
             await self._api.async_write_variable(
                 variable=WEEKDAY_TO_MODBUS_VARIABLE[schedule.day],
                 value=schedule,
-                offset=self._api.get_zone_register_offset(zone=dhw_zone),
+                offset=self._api.get_zone_register_offset(zone=dhw_zone)
+                + self._api.get_schedule_register_offset(schedule=schedule.id),
             )
         except ValueError as e:
             raise RemehaServiceException from e

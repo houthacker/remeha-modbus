@@ -1,8 +1,10 @@
 """Platform for climate entities over modbus."""
 
 import logging
+from datetime import datetime
 from typing import Final, Self
 
+from dateutil import relativedelta
 from homeassistant.components.climate import (
     ClimateEntity,
     ClimateEntityFeature,
@@ -20,12 +22,10 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from homeassistant.util import dt
 
 from custom_components.remeha_modbus.api import (
     ClimateZone,
-    ClimateZoneHeatingMode,
-    ClimateZoneMode,
-    ClimateZoneScheduleId,
     DeviceInstance,
     RemehaApi,
 )
@@ -39,6 +39,10 @@ from custom_components.remeha_modbus.const import (
     REMEHA_PRESET_SCHEDULE_2,
     REMEHA_PRESET_SCHEDULE_3,
     TEMPERATURE_STEP,
+    ClimateZoneHeatingMode,
+    ClimateZoneMode,
+    ClimateZoneScheduleId,
+    Limits,
     MetaRegisters,
     ZoneRegisters,
 )
@@ -170,6 +174,43 @@ class RemehaClimateEntity(CoordinatorEntity, ClimateEntity):
         """The current temperature setpoint."""
 
         return self._zone.current_setpoint
+
+    async def _temporary_setpoint_override(self, target_temperature: float) -> datetime:
+        """Write the temporary setpoint override to the modbus device.
+
+        Returns:
+            datetime: The end date/time of the temporary override.
+
+        """
+        zone: ClimateZone = self._zone
+        zone_offset: int = self.api.get_zone_register_offset(zone)
+
+        tz = dt.get_time_zone(self.hass.config.time_zone)
+        now: datetime = datetime.now(tz=tz)
+        override_end_time: datetime = now + relativedelta.relativedelta(
+            hours=Limits.DHW_SCHEDULING_SETPOINT_OVERRIDE_DURATION
+        )
+
+        await self.api.async_write_variable(
+            variable=ZoneRegisters.END_TIME_MODE_CHANGE,
+            value=override_end_time,
+            offset=zone_offset,
+        )
+
+        await self.api.async_write_variable(
+            variable=ZoneRegisters.TEMPORARY_SETPOINT,
+            value=target_temperature,
+            offset=zone_offset,
+        )
+
+        _LOGGER.debug(
+            "Temporarily overriding scheduled setpoint of %s to %.02f. Override ends at %s",
+            self.name,
+            target_temperature,
+            f"{override_end_time:%Y-%m-%d %H:%M}",
+        )
+
+        return override_end_time
 
 
 class RemehaDhwEntity(RemehaClimateEntity):
@@ -360,6 +401,12 @@ class RemehaDhwEntity(RemehaClimateEntity):
                 value=target_temperature,
                 offset=zone_offset,
             )
+        elif self.preset_mode in CLIMATE_DEFAULT_PRESETS:
+            # We're in scheduling mode, so temporarily override the setpoint.
+            zone.temporary_setpoint_end_time = await self._temporary_setpoint_override(
+                target_temperature=target_temperature
+            )
+
         else:
             raise InvalidClimateContext(
                 translation_domain=DOMAIN,
@@ -370,7 +417,7 @@ class RemehaDhwEntity(RemehaClimateEntity):
                 },
             )
 
-        # Update HA state until next poll
+        # Update HA setpoint until next poll
         zone.current_setpoint = target_temperature
         self.async_write_ha_state()
 
@@ -386,7 +433,7 @@ class RemehaChEntity(RemehaClimateEntity):
     )
 
     def __init__(self, api: RemehaApi, coordinator: RemehaUpdateCoordinator, climate_zone_id: int):
-        """Create a new RemehaDhwEntity."""
+        """Create a new RemehaChEntity."""
         super().__init__(api=api, coordinator=coordinator, climate_zone_id=climate_zone_id)
 
     @property

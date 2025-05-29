@@ -1,9 +1,7 @@
 """GTW-08 helper functions."""
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, tzinfo
 from typing import Final
-
-from dateutil import tz
 
 
 class TimeOfDay:
@@ -12,7 +10,7 @@ class TimeOfDay:
     _CIA301_TOD_BASE_DATE: Final[datetime] = datetime(year=1984, month=1, day=1, hour=0, minute=0)
 
     @classmethod
-    def from_bytes(cls, data: bytes, time_zone: str | None = None) -> datetime:
+    def from_bytes(cls, data: bytes, time_zone: tzinfo | None = None) -> datetime:
         """Decode a CiA 301 TIME_OF_DAY to a `datetime` object.
 
         `TIME_OF_DAY` is a struct that is defined as follows:
@@ -53,7 +51,7 @@ class TimeOfDay:
             data[4:],
         )
 
-        return cls._CIA301_TOD_BASE_DATE.replace(tzinfo=tz.gettz(time_zone)) + timedelta(
+        return cls._CIA301_TOD_BASE_DATE.replace(tzinfo=time_zone) + timedelta(
             days=days, milliseconds=ms
         )
 

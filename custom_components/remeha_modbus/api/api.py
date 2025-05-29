@@ -3,7 +3,7 @@
 import asyncio
 import logging
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, tzinfo
 from enum import Enum, StrEnum, auto
 from types import MappingProxyType
 from typing import Any, Self
@@ -27,6 +27,7 @@ from custom_components.remeha_modbus.const import (
     MODBUS_SERIAL_PARITY,
     MODBUS_SERIAL_STOPBITS,
     REMEHA_DEVICE_INSTANCE_RESERVED_REGISTERS,
+    REMEHA_TIME_PROGRAM_RESERVED_REGISTERS,
     REMEHA_ZONE_RESERVED_REGISTERS,
     WEEKDAY_TO_MODBUS_VARIABLE,
     DataType,
@@ -224,6 +225,7 @@ class RemehaApi:
         connection_type: ConnectionType,
         client: ModbusClient.ModbusBaseClient,
         device_address: int = 1,
+        time_zone: tzinfo | None = None,
     ):
         """Create a new API instance."""
         self._client: ModbusClient.ModbusBaseClient = client
@@ -233,14 +235,18 @@ class RemehaApi:
         self._device_address = device_address
         self._lock = asyncio.Lock()
         self._message_delay_seconds: int | None = 10 / 1000  # 10ms
+        self._time_zone = time_zone
 
     @classmethod
-    def create(cls, name: str, config: MappingProxyType[str, Any]) -> Self:
+    def create(
+        cls, name: str, config: MappingProxyType[str, Any], time_zone: tzinfo | None = None
+    ) -> Self:
         """Create a new `RemehaApi` instance.
 
         Args:
             name (str): The name of the modbus hub name.
             config (MappingProxyType[str, Any]): The dict containing the configuration of the related `ConfigEntry`.
+            time_zone (tzinfo|None): The time zone of the Remeha appliance. If `None`, local system time is used..
 
         """
         connection_type: ConnectionType = config[CONF_TYPE]
@@ -282,6 +288,7 @@ class RemehaApi:
             connection_type=connection_type,
             client=client,
             device_address=config[MODBUS_DEVICE_ADDRESS],
+            time_zone=time_zone,
         )
 
     @property
@@ -413,6 +420,13 @@ class RemehaApi:
 
         device_id: int = device.id if isinstance(device, DeviceInstance) else device
         return device_id * REMEHA_DEVICE_INSTANCE_RESERVED_REGISTERS
+
+    def get_schedule_register_offset(self, schedule: ClimateZoneScheduleId | int) -> int:
+        """Get the offset in registers for the given `ClimateZoneScheduleId | int."""
+        schedule_id: int = (
+            schedule.value if isinstance(schedule, ClimateZoneScheduleId) else int(schedule)
+        )
+        return schedule_id * REMEHA_TIME_PROGRAM_RESERVED_REGISTERS
 
     async def async_health_check(self) -> None:
         """Attempt to check the system health by reading a single register (128 - numberOfDevices).
@@ -801,6 +815,18 @@ class RemehaApi:
             destination_variable=ZoneRegisters.DHW_TANK_TEMPERATURE,
         )
 
+        # Read zone schedules
+        current_schedule: dict[Weekday, ZoneSchedule] = (
+            {
+                day: await self.async_read_zone_schedule(
+                    zone=id, schedule_id=ClimateZoneScheduleId(selected_schedule), day=day
+                )
+                for day in Weekday
+            }
+            if selected_schedule is not None
+            else {}
+        )
+
         return ClimateZone(
             id=id,
             type=ClimateZoneType(zone_type),
@@ -817,10 +843,16 @@ class RemehaApi:
             dhw_comfort_setpoint=dhw_comfort_setpoint,
             dhw_reduced_setpoint=dhw_reduced_setpoint,
             dhw_calorifier_hysteresis=dhw_calorifier_hysteresis,
-            temporary_setpoint_end_time=end_time_temporary_override,
+            temporary_setpoint_end_time=TimeOfDay.from_bytes(
+                data=end_time_temporary_override, time_zone=self._time_zone
+            )
+            if end_time_temporary_override is not None
+            else None,
             room_temperature=room_temperature,
             pump_running=bool(pump_running),
             dhw_tank_temperature=dhw_tank_temperature,
+            time_zone=self._time_zone,
+            current_schedule=current_schedule,
         )
 
     async def async_read_zone_update(self, zone: ClimateZone) -> ClimateZone:
@@ -935,6 +967,18 @@ class RemehaApi:
             destination_variable=ZoneRegisters.DHW_TANK_TEMPERATURE,
         )
 
+        # Read zone schedules
+        current_schedule: dict[Weekday, ZoneSchedule] = (
+            {
+                day: await self.async_read_zone_schedule(
+                    zone=id, schedule_id=selected_schedule, day=day
+                )
+                for day in Weekday
+            }
+            if selected_schedule
+            else {}
+        )
+
         # Merge old and new zone.
         return ClimateZone(
             id=zone.id,
@@ -952,10 +996,16 @@ class RemehaApi:
             dhw_comfort_setpoint=dhw_comfort_setpoint,
             dhw_reduced_setpoint=dhw_reduced_setpoint,
             dhw_calorifier_hysteresis=dhw_calorifier_hysteresis,
-            temporary_setpoint_end_time=end_time_temporary_override,
+            temporary_setpoint_end_time=TimeOfDay.from_bytes(
+                data=end_time_temporary_override, time_zone=self._time_zone
+            )
+            if end_time_temporary_override is not None
+            else None,
             room_temperature=room_temperature,
             pump_running=bool(pump_running),
             dhw_tank_temperature=dhw_tank_temperature,
+            time_zone=self._time_zone,
+            current_schedule=current_schedule,
         )
 
     async def async_read_zone_schedule(
@@ -980,10 +1030,11 @@ class RemehaApi:
         zone_id: int = zone.id if isinstance(zone, ClimateZone) else zone
         variable: ModbusVariableDescription = WEEKDAY_TO_MODBUS_VARIABLE[day]
         zone_register_offset = self.get_zone_register_offset(zone)
+        schedule_register_offset = self.get_schedule_register_offset(schedule=schedule_id)
 
         schedule_bytes: bytes = from_registers(
             registers=await self._async_read_registers(
-                variable=variable, offset=zone_register_offset
+                variable=variable, offset=zone_register_offset + schedule_register_offset
             ),
             destination_variable=variable,
         )

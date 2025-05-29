@@ -16,7 +16,7 @@ async def test_climates(hass: HomeAssistant, mock_modbus_client, mock_config_ent
     api = get_api(mock_modbus_client=mock_modbus_client)
     with patch(
         "custom_components.remeha_modbus.api.RemehaApi.create",
-        new=lambda name, config: api,
+        new=lambda *args, **kwargs: api,
     ):
         await setup_platform(hass=hass, config_entry=mock_config_entry)
         await hass.async_block_till_done()
@@ -31,7 +31,7 @@ async def test_dhw_hysteresis(hass: HomeAssistant, mock_modbus_client, mock_conf
     api = get_api(mock_modbus_client=mock_modbus_client)
     with patch(
         "custom_components.remeha_modbus.api.RemehaApi.create",
-        new=lambda name, config: api,
+        new=lambda *args, **kwargs: api,
     ):
         await setup_platform(hass=hass, config_entry=mock_config_entry)
         await hass.async_block_till_done()
@@ -66,7 +66,7 @@ async def test_dhw_hysteresis_unavailable(
     api = get_api(mock_modbus_client=mock_modbus_client)
     with patch(
         "custom_components.remeha_modbus.api.RemehaApi.create",
-        new=lambda name, config: api,
+        new=lambda *args, **kwargs: api,
     ):
         await setup_platform(hass=hass, config_entry=mock_config_entry)
         await hass.async_block_till_done()
