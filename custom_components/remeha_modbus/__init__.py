@@ -1,5 +1,8 @@
 """The Remeha Modbus integration."""
 
+import logging
+
+from dateutil import tz
 from homeassistant.config_entries import (
     ConfigEntry,
     ConfigEntryError,
@@ -13,7 +16,9 @@ from custom_components.remeha_modbus.api import (
     ConnectionType,
     RemehaApi,
 )
+from custom_components.remeha_modbus.const import CONFIG_AUTO_SCHEDULE
 from custom_components.remeha_modbus.coordinator import RemehaUpdateCoordinator
+from custom_components.remeha_modbus.services import register_services
 
 PLATFORMS: list[Platform] = [
     Platform.CLIMATE,
@@ -21,6 +26,8 @@ PLATFORMS: list[Platform] = [
     Platform.SENSOR,
     Platform.BINARY_SENSOR,
 ]
+
+_LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
@@ -35,7 +42,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             f"{modbus_type} is not a valid connection type. Use one of [{connection_types}]"
         )
 
-    api: RemehaApi = RemehaApi.create(name=modbus_hub_name, config=entry.data)
+    api: RemehaApi = RemehaApi.create(
+        name=modbus_hub_name, config=entry.data, time_zone=tz.gettz(name=hass.config.time_zone)
+    )
 
     # Ensure the modbus device is reachable and actually talking Modbus
     # before forwarding setup to other platforms.
@@ -53,6 +62,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
+    # Register services only if everything else has been set up ssuccessfully.
+    register_services(hass=hass, config=entry, coordinator=coordinator)
+
     return True
 
 
@@ -64,3 +76,33 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     await coordinator.async_shutdown()
 
     return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+
+
+async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
+    """Migrate config entry to latest version."""
+    _LOGGER.debug(
+        "Migrating configuration from version %s.%s",
+        config_entry.version,
+        config_entry.minor_version,
+    )
+
+    if config_entry.version > 1:
+        _LOGGER.error("Cannot downgrade from future version.")
+        return False
+
+    new_data = {**config_entry.data}
+    if config_entry.minor_version == 0:
+        # version 1.1 adds auto-scheduling configuration.
+        # For the migration, setting the parameter `auto_schedule` to `False` is enough:
+        # fully configuring auto scheduling, if desired, can be done by reconfiguring
+        # the integration.
+        new_data[CONFIG_AUTO_SCHEDULE] = False
+
+    hass.config_entries.async_update_entry(config_entry, data=new_data, minor_version=1, version=1)
+    _LOGGER.debug(
+        "Migration to configuration version %s.%s successful",
+        config_entry.version,
+        config_entry.minor_version,
+    )
+
+    return True

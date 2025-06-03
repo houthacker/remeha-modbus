@@ -5,12 +5,55 @@
         "data": {
           "name": "[%key:common::config_flow::data::name%]",
           "type": "Connection type",
-          "slave": "Modbus address"
+          "slave": "Modbus address",
+          "auto_schedule": "DHW scheduling"
         },
         "data_description": {
           "name": "The name of the modbus hub. Must be unique.",
           "type": "The type of modbus connection.",
-          "slave": "The GTW-08 modbus address"
+          "slave": "The GTW-08 modbus address",
+          "auto_schedule": "Set up automatic DHW scheduling"
+        }
+      },
+      "auto_scheduling": {
+        "title": "Auto scheduling configuration",
+        "description": "Select a weather entity and provide PV system configuration.",
+        "data": {
+          "weather_entity_id": "Weather entity"
+        },
+        "data_description": {
+          "weather_entity_id": "Weather entity of which to retrieve the forecast."
+        },
+        "sections": {
+          "pv_options": {
+            "name": "PV system configuration",
+            "data": {
+              "nominal_power_wp": "Nominal power (Wp)",
+              "orientation": "Orientation",
+              "tilt": "Tilt (degrees)",
+              "annual_efficiency_decrease": "Annual efficiency decrease (%)",
+              "installation_date": "Installation date"
+            },
+            "data_description": {
+              "nominal_power_wp": "The total Wp of the PV system",
+              "orientation": "The direction the PV panels are facing towards. For panels that are placed East/West, select 'EW' for 50/50 distribution of the total Wp.",
+              "annual_efficiency_decrease": "The annual efficiency decrease in percent. Leave at `0` if unknown.",
+              "installation_date": "The (approximate) installation date to calculate the current system efficiency."
+            }
+          },
+          "dhw_boiler_options": {
+            "name": "DHW boiler configuration",
+            "data": {
+              "dhw_boiler_volume": "DHW boiler volume",
+              "dhw_heat_loss_rate": "DHW boiler heat loss rate",
+              "dhw_boiler_energy_label": "DHW boiler energy label"
+            },
+            "data_description": {
+              "dhw_boiler_volume": "The DHW boiler volume in L",
+              "dhw_heat_loss_rate": "The DHW boiler heat loss rate in Watts",
+              "dhw_boiler_energy_label": "DHW boiler energy label. Used if heat loss rate is `0`, otherwise ignored."
+            }
+          }
         }
       },
       "modbus_serial": {
@@ -69,6 +112,12 @@
       }
     }
   },
+  "services": {
+    "dhw_auto_schedule": {
+      "name": "DHW auto scheduling",
+      "description": "Create a DHW schedule for the next day based on weather forecast and boiler/solar configuration. Requires a weather integration that provides solar irradiance in hourly forecasts."
+    }
+  },
   "exceptions": {
     "climate_invalid_operation_ctx": {
       "message": "Requested operation {operation} is invalid in preset mode {preset_mode}."
@@ -78,6 +127,27 @@
     },
     "climate_unsupported_preset_mode": {
       "message": "Requested preset mode {preset_mode} is unsupported."
+    },
+    "auto_schedule_unsupported_temperature_unit": {
+      "message": "Entity {entity_id} uses an unsupported temperature unit {unit_of_temperature}."
+    },
+    "auto_schedule_no_dhw_climate": {
+      "message": "Cannot auto schedule: no DHW entity exists in Remeha Modbus integration."
+    },
+    "auto_schedule_no_forecasts": {
+      "message": "Cannot auto schedule: no weather forecasts available."
+    },
+    "auto_schedule_forecast_not_enough_hours": {
+      "message": "Cannot auto schedule: latest available forecast time is {max_forecast_time}, but to schedule a day ahead this must be at least {min_required_end_time}. Please wait until this time and try again."
+    },
+    "auto_schedule_no_solar_irradiance": {
+      "message": "Cannot auto schedule: `solar_irradiance` is a required field in the hourly weather forecast. Please use a weather integration that supports this."
+    },
+    "auto_schedule_modbus_error": {
+      "message": "Cannot auto schedule: a modbus error occurred, see logs for details. Please try again at a later time."
+    },
+    "auto_schedule_value_error": {
+      "message": "Cannot auto schedule: error while deserializing modbus response, see logs for details."
     }
   }
 }
