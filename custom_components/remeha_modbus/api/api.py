@@ -974,7 +974,7 @@ class RemehaApi:
                 )
                 for day in Weekday
             }
-            if selected_schedule
+            if selected_schedule is not None
             else {}
         )
 
