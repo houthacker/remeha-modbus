@@ -178,7 +178,7 @@ class RemehaUpdateCoordinator(DataUpdateCoordinator):
     def get_sensor_value(self, variable: ModbusVariableDescription) -> Any:
         """Get the current value of a sensor."""
 
-        return self.data["sensors"][variable]
+        return self.data["sensors"].get(variable, None)
 
     async def async_dhw_auto_schedule(
         self,
