@@ -970,7 +970,7 @@ class RemehaApi:
         current_schedule: dict[Weekday, ZoneSchedule] = (
             {
                 day: await self.async_read_zone_schedule(
-                    zone=id, schedule_id=selected_schedule, day=day
+                    zone=zone, schedule_id=selected_schedule, day=day
                 )
                 for day in Weekday
             }
@@ -1028,7 +1028,7 @@ class RemehaApi:
 
         zone_id: int = zone.id if isinstance(zone, ClimateZone) else zone
         variable: ModbusVariableDescription = WEEKDAY_TO_MODBUS_VARIABLE[day]
-        zone_register_offset = self.get_zone_register_offset(zone)
+        zone_register_offset = self.get_zone_register_offset(zone_id)
         schedule_register_offset = self.get_schedule_register_offset(schedule=schedule_id)
 
         schedule_bytes: bytes = from_registers(
