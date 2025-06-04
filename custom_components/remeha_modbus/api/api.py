@@ -234,7 +234,6 @@ class RemehaApi:
         self._connection_type = connection_type
         self._device_address = device_address
         self._lock = asyncio.Lock()
-        self._message_delay_seconds: int | None = 10 / 1000  # 10ms
         self._time_zone = time_zone
 
     @classmethod
@@ -254,6 +253,7 @@ class RemehaApi:
         match connection_type:
             case ConnectionType.SERIAL:
                 client = AsyncModbusSerialClient(
+                    name="remeha_modbus_serial",
                     port=config[CONF_PORT],
                     baudrate=config[MODBUS_SERIAL_BAUDRATE],
                     bytesize=config[MODBUS_SERIAL_BYTESIZE],
@@ -263,24 +263,27 @@ class RemehaApi:
                 )
             case ConnectionType.TCP:
                 client = AsyncModbusTcpClient(
+                    name="remeha_modbus_tcp",
                     host=config[CONF_HOST],
                     port=int(config[CONF_PORT]),
                     framer=FramerType.SOCKET,
-                    timeout=5,
+                    timeout=120,
                 )
             case ConnectionType.UDP:
                 client = AsyncModbusUdpClient(
+                    name="remeha_modbus_udp",
                     host=config[CONF_HOST],
                     port=int(config[CONF_PORT]),
                     framer=FramerType.SOCKET,
-                    timeout=5,
+                    timeout=120,
                 )
             case ConnectionType.RTU_OVER_TCP:
                 client = AsyncModbusTcpClient(
+                    name="remeha_modbus_rtu_over_tcp",
                     host=config[CONF_HOST],
                     port=int(config[CONF_PORT]),
                     framer=FramerType.RTU,
-                    timeout=5,
+                    timeout=120,
                 )
 
         return RemehaApi(
@@ -361,10 +364,6 @@ class RemehaApi:
             """Ensure that we're connected or raise an exception."""
             if not self._client.connected and not await self._client.connect():
                 raise ModbusException("Connection to modbus device lost.")
-
-        if self._message_delay_seconds is not None:
-            # Let the modbus device catch its breath.
-            await asyncio.sleep(self._message_delay_seconds)
 
         await _async_ensure_connected()
         response: ModbusPDU = await self._client.read_holding_registers(

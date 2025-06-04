@@ -299,7 +299,7 @@ def _create_config_entry(
                     PV_ORIENTATION: "S",
                     PV_TILT: 30.0,
                     PV_ANNUAL_EFFICIENCY_DECREASE: 0.42,
-                    PV_INSTALLATION_DATE: dt.now(time_zone=time_zone).date(),
+                    PV_INSTALLATION_DATE: str(dt.now(time_zone=time_zone).date()),
                 },
                 DHW_BOILER_CONFIG_SECTION: {
                     DHW_BOILER_VOLUME: dhw_boiler_volume,
