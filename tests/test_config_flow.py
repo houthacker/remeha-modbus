@@ -1,7 +1,7 @@
 """Test the Remeha Modbus config flow."""
 
 import logging
-from datetime import timedelta
+from datetime import date, timedelta
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -226,7 +226,7 @@ async def test_config_auto_scheduling(hass: HomeAssistant, mock_setup_entry: Asy
             PV_ORIENTATION: PVSystemOrientation.SOUTH,
             PV_TILT: 30,
             PV_ANNUAL_EFFICIENCY_DECREASE: 0.54,
-            PV_INSTALLATION_DATE: "2025-03-14",
+            PV_INSTALLATION_DATE: date(year=2025, month=3, day=14),
         },
         DHW_BOILER_CONFIG_SECTION: {
             DHW_BOILER_VOLUME: 300,
