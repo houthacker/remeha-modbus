@@ -16,7 +16,6 @@
         }
       },
       "auto_scheduling": {
-        "name": "Enable auto scheduling",
         "title": "Auto scheduling configuration",
         "description": "Select a weather entity and provide PV system configuration.",
         "data": {
