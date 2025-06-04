@@ -409,7 +409,7 @@ PV_NOMINAL_POWER_WP: Final[str] = "nominal_power_wp"
 PV_ORIENTATION: Final[str] = "orientation"
 PV_TILT: Final[str] = "tilt"
 PV_ANNUAL_EFFICIENCY_DECREASE: Final[str] = "annual_efficiency_decrease"
-PV_INSTALLATION_DATE: Final[str] = "installation_date"
+PV_INSTALLATION_DATE: Final[str] = "pv_installation_date"
 
 # DHW boiler parameters
 DHW_BOILER_CONFIG_SECTION: Final[str] = "dhw_boiler_options"
