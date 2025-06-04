@@ -98,7 +98,7 @@ STEP_AUTO_SCHEDULING = vol.Schema(
                         vol.Range(min=PV_MIN_TILT_DEGREES, max=PV_MAX_TILT_DEGREES),
                     ),
                     vol.Optional(PV_ANNUAL_EFFICIENCY_DECREASE, default=0.0): cv.positive_float,
-                    vol.Optional(PV_INSTALLATION_DATE): vol.Date(),
+                    vol.Optional(PV_INSTALLATION_DATE): selector({"date": {}}),
                 }
             ),
             {"collapsed": False},

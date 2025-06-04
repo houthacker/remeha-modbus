@@ -39,13 +39,13 @@
               "orientation": "Oriëntatie",
               "tilt": "Hellingshoek (graden)",
               "annual_efficiency_decrease": "Jaarlijkse afname efficiëntie (%)",
-              "installation_date": "Installatiedatum"
+              "pv_installation_date": "Installatiedatum"
             },
             "data_description": {
               "nominal_power_wp": "Het totale piekvermogen van het PV systeem.",
               "orientation": "Selecteer de oriëntatie van de zonnepanelen. Zonnepanelen die oost/west (EW) zijn geplaatst verdelen het piekvermogen 50/50.",
               "annual_efficiency_decrease": "Vul de jaarlijkse efficiëntie-afname in, in procenten. Indien onbekend, vul dan 0 in.",
-              "installation_date": "De installatiedatum (hoeft niet exact) van het PV systeem wordt gebruikt om de huidige efficiëntie te berekenen."
+              "pv_installation_date": "De installatiedatum (hoeft niet exact) van het PV systeem wordt gebruikt om de huidige efficiëntie te berekenen."
             }
           },
           "dhw_boiler_options": {

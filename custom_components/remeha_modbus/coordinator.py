@@ -5,6 +5,7 @@ from collections.abc import Callable
 from datetime import timedelta
 from typing import Any
 
+from dateutil.parser import parse
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import UnitOfTemperature
 from homeassistant.core import HomeAssistant
@@ -68,7 +69,9 @@ def _config_to_pv_config(config: ConfigEntry) -> PVSystem:
         orientation=PVSystemOrientation(section[PV_ORIENTATION]),
         tilt=section.get(PV_TILT, None),
         annual_efficiency_decrease=section.get(PV_ANNUAL_EFFICIENCY_DECREASE, None),
-        installation_date=section.get(PV_INSTALLATION_DATE, None),
+        installation_date=parse(section[PV_INSTALLATION_DATE]).date()
+        if PV_INSTALLATION_DATE in section
+        else None,
     )
 
 

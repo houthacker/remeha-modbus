@@ -29,7 +29,7 @@ MAXIMUM_NORMAL_SURFACE_IRRADIANCE_NL: Final[int] = 1000
 WATER_SPECIFIC_HEAT_CAPACITY_KJ: Final[float] = 4.18
 """The amount of energy required to warm 1 kilogram of water by one degree K"""
 
-AUTO_SCHEDULE_MINIMAL_END_HOUR: Final[int] = 22
+AUTO_SCHEDULE_MINIMAL_END_HOUR: Final[int] = 21
 """The minimal latest hour required to create a useful auto schedule.
 
 This means that if a schedule is planned before this hour, it cannot succeed
@@ -409,7 +409,7 @@ PV_NOMINAL_POWER_WP: Final[str] = "nominal_power_wp"
 PV_ORIENTATION: Final[str] = "orientation"
 PV_TILT: Final[str] = "tilt"
 PV_ANNUAL_EFFICIENCY_DECREASE: Final[str] = "annual_efficiency_decrease"
-PV_INSTALLATION_DATE: Final[str] = "installation_date"
+PV_INSTALLATION_DATE: Final[str] = "pv_installation_date"
 
 # DHW boiler parameters
 DHW_BOILER_CONFIG_SECTION: Final[str] = "dhw_boiler_options"
