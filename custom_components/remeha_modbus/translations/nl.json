@@ -23,6 +23,7 @@
         }
       },
       "auto_scheduling": {
+        "name": "Configureer automatische SWW planning",
         "title": "Automatisch schema voor SWW",
         "description": "Kies een 'weather' entiteit en vul informatie over je zonnepanelen in.",
         "data": {
