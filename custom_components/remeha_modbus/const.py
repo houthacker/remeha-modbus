@@ -21,7 +21,7 @@ DOMAIN: Final[str] = "remeha_modbus"
 
 # Versioning for the config flow.
 HA_CONFIG_VERSION = 1
-HA_CONFIG_MINOR_VERSION = 1
+HA_CONFIG_MINOR_VERSION = 2
 
 MAXIMUM_NORMAL_SURFACE_IRRADIANCE_NL: Final[int] = 1000
 """The maximum normal surface irradiance in The Netherlands, in W/m²"""
@@ -406,6 +406,9 @@ AUTO_SCHEDULE_DEFAULT_ID: Final[ClimateZoneScheduleId] = ClimateZoneScheduleId.S
 WEATHER_ENTITY_ID: Final[str] = "weather_entity_id"
 """Config key for the Weather entity to retrieve the forecast of."""
 
+AUTO_SCHEDULE_SELECTED_SCHEDULE: Final[str] = "selected_schedule"
+"""The id of the schedule to use for auto scheduling."""
+
 # PV system parameters
 PV_CONFIG_SECTION: Final[str] = "pv_options"
 PV_NOMINAL_POWER_WP: Final[str] = "nominal_power_wp"
@@ -469,6 +472,12 @@ CLIMATE_DEFAULT_PRESETS: Final[list[str]] = [
 
 # Additional presets available on DHW zones
 CLIMATE_DHW_EXTRA_PRESETS: Final[list[str]] = [PRESET_COMFORT, PRESET_ECO, PRESET_NONE]
+
+HA_SCHEDULE_TO_REMEHA_SCHEDULE: Final[dict[str, ClimateZoneScheduleId]] = {
+    REMEHA_PRESET_SCHEDULE_1: ClimateZoneScheduleId.SCHEDULE_1,
+    REMEHA_PRESET_SCHEDULE_2: ClimateZoneScheduleId.SCHEDULE_2,
+    REMEHA_PRESET_SCHEDULE_3: ClimateZoneScheduleId.SCHEDULE_3,
+}
 
 
 class DataType(StrEnum):

@@ -33,6 +33,7 @@ from pytest_homeassistant_custom_component.common import (
 
 from custom_components.remeha_modbus.api import ConnectionType, RemehaApi
 from custom_components.remeha_modbus.const import (
+    AUTO_SCHEDULE_SELECTED_SCHEDULE,
     CONFIG_AUTO_SCHEDULE,
     CONNECTION_RTU_OVER_TCP,
     DHW_BOILER_CONFIG_SECTION,
@@ -49,6 +50,7 @@ from custom_components.remeha_modbus.const import (
     PV_NOMINAL_POWER_WP,
     PV_ORIENTATION,
     PV_TILT,
+    REMEHA_PRESET_SCHEDULE_1,
     REMEHA_ZONE_RESERVED_REGISTERS,
     WEATHER_ENTITY_ID,
     BoilerEnergyLabel,
@@ -287,13 +289,14 @@ def _create_config_entry(
         CONF_PORT: 8899,
     }
 
-    # v1.1
-    if version[1] == 1:
+    # v1.1, v1.2
+    if version[1] in [1, 2]:
         entry_data |= {CONFIG_AUTO_SCHEDULE: auto_scheduling}
 
         if auto_scheduling is True:
             entry_data |= {
                 WEATHER_ENTITY_ID: "weather.fake_weather",
+                AUTO_SCHEDULE_SELECTED_SCHEDULE: REMEHA_PRESET_SCHEDULE_1,
                 PV_CONFIG_SECTION: {
                     PV_NOMINAL_POWER_WP: 5720,
                     PV_ORIENTATION: "S",

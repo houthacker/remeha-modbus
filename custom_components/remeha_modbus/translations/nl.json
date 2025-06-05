@@ -93,6 +93,15 @@
       }
     }
   },
+  "selector": {
+    "select_default_auto_schedule_id": {
+      "options": {
+        "schedule_1": "Schema 1",
+        "schedule_2": "Schema 2",
+        "schedule_3": "Schema 3"
+      }
+    }
+  },
   "entity": {
     "climate": {
       "remeha_modbus": {

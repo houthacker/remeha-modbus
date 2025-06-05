@@ -93,6 +93,15 @@
       "already_configured": "[%key:common::config_flow::abort::already_configured_device%]"
     }
   },
+  "selector": {
+    "select_default_auto_schedule_id": {
+      "options": {
+        "schedule_1": "Schedule 1",
+        "schedule_2": "Schedule 2",
+        "schedule_3": "Schedule 3"
+      }
+    }
+  },
   "entity": {
     "climate": {
       "remeha_modbus": {

@@ -14,6 +14,7 @@ from homeassistant.data_entry_flow import FlowResultType, InvalidData
 from homeassistant.helpers.entity_component import EntityComponent
 
 from custom_components.remeha_modbus.const import (
+    AUTO_SCHEDULE_SELECTED_SCHEDULE,
     CONFIG_AUTO_SCHEDULE,
     CONNECTION_RTU_OVER_TCP,
     CONNECTION_SERIAL,
@@ -39,6 +40,7 @@ from custom_components.remeha_modbus.const import (
     PV_NOMINAL_POWER_WP,
     PV_ORIENTATION,
     PV_TILT,
+    REMEHA_PRESET_SCHEDULE_1,
     WEATHER_ENTITY_ID,
     PVSystemOrientation,
 )
@@ -187,6 +189,7 @@ async def test_config_auto_scheduling(hass: HomeAssistant, mock_setup_entry: Asy
         result["flow_id"],
         {
             WEATHER_ENTITY_ID: "weather.fake_weather",
+            AUTO_SCHEDULE_SELECTED_SCHEDULE: REMEHA_PRESET_SCHEDULE_1,
             PV_CONFIG_SECTION: {
                 PV_NOMINAL_POWER_WP: 1375,
                 PV_ORIENTATION: PVSystemOrientation.SOUTH,
@@ -221,6 +224,7 @@ async def test_config_auto_scheduling(hass: HomeAssistant, mock_setup_entry: Asy
         CONF_PORT: 502,
         CONFIG_AUTO_SCHEDULE: True,
         WEATHER_ENTITY_ID: "weather.fake_weather",
+        AUTO_SCHEDULE_SELECTED_SCHEDULE: REMEHA_PRESET_SCHEDULE_1,
         PV_CONFIG_SECTION: {
             PV_NOMINAL_POWER_WP: 1375,
             PV_ORIENTATION: PVSystemOrientation.SOUTH,
@@ -279,6 +283,7 @@ async def test_config_auto_scheduling_no_installation_date(
     assert result["type"] is FlowResultType.FORM
 
     # Fill in the details, check the result.
+    # Leave out AUTO_SCHEDULE_SELECTED_SCHEDULE, since it has a default value.
     result = await hass.config_entries.flow.async_configure(
         result["flow_id"],
         {
@@ -316,6 +321,7 @@ async def test_config_auto_scheduling_no_installation_date(
         CONF_PORT: 502,
         CONFIG_AUTO_SCHEDULE: True,
         WEATHER_ENTITY_ID: "weather.fake_weather",
+        AUTO_SCHEDULE_SELECTED_SCHEDULE: REMEHA_PRESET_SCHEDULE_1,
         PV_CONFIG_SECTION: {
             PV_NOMINAL_POWER_WP: 1375,
             PV_ORIENTATION: "S",

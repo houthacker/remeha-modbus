@@ -19,6 +19,7 @@ from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.selector import selector
 
 from custom_components.remeha_modbus.const import (
+    AUTO_SCHEDULE_SELECTED_SCHEDULE,
     CONFIG_AUTO_SCHEDULE,
     CONNECTION_RTU_OVER_TCP,
     CONNECTION_SERIAL,
@@ -50,6 +51,9 @@ from custom_components.remeha_modbus.const import (
     PV_NOMINAL_POWER_WP,
     PV_ORIENTATION,
     PV_TILT,
+    REMEHA_PRESET_SCHEDULE_1,
+    REMEHA_PRESET_SCHEDULE_2,
+    REMEHA_PRESET_SCHEDULE_3,
     WEATHER_ENTITY_ID,
     BoilerEnergyLabel,
     PVSystemOrientation,
@@ -85,6 +89,19 @@ STEP_AUTO_SCHEDULING = vol.Schema(
     {
         vol.Required(WEATHER_ENTITY_ID): selector(
             {"entity": {"filter": {"domain": WeatherDomain}}}
+        ),
+        vol.Required(AUTO_SCHEDULE_SELECTED_SCHEDULE, default=REMEHA_PRESET_SCHEDULE_1): selector(
+            {
+                "select": {
+                    "mode": "dropdown",
+                    "translation_key": "select_default_auto_schedule_id",
+                    "options": [
+                        REMEHA_PRESET_SCHEDULE_1,
+                        REMEHA_PRESET_SCHEDULE_2,
+                        REMEHA_PRESET_SCHEDULE_3,
+                    ],
+                }
+            }
         ),
         vol.Required(PV_CONFIG_SECTION): section(
             vol.Schema(
@@ -160,6 +177,7 @@ def _validate_auto_scheduling_config(data: dict[str, Any]) -> dict[str, Any]:
     dhw_options: dict[str, Any] = data[DHW_BOILER_CONFIG_SECTION]
     return {
         WEATHER_ENTITY_ID: data[WEATHER_ENTITY_ID],
+        AUTO_SCHEDULE_SELECTED_SCHEDULE: data[AUTO_SCHEDULE_SELECTED_SCHEDULE],
         PV_CONFIG_SECTION: {
             PV_NOMINAL_POWER_WP: pv_options[PV_NOMINAL_POWER_WP],
             PV_ORIENTATION: pv_options[PV_ORIENTATION],
