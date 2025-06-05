@@ -15,6 +15,7 @@ from custom_components.remeha_modbus.api.schedule import (
     ZoneSchedule,
 )
 from custom_components.remeha_modbus.const import (
+    AUTO_SCHEDULE_DEFAULT_ID,
     WEEKDAY_TO_MODBUS_VARIABLE,
     BoilerConfiguration,
     BoilerEnergyLabel,
@@ -188,10 +189,11 @@ async def test_generate_dhw_time_schedule(json_fixture, mock_modbus_client):
             boiler_config=boiler_config,
             boiler_zone=zone,
             appliance_seasonal_mode=appliance.season_mode,
+            schedule_id=AUTO_SCHEDULE_DEFAULT_ID,
         )
 
         assert schedule == ZoneSchedule(
-            id=ClimateZoneScheduleId.SCHEDULE_3,
+            id=AUTO_SCHEDULE_DEFAULT_ID,
             zone_id=zone.id,
             day=Weekday.FRIDAY,
             time_slots=[
@@ -258,10 +260,11 @@ async def test_generate_dhw_time_schedule_without_solar_yield(json_fixture, mock
             boiler_config=boiler_config,
             boiler_zone=zone,
             appliance_seasonal_mode=appliance.season_mode,
+            schedule_id=AUTO_SCHEDULE_DEFAULT_ID,
         )
 
         assert schedule == ZoneSchedule(
-            id=ClimateZoneScheduleId.SCHEDULE_3,
+            id=AUTO_SCHEDULE_DEFAULT_ID,
             zone_id=zone.id,
             day=Weekday.FRIDAY,
             time_slots=[

@@ -400,6 +400,9 @@ CONFIG_AUTO_SCHEDULE: Final[str] = "auto_schedule"
 # Keep in sync with services.yaml service name.
 AUTO_SCHEDULE_SERVICE_NAME: Final[str] = "dhw_auto_schedule"
 
+AUTO_SCHEDULE_DEFAULT_ID: Final[ClimateZoneScheduleId] = ClimateZoneScheduleId.SCHEDULE_1
+"""The default schedule id for auto scheduling."""
+
 WEATHER_ENTITY_ID: Final[str] = "weather_entity_id"
 """Config key for the Weather entity to retrieve the forecast of."""
 
