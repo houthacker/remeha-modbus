@@ -76,8 +76,8 @@ To start using the auto scheduling feature, execute the following steps:
 - Then just create a new automation with the following properties:
     - Trigger at any time between 22:00 and 23:59
     - Call the Remeha Modbus action `dhw_auto_schedule`
-    - Optionally set the DHW boiler climate to preset `schedule_3`.
+    - Optionally set the DHW boiler climate to preset `schedule_1`.
 
 #### Set the correct DHW preset mode
 After creating the automation, a new schedule for the next day will automatically be created. If the preset is not set in the
-automation, manually change the preset mode of your DHW boiler climate to `Schedule 3`, otherwise the schedule will of course be inactive.
+automation, manually change the preset mode of your DHW boiler climate to `Schedule 1`, otherwise the schedule will of course be inactive.
