@@ -16,7 +16,11 @@ from custom_components.remeha_modbus.api import (
     ConnectionType,
     RemehaApi,
 )
-from custom_components.remeha_modbus.const import CONFIG_AUTO_SCHEDULE
+from custom_components.remeha_modbus.const import (
+    AUTO_SCHEDULE_SELECTED_SCHEDULE,
+    CONFIG_AUTO_SCHEDULE,
+    REMEHA_PRESET_SCHEDULE_1,
+)
 from custom_components.remeha_modbus.coordinator import RemehaUpdateCoordinator
 from custom_components.remeha_modbus.services import register_services
 
@@ -98,7 +102,14 @@ async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) ->
         # the integration.
         new_data[CONFIG_AUTO_SCHEDULE] = False
 
-    hass.config_entries.async_update_entry(config_entry, data=new_data, minor_version=1, version=1)
+    if config_entry.minor_version < 2:
+        # Version 1.2 adds a configurable schedule id to the auto-scheduling configuration.
+        # It defaults to SCHEDULE_1, so use that if CONFIG_AUTO_SCHEDULE is True
+        # (i.e. auto-scheduling) is used.
+        if new_data[CONFIG_AUTO_SCHEDULE] is True:
+            new_data[AUTO_SCHEDULE_SELECTED_SCHEDULE] = REMEHA_PRESET_SCHEDULE_1
+
+    hass.config_entries.async_update_entry(config_entry, data=new_data, minor_version=2, version=1)
     _LOGGER.debug(
         "Migration to configuration version %s.%s successful",
         config_entry.version,

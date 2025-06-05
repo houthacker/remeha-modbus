@@ -54,10 +54,12 @@
         "title": "Auto scheduling configuration",
         "description": "Select a weather entity and provide PV system configuration.",
         "data": {
-          "weather_entity_id": "Weather entity"
+          "weather_entity_id": "Weather entity",
+          "selected_schedule": "Select a schedule"
         },
         "data_description": {
-          "weather_entity_id": "Weather entity of which to retrieve the forecast."
+          "weather_entity_id": "Weather entity of which to retrieve the forecast.",
+          "selected_schedule": "Schedule to use for auto scheduling."
         },
         "sections": {
           "pv_options": {
@@ -91,6 +93,15 @@
             }
           }
         }
+      }
+    }
+  },
+  "selector": {
+    "select_default_auto_schedule_id": {
+      "options": {
+        "schedule_1": "Schedule 1",
+        "schedule_2": "Schedule 2",
+        "schedule_3": "Schedule 3"
       }
     }
   },

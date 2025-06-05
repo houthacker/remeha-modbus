@@ -35,9 +35,7 @@ from custom_components.remeha_modbus.const import (
     DOMAIN,
     HA_PRESET_ANTI_FROST,
     HA_PRESET_MANUAL,
-    REMEHA_PRESET_SCHEDULE_1,
-    REMEHA_PRESET_SCHEDULE_2,
-    REMEHA_PRESET_SCHEDULE_3,
+    HA_SCHEDULE_TO_REMEHA_SCHEDULE,
     TEMPERATURE_STEP,
     ClimateZoneHeatingMode,
     ClimateZoneMode,
@@ -48,12 +46,6 @@ from custom_components.remeha_modbus.const import (
 )
 from custom_components.remeha_modbus.coordinator import RemehaUpdateCoordinator
 from custom_components.remeha_modbus.errors import InvalidClimateContext
-
-HA_SCHEDULE_TO_REMEHA_SCHEDULE: Final[dict[str, ClimateZoneScheduleId]] = {
-    REMEHA_PRESET_SCHEDULE_1: ClimateZoneScheduleId.SCHEDULE_1,
-    REMEHA_PRESET_SCHEDULE_2: ClimateZoneScheduleId.SCHEDULE_2,
-    REMEHA_PRESET_SCHEDULE_3: ClimateZoneScheduleId.SCHEDULE_3,
-}
 
 HA_CLIMATE_PRESET_TO_REMEHA_ZONE_MODE: Final[dict[str, ClimateZoneMode]] = {
     HA_PRESET_ANTI_FROST: ClimateZoneMode.ANTI_FROST,

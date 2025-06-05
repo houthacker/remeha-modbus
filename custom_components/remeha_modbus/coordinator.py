@@ -22,11 +22,13 @@ from custom_components.remeha_modbus.api import (
     ZoneSchedule,
 )
 from custom_components.remeha_modbus.const import (
+    AUTO_SCHEDULE_SELECTED_SCHEDULE,
     DHW_BOILER_CONFIG_SECTION,
     DHW_BOILER_ENERGY_LABEL,
     DHW_BOILER_HEAT_LOSS_RATE,
     DHW_BOILER_VOLUME,
     DOMAIN,
+    HA_SCHEDULE_TO_REMEHA_SCHEDULE,
     PV_ANNUAL_EFFICIENCY_DECREASE,
     PV_CONFIG_SECTION,
     PV_INSTALLATION_DATE,
@@ -243,6 +245,9 @@ class RemehaUpdateCoordinator(DataUpdateCoordinator):
             boiler_config=_config_to_boiler_config(self.config_entry),
             boiler_zone=dhw_zone,
             appliance_seasonal_mode=self.get_appliance().season_mode,
+            schedule_id=HA_SCHEDULE_TO_REMEHA_SCHEDULE[
+                self.config_entry.data[AUTO_SCHEDULE_SELECTED_SCHEDULE]
+            ],
         )
 
         _LOGGER.debug("Schedule generated:\n\n%s\n\n, now pushing it to the appliance.", schedule)

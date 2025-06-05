@@ -7,8 +7,10 @@ from homeassistant.core import HomeAssistant
 
 from custom_components.remeha_modbus.api import ClimateZone, Weekday, ZoneSchedule
 from custom_components.remeha_modbus.const import (
+    AUTO_SCHEDULE_DEFAULT_ID,
     AUTO_SCHEDULE_SERVICE_NAME,
     DOMAIN,
+    ClimateZoneMode,
     ClimateZoneScheduleId,
 )
 
@@ -38,13 +40,14 @@ async def test_scheduling_service(hass: HomeAssistant, mock_modbus_client, mock_
         await hass.async_block_till_done()
 
         # Check that the schedule has been created but not activated.
-        # For auto scheduling, we use SCHEDULE_3.
+        # For auto scheduling, we use SCHEDULE_1.
         # Using the test data, a schedule will be created for Weekday.FRIDAY.
         zone: ClimateZone = await api.async_read_zone(id=2)
         assert zone.selected_schedule == ClimateZoneScheduleId.SCHEDULE_1
+        assert zone.mode == ClimateZoneMode.MANUAL
 
         day: Weekday = Weekday.FRIDAY
         schedule: ZoneSchedule = await api.async_read_zone_schedule(
-            zone=zone, schedule_id=ClimateZoneScheduleId.SCHEDULE_3, day=day
+            zone=zone, schedule_id=AUTO_SCHEDULE_DEFAULT_ID, day=day
         )
         assert schedule is not None

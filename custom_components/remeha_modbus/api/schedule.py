@@ -315,11 +315,9 @@ class ZoneSchedule:
         boiler_config: BoilerConfiguration,
         boiler_zone: ClimateZone,
         appliance_seasonal_mode: SeasonalMode,
+        schedule_id: ClimateZoneScheduleId,
     ) -> Self:
         """Generate a `ZoneSchedule` for the next day, based on the weather forecast.
-
-        ### Notes
-        - The id of the generated `ZoneSchedule` is always `3`.
 
         Args:
             weather_forecast (WeatherForecast): The weather forecast for the next 24 hours.
@@ -327,6 +325,7 @@ class ZoneSchedule:
             boiler_config (BoilerConfiguration): The DHW boiler configuration.
             boiler_zone (ClimateZone): The DHW climate zone.
             appliance_seasonal_mode (SeasonalMode): The current seasonal mode of the appliance.
+            schedule_id (ClimateZoneScheduleId): The id of the zone schedule to alter.
 
         Returns:
             The generated `ZoneSchedule`.
@@ -340,7 +339,7 @@ class ZoneSchedule:
             )
 
         # We want to generate a planning for the next whole day, which must, to be useful,
-        # end no earlier than 22:00.
+        # end no earlier than `AUTO_SCHEDULE_MINIMAL_END_HOUR`.
         last_forecast: HourlyForecast = weather_forecast.forecasts[-1]
         if last_forecast.start_time.hour < AUTO_SCHEDULE_MINIMAL_END_HOUR:
             raise AutoSchedulingError(
@@ -518,7 +517,7 @@ class ZoneSchedule:
             yield from all_timeslots
 
         return ZoneSchedule(
-            id=ClimateZoneScheduleId.SCHEDULE_3,
+            id=schedule_id,
             zone_id=boiler_zone.id,
             # When presented with old data (like in testing), the week day returned here is
             # probably not the actual current week day

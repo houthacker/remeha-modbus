@@ -26,10 +26,12 @@
         "title": "Automatisch schema voor SWW",
         "description": "Kies een 'weather' entiteit en vul informatie over je zonnepanelen in.",
         "data": {
-          "weather_entity_id": "Weer-entiteit"
+          "weather_entity_id": "Weer-entiteit",
+          "selected_schedule": "Selecteer een schema"
         },
         "data_description": {
-          "weather_entity_id": "Weer-entiteit die gebruikt wordt om de voospelling op te halen."
+          "weather_entity_id": "Weer-entiteit die gebruikt wordt om de voospelling op te halen.",
+          "selected_schedule": "Het schema dat gebruikt wordt voor geautomatiseerde DHW planning."
         },
         "sections": {
           "pv_options": {
@@ -90,6 +92,15 @@
           "host": "IP-adres of hostnaam van het modbus apparaat, bijvoorbeeld `192.168.1.1`.",
           "port": "Netwerkpoort voor communicatie."
         }
+      }
+    }
+  },
+  "selector": {
+    "select_default_auto_schedule_id": {
+      "options": {
+        "schedule_1": "Schema 1",
+        "schedule_2": "Schema 2",
+        "schedule_3": "Schema 3"
       }
     }
   },
