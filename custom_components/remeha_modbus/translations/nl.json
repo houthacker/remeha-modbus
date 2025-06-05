@@ -26,10 +26,12 @@
         "title": "Automatisch schema voor SWW",
         "description": "Kies een 'weather' entiteit en vul informatie over je zonnepanelen in.",
         "data": {
-          "weather_entity_id": "Weer-entiteit"
+          "weather_entity_id": "Weer-entiteit",
+          "selected_schedule": "Selecteer een schema"
         },
         "data_description": {
-          "weather_entity_id": "Weer-entiteit die gebruikt wordt om de voospelling op te halen."
+          "weather_entity_id": "Weer-entiteit die gebruikt wordt om de voospelling op te halen.",
+          "selected_schedule": "Het schema dat gebruikt wordt voor geautomatiseerde DHW planning."
         },
         "sections": {
           "pv_options": {
