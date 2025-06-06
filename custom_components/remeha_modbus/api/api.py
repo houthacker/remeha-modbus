@@ -2,6 +2,7 @@
 
 import asyncio
 import logging
+import struct
 from dataclasses import dataclass
 from datetime import datetime, tzinfo
 from enum import Enum, StrEnum, auto
@@ -38,7 +39,11 @@ from custom_components.remeha_modbus.const import (
     ZoneRegisters,
 )
 from custom_components.remeha_modbus.helpers.gtw08 import TimeOfDay
-from custom_components.remeha_modbus.helpers.modbus import from_registers, to_registers
+from custom_components.remeha_modbus.helpers.modbus import (
+    bytes_from_registers,
+    from_registers,
+    to_registers,
+)
 
 from .appliance import Appliance, ApplianceErrorPriority, ApplianceStatus, SeasonalMode
 from .climate_zone import (
@@ -318,6 +323,35 @@ class RemehaApi:
             registers=await self._async_read_registers(variable=MetaRegisters.COOLING_FORCED),
             destination_variable=MetaRegisters.COOLING_FORCED,
         )
+
+    async def async_read_registers(
+        self, start_register: int, register_count: int = 1, struct_format: str | bytes = "=H"
+    ) -> tuple[Any, ...]:
+        """Read registers from the modbus interface for debugging purposes.
+
+        Args:
+            start_register (int): The register to start reading at.
+            register_count (int): The amount of registers to read.
+            struct_format (str | bytes): The struct format to convert the register bytes to.
+
+        Returns:
+            A tuple containing values unpacked according to the format string.
+
+        Raises:
+            ModbusException: if a modbus error occurred while reading the registers.
+            struct.error: if `struct_format` is an illegal struct format.
+
+        """
+
+        response: ModbusPDU = await self._client.read_holding_registers(
+            address=start_register, count=register_count, slave=self._device_address
+        )
+        if response.isError():
+            raise ModbusException(
+                "Modbus device returned an error while reading holding registers."
+            )
+
+        return struct.unpack(struct_format, bytes_from_registers(registers=response.registers))
 
     async def async_connect(self) -> bool:
         """Connect to the configured modbus device."""

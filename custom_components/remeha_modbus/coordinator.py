@@ -185,6 +185,31 @@ class RemehaUpdateCoordinator(DataUpdateCoordinator):
 
         return self.data["sensors"][variable]
 
+    async def async_read_registers(
+        self, start_register: int, register_count: int, struct_format: str
+    ) -> tuple[Any, ...]:
+        """Read registers directly from the modbus interface.
+
+        Args:
+            start_register (int): The register to start reading at.
+            register_count (int): The amount of registers to read.
+            struct_format (str | bytes): The struct format to convert the register bytes to.
+
+        Returns:
+            A tuple containing values unpacked according to the format string.
+
+        Raises:
+            ModbusException: if a modbus error occurred while reading the registers.
+            struct.error: if `struct_format` is an illegal struct format.
+
+        """
+
+        return await self._api.async_read_registers(
+            start_register=start_register,
+            register_count=register_count,
+            struct_format=struct_format,
+        )
+
     async def async_dhw_auto_schedule(
         self,
         hourly_forecasts: list[dict],

@@ -4,6 +4,7 @@ from datetime import date
 from enum import Enum, StrEnum
 from typing import Final, Self
 
+import voluptuous as vol
 from homeassistant.components.climate.const import (
     PRESET_COMFORT,
     PRESET_ECO,
@@ -14,8 +15,11 @@ from homeassistant.components.sensor import (
     SensorEntityDescription,
     SensorStateClass,
 )
+from homeassistant.helpers import config_validation as cv
 from pydantic import Field, model_validator
 from pydantic.dataclasses import dataclass
+
+from custom_components.remeha_modbus.helpers import config_validation as remeha_cv
 
 DOMAIN: Final[str] = "remeha_modbus"
 
@@ -396,6 +400,19 @@ class ClimateZoneHeatingMode(Enum):
 
 
 CONFIG_AUTO_SCHEDULE: Final[str] = "auto_schedule"
+
+READ_REGISTERS_SERVICE_NAME: Final[str] = "read_registers"
+READ_REGISTERS_START_REGISTER: Final[str] = "start_register"
+READ_REGISTERS_REGISTER_COUNT: Final[str] = "register_count"
+READ_REGISTERS_STRUCT_FORMAT: Final[str] = "struct_format"
+
+READ_REGISTERS_SERVICE_SCHEMA: vol.Schema = vol.Schema(
+    {
+        vol.Required(READ_REGISTERS_START_REGISTER): cv.positive_int,
+        vol.Required(READ_REGISTERS_REGISTER_COUNT, default=1): cv.positive_int,
+        vol.Required(READ_REGISTERS_STRUCT_FORMAT, default="=H"): remeha_cv.struct_format,
+    }
+)
 
 # Keep in sync with services.yaml service name.
 AUTO_SCHEDULE_SERVICE_NAME: Final[str] = "dhw_auto_schedule"
