@@ -159,6 +159,15 @@
     },
     "auto_schedule_value_error": {
       "message": "Kan geen automatische planning maken: fout tijdens het deserializeren van het modbus bericht, zie logs voor details."
+    },
+    "read_registers_modbus_error": {
+      "message": "Modbus fout tijdens het lezen van de registers."
+    },
+    "read_registers_illegal_struct_format": {
+      "message": "Kan registers niet verwerken: ongeldig struct format {struct-format}."
+    },
+    "read_registers_unknown_error": {
+      "message": "Onbekende fout tijdens het lezen van de registers. Zie log voor details."
     }
   }
 }

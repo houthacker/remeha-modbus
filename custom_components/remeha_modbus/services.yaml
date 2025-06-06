@@ -1,3 +1,30 @@
 
 # Keep service name in sync with const.AUTO_SCHEDULE_SERVICE_NAME
 dhw_auto_schedule:
+
+read_registers:
+  fields:
+    start_register:
+      required: true
+      example: 128
+      selector:
+        number:
+          translation_key: "modbus_register"
+          mode: box
+    register_count:
+      required: true
+      example: 1
+      default: 1
+      selector:
+        number:
+          translation_key: "register_count"
+          mode: box
+          min: 1
+          max: 10
+    struct_format:
+      required: true
+      example: "=BB"
+      default: "=H"
+      selector:
+        text:
+          translation_key: "struct_format"

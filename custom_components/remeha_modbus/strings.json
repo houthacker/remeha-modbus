@@ -159,6 +159,15 @@
     },
     "auto_schedule_value_error": {
       "message": "Cannot auto schedule: error while deserializing modbus response, see logs for details."
+    },
+    "read_registers_modbus_error": {
+      "message": "Modbus error while reading registers."
+    },
+    "read_registers_illegal_struct_format": {
+      "message": "Cannot parse result: illegal struct format {struct-format}."
+    },
+    "read_registers_unknown_error": {
+      "message": "An unknown error occurred while reading modbus registers. See log for details."
     }
   }
 }
