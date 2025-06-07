@@ -330,8 +330,8 @@ class Weekday(Enum):
     WEDNESDAY = 2
     THURSDAY = 3
     FRIDAY = 4
-    SATURDAY = 6
-    SUNDAY = 7
+    SATURDAY = 5
+    SUNDAY = 6
 
 
 class ClimateZoneType(Enum):
