@@ -102,6 +102,17 @@
         "schedule_2": "Schema 2",
         "schedule_3": "Schema 3"
       }
+    },
+    "weekday": {
+      "options": {
+        "MONDAY": "Maandag",
+        "TUESDAY": "Dinsdag",
+        "WEDNESDAY": "Woensdag",
+        "THURSDAY": "Donderdag",
+        "FRIDAY": "Vrijdag",
+        "SATURDAY": "Zaterdag",
+        "SUNDAY": "Zondag"
+      }
     }
   },
   "entity": {
@@ -127,6 +138,38 @@
     "dhw_auto_schedule": {
       "name": "SWW automatische planning",
       "description": "Maak een SWW planning voor de volgende dag, gebaseerd op de weersvoorspelling en de boiler/zonnepanelen configuration. Vereiest een weather integratie die voorziet in zonnestraling (GHI) in de uurlijkse voorspellingen."
+    },
+    "read_registers": {
+      "name": "Lees modbus registers",
+      "description": "Lees willekeurige registers uit de Remeha modbus interface.",
+      "fields": {
+        "start_register": {
+          "name": "Register",
+          "description": "Het eerste uit te lezen register."
+        },
+        "register_count": {
+          "name": "Aantal registers",
+          "description": "Het aantal uit te lezen registers."
+        },
+        "struct_format": {
+          "name": "Struct format",
+          "description": "Het Python struct format van de te lezen registers."
+        }
+      }
+    },
+    "push_schedule": {
+      "name": "Stuur SWW planning",
+      "description": "Stuur de SWW-planning van vandaag naar Home Assistant. Hiervoor is de HACS integratie `scheduler-card` vereist.",
+      "fields": {
+        "climate_entity": {
+          "name": "Bron",
+          "description": "De klimaat-entiteit waarvan de planning moet worden uitgelezen."
+        },
+        "weekday": {
+          "name": "Dag van de week",
+          "description": "De planningsdag die naar Home Assistant gestuurd moet worden."
+        }
+      }
     }
   },
   "exceptions": {
@@ -168,6 +211,9 @@
     },
     "read_registers_unknown_error": {
       "message": "Onbekende fout tijdens het lezen van de registers. Zie log voor details."
+    },
+    "push_schedule_missing_integration": {
+      "message": "Kan SWW planning niet versturen: vereiste HACS integratie `scheduler-component` is niet geïnstalleerd of de benodigde services missen."
     }
   }
 }

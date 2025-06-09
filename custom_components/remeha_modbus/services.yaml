@@ -28,3 +28,28 @@ read_registers:
       selector:
         text:
           translation_key: "struct_format"
+
+push_schedule:
+  fields:
+    climate_entity:
+      required: true
+      selector:
+        entity:
+          translation_key: "climate_entity"
+          filter:
+            integration: "remeha_modbus"
+            domain: "climate"
+    weekday:
+      required: true
+      selector:
+        select:
+          translation_key: "weekday"
+          mode: "dropdown"
+          options:
+            - "MONDAY"
+            - "TUESDAY"
+            - "WEDNESDAY"
+            - "THURSDAY"
+            - "FRIDAY"
+            - "SATURDAY"
+            - "SUNDAY"

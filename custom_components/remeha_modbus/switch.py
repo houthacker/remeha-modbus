@@ -8,8 +8,12 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.restore_state import RestoreEntity
 
+from custom_components.remeha_modbus.const import SWITCH_EXECUTE_SCHEDULING_ACTIONS
+
 DESCRIPTIONS: Final[list[SwitchEntityDescription]] = [
-    SwitchEntityDescription(key="execute_scheduling_actions", name="execute_scheduling_actions")
+    SwitchEntityDescription(
+        key=SWITCH_EXECUTE_SCHEDULING_ACTIONS, name=SWITCH_EXECUTE_SCHEDULING_ACTIONS
+    )
 ]
 
 

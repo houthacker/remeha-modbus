@@ -14,18 +14,25 @@ from custom_components.remeha_modbus.const import (
     AUTO_SCHEDULE_SERVICE_NAME,
     CONFIG_AUTO_SCHEDULE,
     DOMAIN,
+    PUSH_SCHEDULE_CLIMATE_ENTITY,
+    PUSH_SCHEDULE_SERVICE_NAME,
+    PUSH_SCHEDULE_SERVICE_SCHEMA,
+    PUSH_SCHEDULE_WEEKDAY,
     READ_REGISTERS_REGISTER_COUNT,
     READ_REGISTERS_SERVICE_NAME,
     READ_REGISTERS_SERVICE_SCHEMA,
     READ_REGISTERS_START_REGISTER,
     READ_REGISTERS_STRUCT_FORMAT,
     WEATHER_ENTITY_ID,
+    Weekday,
 )
 from custom_components.remeha_modbus.coordinator import RemehaUpdateCoordinator
 from custom_components.remeha_modbus.errors import (
     RemehaIncorrectServiceCall,
     RemehaServiceException,
+    RequiredServiceMissing,
 )
+from custom_components.remeha_modbus.schedule_sync.synchronizer import ScheduleSynchronizer
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -96,6 +103,17 @@ def register_services(
                 translation_domain=DOMAIN, translation_key="read_registers_modbus_error"
             ) from e
 
+    async def async_push_schedule(call: ServiceCall) -> None:
+        synchronizer = ScheduleSynchronizer(hass=hass, coordinator=coordinator)
+        dhw_state = hass.states.get(call.data[PUSH_SCHEDULE_CLIMATE_ENTITY])
+        dhw = coordinator.get_climate(id=dhw_state.attributes["zone_id"])
+        schedule = dhw.current_schedule[Weekday[call.data[PUSH_SCHEDULE_WEEKDAY]]]
+
+        try:
+            await synchronizer.async_push_schedule(schedule=schedule)
+        except RequiredServiceMissing as e:
+            raise RemehaIncorrectServiceCall from e
+
     hass.services.async_register(
         domain=DOMAIN,
         service=AUTO_SCHEDULE_SERVICE_NAME,
@@ -108,4 +126,11 @@ def register_services(
         service_func=async_read_registers,
         schema=READ_REGISTERS_SERVICE_SCHEMA,
         supports_response=SupportsResponse.ONLY,
+    )
+
+    hass.services.async_register(
+        domain=DOMAIN,
+        service=PUSH_SCHEDULE_SERVICE_NAME,
+        service_func=async_push_schedule,
+        schema=PUSH_SCHEDULE_SERVICE_SCHEMA,
     )

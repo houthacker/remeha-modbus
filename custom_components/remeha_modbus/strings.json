@@ -102,6 +102,17 @@
         "schedule_2": "Schedule 2",
         "schedule_3": "Schedule 3"
       }
+    },
+    "weekday": {
+      "options": {
+        "MONDAY": "Monday",
+        "TUESDAY": "Tuesday",
+        "WEDNESDAY": "Wednesday",
+        "THURSDAY": "Thursday",
+        "FRIDAY": "Friday",
+        "SATURDAY": "Saturday",
+        "SUNDAY": "Sunday"
+      }
     }
   },
   "entity": {
@@ -127,6 +138,38 @@
     "dhw_auto_schedule": {
       "name": "DHW auto scheduling",
       "description": "Create a DHW schedule for the next day based on weather forecast and boiler/solar configuration. Requires a weather integration that provides solar irradiance in hourly forecasts."
+    },
+    "read_registers": {
+      "name": "Read modbus registers",
+      "description": "Read arbitrary registers from the Remeha modbus interface.",
+      "fields": {
+        "start_register": {
+          "name": "Register",
+          "description": "The first register to read."
+        },
+        "register_count": {
+          "name": "Register count",
+          "description": "The amount of registers to read."
+        },
+        "struct_format": {
+          "name": "Struct format",
+          "description": "The python struct formatting string of the returned value(s)."
+        }
+      }
+    },
+    "push_schedule": {
+      "name": "Push DHW schedule",
+      "description": "Push today's DHW schedule to Home Assistant. This requires the `scheduler-card` HACS integration.",
+      "fields": {
+        "climate_entity": {
+          "name": "Source",
+          "description": "The source climate entity to read the schedule from."
+        },
+        "weekday": {
+          "name": "Weekday",
+          "description": "The weekday of the schedule to push."
+        }
+      }
     }
   },
   "exceptions": {
@@ -168,6 +211,9 @@
     },
     "read_registers_unknown_error": {
       "message": "An unknown error occurred while reading modbus registers. See log for details."
+    },
+    "push_schedule_missing_integration": {
+      "message": "Cannot push schedule: required HACS integration `scheduler-component` is not installed or it's services are missing."
     }
   }
 }
