@@ -1003,7 +1003,7 @@ class RemehaApi:
         current_schedule: dict[Weekday, ZoneSchedule] = (
             {
                 day: await self.async_read_zone_schedule(
-                    zone=zone, schedule_id=selected_schedule, day=day
+                    zone=zone, schedule_id=ClimateZoneScheduleId(selected_schedule), day=day
                 )
                 for day in Weekday
             }
