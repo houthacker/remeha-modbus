@@ -135,7 +135,7 @@ class TimeslotSetpointType(Enum):
     """Setpoint in 'evening' mode."""
 
 
-@dataclass
+@dataclass(unsafe_hash=True)
 class Timeslot:
     """A zone schedule time slot."""
 
