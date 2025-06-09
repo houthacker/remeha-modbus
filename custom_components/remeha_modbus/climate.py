@@ -90,6 +90,7 @@ class RemehaClimateEntity(CoordinatorEntity, ClimateEntity):
         self.climate_zone_id: int = climate_zone_id
 
         self._attr_unique_id = f"zone_{climate_zone_id}"
+        self._attr_extra_state_attributes = {"zone_id": climate_zone_id}
 
         _LOGGER.debug("Creating new RemehaModbusClimate entity [%s]", self._attr_unique_id)
 
