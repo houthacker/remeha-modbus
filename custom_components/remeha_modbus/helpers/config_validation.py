@@ -1,7 +1,7 @@
 """Helpers for config validation that are not in the HA helpers."""
 
 import struct
-from enum import StrEnum
+from enum import Enum, StrEnum
 
 import voluptuous as vol
 
@@ -10,6 +10,12 @@ def str_enum(enum: type[StrEnum]) -> vol.In:
     """Create a validator for the given StrEnum."""
 
     return vol.In([e.value for e in enum])
+
+
+def enum_names(enum: type[Enum]) -> vol.In:
+    """Create a validator for the given Enum."""
+
+    return vol.In([e.name for e in enum])
 
 
 def struct_format(struct_format: str | bytes) -> str | bytes:
