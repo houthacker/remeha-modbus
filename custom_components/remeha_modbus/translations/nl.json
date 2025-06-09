@@ -105,13 +105,13 @@
     },
     "weekday": {
       "options": {
-        "MONDAY": "Maandag",
-        "TUESDAY": "Dinsdag",
-        "WEDNESDAY": "Woensdag",
-        "THURSDAY": "Donderdag",
-        "FRIDAY": "Vrijdag",
-        "SATURDAY": "Zaterdag",
-        "SUNDAY": "Zondag"
+        "monday": "Maandag",
+        "tuesday": "Dinsdag",
+        "wednesday": "Woensdag",
+        "thursday": "Donderdag",
+        "friday": "Vrijdag",
+        "saturday": "Zaterdag",
+        "sunday": "Zondag"
       }
     }
   },

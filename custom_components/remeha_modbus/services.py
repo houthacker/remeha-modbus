@@ -107,7 +107,7 @@ def register_services(
         synchronizer = ScheduleSynchronizer(hass=hass, coordinator=coordinator)
         dhw_state = hass.states.get(call.data[PUSH_SCHEDULE_CLIMATE_ENTITY])
         dhw = coordinator.get_climate(id=dhw_state.attributes["zone_id"])
-        schedule = dhw.current_schedule[Weekday[call.data[PUSH_SCHEDULE_WEEKDAY]]]
+        schedule = dhw.current_schedule[Weekday[str(call.data[PUSH_SCHEDULE_WEEKDAY]).upper()]]
 
         try:
             await synchronizer.async_push_schedule(schedule=schedule)

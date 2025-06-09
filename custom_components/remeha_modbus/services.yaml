@@ -9,7 +9,6 @@ read_registers:
       example: 128
       selector:
         number:
-          translation_key: "modbus_register"
           mode: box
     register_count:
       required: true
@@ -17,7 +16,6 @@ read_registers:
       default: 1
       selector:
         number:
-          translation_key: "register_count"
           mode: box
           min: 1
           max: 10
@@ -27,7 +25,7 @@ read_registers:
       default: "=H"
       selector:
         text:
-          translation_key: "struct_format"
+          type: "text"
 
 push_schedule:
   fields:
@@ -35,7 +33,6 @@ push_schedule:
       required: true
       selector:
         entity:
-          translation_key: "climate_entity"
           filter:
             integration: "remeha_modbus"
             domain: "climate"

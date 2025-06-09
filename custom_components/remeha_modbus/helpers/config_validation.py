@@ -15,7 +15,7 @@ def str_enum(enum: type[StrEnum]) -> vol.In:
 def enum_names(enum: type[Enum]) -> vol.In:
     """Create a validator for the given Enum."""
 
-    return vol.In([e.name for e in enum])
+    return vol.In([e.name.lower() for e in enum])
 
 
 def struct_format(struct_format: str | bytes) -> str | bytes:
