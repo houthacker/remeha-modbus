@@ -7,17 +7,28 @@ from homeassistant.components.weather.const import ATTR_WEATHER_TEMPERATURE_UNIT
 from homeassistant.components.weather.const import DOMAIN as WeatherDomain
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import UnitOfTemperature
-from homeassistant.core import HomeAssistant, ServiceCall, ServiceResponse, SupportsResponse
+from homeassistant.core import (
+    HomeAssistant,
+    ServiceCall,
+    ServiceResponse,
+    SupportsResponse,
+    callback,
+)
+from homeassistant.helpers.event import (
+    Event,
+    EventStateChangedData,
+    async_track_state_change_event,
+)
 from pymodbus import ModbusException
 
 from custom_components.remeha_modbus.const import (
     AUTO_SCHEDULE_SERVICE_NAME,
     CONFIG_AUTO_SCHEDULE,
     DOMAIN,
-    PUSH_SCHEDULE_CLIMATE_ENTITY,
-    PUSH_SCHEDULE_SERVICE_NAME,
-    PUSH_SCHEDULE_SERVICE_SCHEMA,
-    PUSH_SCHEDULE_WEEKDAY,
+    IMPORT_SCHEDULE_CLIMATE_ENTITY,
+    IMPORT_SCHEDULE_SERVICE_NAME,
+    IMPORT_SCHEDULE_SERVICE_SCHEMA,
+    IMPORT_SCHEDULE_WEEKDAY,
     READ_REGISTERS_REGISTER_COUNT,
     READ_REGISTERS_SERVICE_NAME,
     READ_REGISTERS_SERVICE_SCHEMA,
@@ -103,14 +114,26 @@ def register_services(
                 translation_domain=DOMAIN, translation_key="read_registers_modbus_error"
             ) from e
 
-    async def async_push_schedule(call: ServiceCall) -> None:
+    async def async_import_schedule(call: ServiceCall) -> None:
         synchronizer = ScheduleSynchronizer(hass=hass, coordinator=coordinator)
-        dhw_state = hass.states.get(call.data[PUSH_SCHEDULE_CLIMATE_ENTITY])
+        dhw_state = hass.states.get(call.data[IMPORT_SCHEDULE_CLIMATE_ENTITY])
         dhw = coordinator.get_climate(id=dhw_state.attributes["zone_id"])
-        schedule = dhw.current_schedule[Weekday[str(call.data[PUSH_SCHEDULE_WEEKDAY]).upper()]]
+        schedule = dhw.current_schedule[Weekday[str(call.data[IMPORT_SCHEDULE_WEEKDAY]).upper()]]
 
         try:
-            await synchronizer.async_push_schedule(schedule=schedule)
+            # TODO move to coordinator
+            entity_id: str = await synchronizer.async_import_schedule(schedule=schedule)
+
+            @callback
+            async def _handle_schedule_update(subject: Event[EventStateChangedData]) -> None:
+                await synchronizer.async_export_schedule(
+                    schedule_entity_id=subject.data["entity_id"]
+                )
+
+            # Subscribe to state changes of the schedule
+            async_track_state_change_event(
+                hass=hass, entity_ids=entity_id, action=_handle_schedule_update
+            )
         except RequiredServiceMissing as e:
             raise RemehaIncorrectServiceCall from e
 
@@ -130,7 +153,12 @@ def register_services(
 
     hass.services.async_register(
         domain=DOMAIN,
-        service=PUSH_SCHEDULE_SERVICE_NAME,
-        service_func=async_push_schedule,
-        schema=PUSH_SCHEDULE_SERVICE_SCHEMA,
+        service=IMPORT_SCHEDULE_SERVICE_NAME,
+        service_func=async_import_schedule,
+        schema=IMPORT_SCHEDULE_SERVICE_SCHEMA,
     )
+
+    # TODO register export_schedule
+
+    # TODO figure out how to detect that a changed schedule was changed due to an update from the modbus interface,
+    # TODO in which case we don't need to send it there twice.

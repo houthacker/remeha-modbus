@@ -27,7 +27,7 @@ read_registers:
         text:
           type: "text"
 
-push_schedule:
+import_schedule:
   fields:
     climate_entity:
       required: true
@@ -43,10 +43,10 @@ push_schedule:
           translation_key: "weekday"
           mode: "dropdown"
           options:
-            - "MONDAY"
-            - "TUESDAY"
-            - "WEDNESDAY"
-            - "THURSDAY"
-            - "FRIDAY"
-            - "SATURDAY"
-            - "SUNDAY"
+            - "monday"
+            - "tuesday"
+            - "wednesday"
+            - "thursday"
+            - "friday"
+            - "saturday"
+            - "sunday"

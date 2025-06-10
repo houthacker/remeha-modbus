@@ -16,8 +16,8 @@ from custom_components.remeha_modbus.api import (
 )
 from custom_components.remeha_modbus.const import (
     DOMAIN,
-    PUSH_SCHEDULE_REQUIRED_DOMAIN_NAME,
-    PUSH_SCHEDULE_REQUIRED_SERVICES,
+    IMPORT_SCHEDULE_REQUIRED_DOMAIN_NAME,
+    IMPORT_SCHEDULE_REQUIRED_SERVICES,
     SWITCH_EXECUTE_SCHEDULING_ACTIONS,
     Weekday,
 )
@@ -58,13 +58,14 @@ class ScheduleSynchronizer:
     def _to_schedule_name(self, schedule: ZoneSchedule) -> str:
         return f"zone_{schedule.zone_id}_{schedule.id.name.lower()}_{schedule.day.name.lower()}"
 
-    def _to_entity_id(self, schedule: ZoneSchedule) -> str:
+    def _to_scheduler_entity_id(self, schedule: ZoneSchedule) -> str:
         return f"switch.schedule_{self._to_schedule_name(schedule=schedule)}"
 
     async def _get_service_operation(self, schedule: ZoneSchedule) -> ServiceOperation:
         return (
             ServiceOperation.ADD
-            if self._hass.states.get(entity_id=self._to_entity_id(schedule=schedule)) is None
+            if self._hass.states.get(entity_id=self._to_scheduler_entity_id(schedule=schedule))
+            is None
             else ServiceOperation.EDIT
         )
 
@@ -122,17 +123,17 @@ class ScheduleSynchronizer:
         }
 
         if operation == ServiceOperation.EDIT:
-            data |= {"entity_id": self._to_entity_id(schedule=schedule)}
+            data |= {"entity_id": self._to_scheduler_entity_id(schedule=schedule)}
 
         return data
 
-    async def async_push_schedule(self, schedule: ZoneSchedule) -> str:
-        """Push the given schedule to the scheduler service.
+    async def async_import_schedule(self, schedule: ZoneSchedule) -> str:
+        """Import the given schedule into Home Assistant.
 
         If the schedule already exists, it is updated. Otherwise, it is created.
 
         Args:
-          schedule (ZoneSchedule): The schedule to push.
+          schedule (ZoneSchedule): The schedule to import.
 
         Returns:
           str: The entity id of the created (or updated) schedule.
@@ -140,22 +141,34 @@ class ScheduleSynchronizer:
         """
 
         services: dict | None = self._hass.services.async_services_for_domain(
-            PUSH_SCHEDULE_REQUIRED_DOMAIN_NAME
+            IMPORT_SCHEDULE_REQUIRED_DOMAIN_NAME
         )
 
-        if not services or not services.keys() & PUSH_SCHEDULE_REQUIRED_SERVICES:
+        if not services or not services.keys() & IMPORT_SCHEDULE_REQUIRED_SERVICES:
             raise RequiredServiceMissing(
-                translation_domain=DOMAIN, translation_key="push_schedule_missing_services"
+                translation_domain=DOMAIN, translation_key="import_schedule_missing_services"
             )
 
         operation: ServiceOperation = await self._get_service_operation(schedule=schedule)
 
+        # Call the scheduler service.
         data = self._to_service_data(schedule=schedule, operation=operation)
-
         await self._hass.services.async_call(
-            domain=PUSH_SCHEDULE_REQUIRED_DOMAIN_NAME,
+            domain=IMPORT_SCHEDULE_REQUIRED_DOMAIN_NAME,
             service=str(operation),
             blocking=False,
             return_response=False,
             service_data=data,
         )
+
+        return self._to_scheduler_entity_id(schedule=schedule)
+
+    async def async_export_schedule(self, schedule_entity_id: str):
+        """Export the schedule with the given id to the modbus interface.
+
+        Args:
+            schedule_entity_id (str): The entity id of the schedule to export.
+
+        """
+
+        raise NotImplementedError

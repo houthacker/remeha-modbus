@@ -417,25 +417,25 @@ READ_REGISTERS_SERVICE_SCHEMA: vol.Schema = vol.Schema(
 SWITCH_EXECUTE_SCHEDULING_ACTIONS: Final[str] = "execute_scheduling_actions"
 """Entity name of the switch that determines whether scheduling actions are executed."""
 
-PUSH_SCHEDULE_SERVICE_NAME: Final[str] = "push_schedule"
-"""The service name of the push_schedule service."""
+IMPORT_SCHEDULE_SERVICE_NAME: Final[str] = "import_schedule"
+"""The service name of the import_schedule service."""
 
-PUSH_SCHEDULE_CLIMATE_ENTITY: Final[str] = "climate_entity"
+IMPORT_SCHEDULE_CLIMATE_ENTITY: Final[str] = "climate_entity"
 """The name of the service field containing the climate entity id of which the schedule is retrieved."""
 
-PUSH_SCHEDULE_WEEKDAY: Final[str] = "weekday"
-"""The name of the service field containing the weekday of the schedule to be pushed."""
+IMPORT_SCHEDULE_WEEKDAY: Final[str] = "weekday"
+"""The name of the service field containing the weekday of the schedule to be imported."""
 
-PUSH_SCHEDULE_REQUIRED_DOMAIN_NAME: Final[str] = "scheduler"
-"""The domain name of the service the schedule is pushed to."""
+IMPORT_SCHEDULE_REQUIRED_DOMAIN_NAME: Final[str] = "scheduler"
+"""The domain name of the service the schedule is imported into."""
 
-PUSH_SCHEDULE_REQUIRED_SERVICES: Final[set[str]] = {"add", "edit", "remove"}
-"""The list of service names that must exist in the service the schedule is pushed to."""
+IMPORT_SCHEDULE_REQUIRED_SERVICES: Final[set[str]] = {"add", "edit", "remove"}
+"""The list of service names that must exist in the service the schedule is imported into."""
 
-PUSH_SCHEDULE_SERVICE_SCHEMA: Final[vol.Schema] = vol.Schema(
+IMPORT_SCHEDULE_SERVICE_SCHEMA: Final[vol.Schema] = vol.Schema(
     {
-        vol.Required(PUSH_SCHEDULE_CLIMATE_ENTITY): cv.entity_id,
-        vol.Required(PUSH_SCHEDULE_WEEKDAY): remeha_cv.enum_names(enum=Weekday),
+        vol.Required(IMPORT_SCHEDULE_CLIMATE_ENTITY): cv.entity_id,
+        vol.Required(IMPORT_SCHEDULE_WEEKDAY): remeha_cv.enum_names(enum=Weekday),
     }
 )
 

@@ -157,9 +157,9 @@
         }
       }
     },
-    "push_schedule": {
-      "name": "Stuur SWW planning",
-      "description": "Stuur de SWW-planning van vandaag naar Home Assistant. Hiervoor is de HACS integratie `scheduler-card` vereist.",
+    "import_schedule": {
+      "name": "SWW planning import",
+      "description": "Importeer een SWW-planning in Home Assistant. Hiervoor is de HACS integratie `scheduler-card` vereist.",
       "fields": {
         "climate_entity": {
           "name": "Bron",
@@ -167,7 +167,7 @@
         },
         "weekday": {
           "name": "Dag van de week",
-          "description": "De planningsdag die naar Home Assistant gestuurd moet worden."
+          "description": "De weekdag van de planning die in Home Assistant geïmporteerd moet worden."
         }
       }
     }
@@ -212,8 +212,8 @@
     "read_registers_unknown_error": {
       "message": "Onbekende fout tijdens het lezen van de registers. Zie log voor details."
     },
-    "push_schedule_missing_integration": {
-      "message": "Kan SWW planning niet versturen: vereiste HACS integratie `scheduler-component` is niet geïnstalleerd of de benodigde services missen."
+    "import_schedule_missing_integration": {
+      "message": "Kan SWW planning niet importeren: vereiste HACS integratie `scheduler-component` is niet geïnstalleerd of de benodigde services missen."
     }
   }
 }

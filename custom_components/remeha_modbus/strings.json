@@ -157,9 +157,9 @@
         }
       }
     },
-    "push_schedule": {
-      "name": "Push DHW schedule",
-      "description": "Push today's DHW schedule to Home Assistant. This requires the `scheduler-card` HACS integration.",
+    "import_schedule": {
+      "name": "Import DHW schedule",
+      "description": "Import a DHW schedule into Home Assistant. This requires the `scheduler-card` HACS integration.",
       "fields": {
         "climate_entity": {
           "name": "Source",
@@ -167,7 +167,7 @@
         },
         "weekday": {
           "name": "Weekday",
-          "description": "The weekday of the schedule to push."
+          "description": "The weekday of the schedule to import."
         }
       }
     }
@@ -212,8 +212,8 @@
     "read_registers_unknown_error": {
       "message": "An unknown error occurred while reading modbus registers. See log for details."
     },
-    "push_schedule_missing_integration": {
-      "message": "Cannot push schedule: required HACS integration `scheduler-component` is not installed or it's services are missing."
+    "import_schedule_missing_integration": {
+      "message": "Cannot import schedule: required HACS integration `scheduler-component` is not installed or it's services are missing."
     }
   }
 }
