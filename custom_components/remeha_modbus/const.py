@@ -2,7 +2,7 @@
 
 from datetime import date
 from enum import Enum, StrEnum
-from typing import Final, Self
+from typing import Final, Literal, NotRequired, Required, Self, TypedDict
 
 import voluptuous as vol
 from homeassistant.components.climate.const import (
@@ -397,6 +397,94 @@ class ClimateZoneHeatingMode(Enum):
     STANDBY = 0
     HEATING = 1
     COOLING = 2
+
+
+class SchedulerAction(TypedDict):
+    """A `SchedulerAction` represents a Home Assistant action that is executed when a schedule timer expires."""
+
+    entity_id: Required[str]
+    "Entity to which the action needs to be executed, e.g. `light.my_lamp`."
+
+    service: Required[str]
+    """HA service that needs to be executed on the entity, e.g. `light.turn_on`."""
+
+    service_data: NotRequired[dict]
+    """Extra parameters to use in the service call, e.g. `{brightness: 200}`"""
+
+
+class SchedulerCondition(TypedDict):
+    """A `SchedulerCondition` is a predicate that must resolve to `True` to execute the related `SchedulerAction`."""
+
+    attribute: Required[Literal["state"]]
+    """The entity attribute to check for this condition."""
+
+    entity_id: Required[str]
+    """Entity to which the condition applies, e.g. `binary_sensor.my_window`."""
+
+    value: Required[str]
+    """Value to compare the entity state to, e.g. `on`."""
+
+    match_type: Required[Literal["is", "not", "below", "above"]]
+    """Logic to apply for the comparison.
+
+    Values:
+    * `is`: entity state must match `value`.
+    * `not`: entity state must _not_ match `value`.
+    * `below`: entity state must be below `value` (applicable to numerical values only).
+    * `above`: entity state must be above `value` (applicable to numerical values only).
+    """
+
+
+class SchedulerTimeslot(TypedDict):
+    """A `SchedulerTimeslot` defines when a `SchedulerSchedule` is triggered, together with the actions that must be executed."""
+
+    start: Required[str]
+    """Time in `%H:%M:%S` format on which the schedule should trigger, for example `22:00:00` for 10 PM."""
+
+    stop: NotRequired[str]
+    """Time in `%H:%M:%S` format on which the timeslot ends. Only required when a new timeslot is defined."""
+
+    conditions: NotRequired[list[SchedulerCondition]]
+    """Conditions that should be validated before the action(s) may be executed."""
+
+    condition_type: NotRequired[Literal["and", "or"]]
+    """Logicto apply when validating multiple conditions.
+
+    Values:
+    * `and`: All conditions must be met.
+    * `or`: One or more of the conditions must be met.
+    """
+
+    track_conditions: NotRequired[bool]
+    """Watch condition entries for changes, repeat the actions once conditions become valid."""
+
+    actions: Required[list[SchedulerAction]]
+    """Actions to execute when the `start` time is reached."""
+
+
+class SchedulerSchedule(TypedDict):
+    """A `SchedulerSchedule` is a schedule that adheres to the `scheduler.schedule` format definition."""
+
+    entity_id: NotRequired[str]
+    """The entity id of the schedule. Only required when editing a schedule."""
+
+    name: NotRequired[str]
+    """The name of the schedule. Will be used to create its entity_id and is therefore only required when creating a new schedule."""
+
+    weekdays: Required[list[Literal["mon", "tue", "wed", "thu", "fri", "sat", "sun"]]]
+    """The days of the week on which the schedule should be execited."""
+
+    repeat_type: Required[Literal["repeat", "single", "pause"]]
+    """Control repeat behaviour after triggering.
+
+    Values:
+    * `repeat`: schedule will loop after triggering.
+    * `single`: schedule will delete itself after triggering.
+    * `pause`: schedule will turn off after triggering, can be reset by turning on.
+    """
+
+    timeslots: Required[list[SchedulerTimeslot]]
+    """List of time intervals with the actions that should be executed."""
 
 
 CONFIG_AUTO_SCHEDULE: Final[str] = "auto_schedule"

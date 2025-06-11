@@ -19,6 +19,10 @@ from custom_components.remeha_modbus.const import (
     IMPORT_SCHEDULE_REQUIRED_DOMAIN_NAME,
     IMPORT_SCHEDULE_REQUIRED_SERVICES,
     SWITCH_EXECUTE_SCHEDULING_ACTIONS,
+    SchedulerAction,
+    SchedulerCondition,
+    SchedulerSchedule,
+    SchedulerTimeslot,
     Weekday,
 )
 from custom_components.remeha_modbus.coordinator import RemehaUpdateCoordinator
@@ -91,39 +95,43 @@ class ScheduleSynchronizer:
         durations: dict[Timeslot, timedelta] = dict(self._get_durations(schedule=schedule))
         zone: ClimateZone = self._coordinator.get_climate(id=schedule.zone_id)
 
-        data = {
-            "name": self._to_schedule_name(schedule=schedule),
-            "weekdays": [WEEKDAY_TO_SHORT_DESC[schedule.day]],
-            "repeat_type": "repeat",
-            "timeslots": [
-                {
-                    "start": ts.switch_time.strftime("%H:%M:%S"),
-                    "stop": time(
+        data = SchedulerSchedule(
+            weekdays=[WEEKDAY_TO_SHORT_DESC[schedule.day]],
+            repeat_type="repeat",
+            timeslots=[
+                SchedulerTimeslot(
+                    start=ts.switch_time.strftime("%H:%M:%S"),
+                    stop=time(
                         hour=int((ts.switch_time.hour + (durations[ts].seconds / 3600)) % 24)
                     ).strftime("%H:%M:%S"),
-                    "conditions": [
-                        {
-                            "entity_id": f"switch.{SWITCH_EXECUTE_SCHEDULING_ACTIONS}",
-                            "value": "on",
-                            "match_type": "is",
-                        }
+                    conditions=[
+                        SchedulerCondition(
+                            entity_id=f"switch.{SWITCH_EXECUTE_SCHEDULING_ACTIONS}",
+                            value="on",
+                            match_type="is",
+                            attribute="state",
+                        )
                     ],
-                    "actions": [
-                        {
-                            "entity_id": f"climate.{DOMAIN}_{zone.short_name}",
-                            "service": "climate.set_preset_mode",
-                            "service_data": {
+                    condition_type="and",
+                    actions=[
+                        SchedulerAction(
+                            entity_id=f"climate.{DOMAIN}_{zone.short_name}",
+                            service="climate.set_preset_mode",
+                            service_data={
                                 "preset_mode": self._to_preset_mode(type=ts.setpoint_type)
                             },
-                        }
+                        )
                     ],
-                }
+                )
                 for ts in schedule.time_slots
             ],
-        }
+        )
 
         if operation == ServiceOperation.EDIT:
-            data |= {"entity_id": self._to_scheduler_entity_id(schedule=schedule)}
+            data["entity_id"] = self._to_scheduler_entity_id(schedule=schedule)
+        elif operation == ServiceOperation.ADD:
+            # Name must only be set when creating a new schedule.
+            data["name"] = self._to_schedule_name(schedule=schedule)
 
         return data
 
@@ -168,6 +176,75 @@ class ScheduleSynchronizer:
 
         Args:
             schedule_entity_id (str): The entity id of the schedule to export.
+
+        Example state:
+        ```json
+        {
+            "entity_id": "switch.schedule_zone_2_schedule_1_monday",
+            "state": "on",
+            "attributes": {
+                "weekdays": [
+                "mon"
+                ],
+                "timeslots": [
+                "00:00:00 - 10:00:00",
+                "10:00:00 - 13:00:00",
+                "13:00:00 - 15:00:00",
+                "15:00:00 - 18:00:00",
+                "18:00:00 - 00:00:00"
+                ],
+                "entities": [
+                "climate.remeha_modbus_dhw"
+                ],
+                "actions": [
+                {
+                    "service": "climate.set_preset_mode",
+                    "data": {
+                    "preset_mode": "eco"
+                    }
+                },
+                {
+                    "service": "climate.set_preset_mode",
+                    "data": {
+                    "preset_mode": "comfort"
+                    }
+                },
+                {
+                    "service": "climate.set_preset_mode",
+                    "data": {
+                    "preset_mode": "eco"
+                    }
+                },
+                {
+                    "service": "climate.set_preset_mode",
+                    "data": {
+                    "preset_mode": "comfort"
+                    }
+                },
+                {
+                    "service": "climate.set_preset_mode",
+                    "data": {
+                    "preset_mode": "eco"
+                    }
+                }
+                ],
+                "current_slot": null,
+                "next_slot": 0,
+                "next_trigger": "2025-06-16T00:00:00+02:00",
+                "tags": [],
+                "icon": "mdi:calendar-clock",
+                "friendly_name": "zone_2_schedule_1_monday"
+            },
+            "last_changed": "2025-06-10T15:18:57.588183+00:00",
+            "last_reported": "2025-06-10T15:19:35.867681+00:00",
+            "last_updated": "2025-06-10T15:19:35.863318+00:00",
+            "context": {
+                "id": "01JXD6SSNQTGS5EBF9KKDEBPV0",
+                "parent_id": null,
+                "user_id": null
+            }
+            }
+        ```
 
         """
 
