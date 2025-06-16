@@ -2,7 +2,7 @@
 
 from datetime import date
 from enum import Enum, StrEnum
-from typing import Final, Literal, NotRequired, Required, Self, TypedDict
+from typing import Any, Final, Literal, NamedTuple, NotRequired, Required, Self, TypedDict
 
 import voluptuous as vol
 from homeassistant.components.climate.const import (
@@ -15,6 +15,7 @@ from homeassistant.components.sensor import (
     SensorEntityDescription,
     SensorStateClass,
 )
+from homeassistant.const import STATE_OFF, STATE_ON, STATE_UNAVAILABLE, STATE_UNKNOWN
 from homeassistant.helpers import config_validation as cv
 from pydantic import Field, model_validator
 from pydantic.dataclasses import dataclass
@@ -26,6 +27,12 @@ DOMAIN: Final[str] = "remeha_modbus"
 # Versioning for the config flow.
 HA_CONFIG_VERSION = 1
 HA_CONFIG_MINOR_VERSION = 2
+
+# JSON storage version
+STORAGE_VERSION = 1
+STORAGE_MINOR_VERSION = 0
+STORAGE_FILE_KEY = f"{DOMAIN}.storage"
+STORAGE_RUNTIME_KEY = f"{DOMAIN}_storage"
 
 MAXIMUM_NORMAL_SURFACE_IRRADIANCE_NL: Final[int] = 1000
 """The maximum normal surface irradiance in The Netherlands, in W/m²"""
@@ -55,6 +62,8 @@ PV_MIN_TILT_DEGREES: Final[int] = 10
 
 PV_MAX_TILT_DEGREES: Final[int] = 90
 """The maximum supported PV system tilt"""
+
+ATTR_ZONE_ID: Final[str] = "zone_id"
 
 
 # DHW auto scheduling
@@ -399,6 +408,25 @@ class ClimateZoneHeatingMode(Enum):
     COOLING = 2
 
 
+class ClimateScheduleIdent(NamedTuple):
+    """A key class to uniquely identify a climate zone schedule."""
+
+    zone_id: int
+
+    schedule_id: ClimateZoneScheduleId
+
+
+@dataclass(frozen=True, slots=True)
+class SchedulerLinkView:
+    """A view of the link between a scheduler.schedule and a ZoneSchedule."""
+
+    zone_id: int
+
+    schedule_id: ClimateZoneScheduleId
+
+    scheduler_entity_id: str
+
+
 class SchedulerAction(TypedDict):
     """A `SchedulerAction` represents a Home Assistant action that is executed when a schedule timer expires."""
 
@@ -463,7 +491,7 @@ class SchedulerTimeslot(TypedDict):
 
 
 class SchedulerSchedule(TypedDict):
-    """A `SchedulerSchedule` is a schedule that adheres to the `scheduler.schedule` format definition."""
+    """A `SchedulerSchedule` is a schedule that adheres to the `scheduler.add|update` service fields."""
 
     entity_id: NotRequired[str]
     """The entity id of the schedule. Only required when editing a schedule."""
@@ -485,6 +513,51 @@ class SchedulerSchedule(TypedDict):
 
     timeslots: Required[list[SchedulerTimeslot]]
     """List of time intervals with the actions that should be executed."""
+
+    tags: NotRequired[list[str]]
+    """An optional list of tags for the schedule."""
+
+
+class SchedulerStateAction(TypedDict):
+    """An action in the attributes of a scheduler State."""
+
+    service: str
+    """The full name of the service to call, for example `climate.set_preset_mode`."""
+
+    data: dict[str, Any]
+    """The service data to go with the service call, for example `{'preset_mode': 'comfort'}`."""
+
+
+class SchedulerStateAttributes(TypedDict):
+    """The attributes field in a scheduler State instance."""
+
+    weekdays: list[Literal["mon", "tue", "wed", "thu", "fri", "sat", "sun"]]
+    """Weekdays at which the schedule is active."""
+
+    timeslots: list[str]
+    """The timeslot ranges in the schedule, in a format like `%H:%M:S - %H:%M:%S`. For every timeslot there is a corresponding action."""
+
+    entities: list[str]
+    """A list containing the entity ids of the entities to apply the schedule to."""
+
+    actions: list[SchedulerStateAction]
+    """The actions for each time slot."""
+
+    tags: list[str]
+    """An optional list of tags for the schedule."""
+
+
+class SchedulerState(TypedDict):
+    """Represents the relevant subset of the state attributes of a `scheduler.schedule`."""
+
+    entity_id: str
+    """The entity id of the schedule."""
+
+    state: Literal[f"{STATE_ON}", f"{STATE_OFF}", f"{STATE_UNKNOWN}", f"{STATE_UNAVAILABLE}"]
+    """The state of the schedule."""
+
+    attributes: SchedulerStateAttributes
+    """The attributes of the scheduler state."""
 
 
 CONFIG_AUTO_SCHEDULE: Final[str] = "auto_schedule"
@@ -526,6 +599,8 @@ IMPORT_SCHEDULE_SERVICE_SCHEMA: Final[vol.Schema] = vol.Schema(
         vol.Required(IMPORT_SCHEDULE_WEEKDAY): remeha_cv.enum_names(enum=Weekday),
     }
 )
+
+EXPORT_SCHEDULE_SERVICE_NAME: Final[str] = "export_schedule"
 
 # Keep in sync with services.yaml service name.
 AUTO_SCHEDULE_SERVICE_NAME: Final[str] = "dhw_auto_schedule"

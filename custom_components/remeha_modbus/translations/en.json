@@ -215,6 +215,9 @@
     },
     "import_schedule_missing_integration": {
       "message": "Cannot import schedule: required HACS integration `scheduler-component` is not installed or it's services are missing."
+    },
+    "import_schedule_climate_state": {
+      "message": "Cannot import schedule: climate {climate_entity} is in unusable state {climate_state}."
     }
   }
 }

@@ -6,18 +6,12 @@ from homeassistant.components.weather import SERVICE_GET_FORECASTS
 from homeassistant.components.weather.const import ATTR_WEATHER_TEMPERATURE_UNIT
 from homeassistant.components.weather.const import DOMAIN as WeatherDomain
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import UnitOfTemperature
+from homeassistant.const import STATE_UNAVAILABLE, STATE_UNKNOWN, UnitOfTemperature
 from homeassistant.core import (
     HomeAssistant,
     ServiceCall,
     ServiceResponse,
     SupportsResponse,
-    callback,
-)
-from homeassistant.helpers.event import (
-    Event,
-    EventStateChangedData,
-    async_track_state_change_event,
 )
 from pymodbus import ModbusException
 
@@ -48,11 +42,10 @@ from custom_components.remeha_modbus.schedule_sync.synchronizer import ScheduleS
 _LOGGER = logging.getLogger(__name__)
 
 
-def register_services(
-    hass: HomeAssistant, config: ConfigEntry, coordinator: RemehaUpdateCoordinator
-) -> None:
+def register_services(hass: HomeAssistant, config: ConfigEntry) -> None:
     """Register all services of this integration."""
 
+    coordinator: RemehaUpdateCoordinator = config.runtime_data["coordinator"]
     if not coordinator.get_climates(lambda climate: climate.is_domestic_hot_water()):
         _LOGGER.warning(
             "Not registering service '%s' since no DHW climate was discovered by this integration.",
@@ -115,27 +108,29 @@ def register_services(
             ) from e
 
     async def async_import_schedule(call: ServiceCall) -> None:
-        synchronizer = ScheduleSynchronizer(hass=hass, coordinator=coordinator)
-        dhw_state = hass.states.get(call.data[IMPORT_SCHEDULE_CLIMATE_ENTITY])
-        dhw = coordinator.get_climate(id=dhw_state.attributes["zone_id"])
-        schedule = dhw.current_schedule[Weekday[str(call.data[IMPORT_SCHEDULE_WEEKDAY]).upper()]]
+        synchronizer: ScheduleSynchronizer = config.runtime_data["schedule_synchronizer"]
+        climate_state = hass.states.get(call.data[IMPORT_SCHEDULE_CLIMATE_ENTITY])
 
-        try:
-            # TODO move to coordinator
-            entity_id: str = await synchronizer.async_import_schedule(schedule=schedule)
+        if climate_state.state not in [STATE_UNAVAILABLE, STATE_UNKNOWN]:
+            climate_zone = coordinator.get_climate(id=climate_state.attributes["zone_id"])
+            schedule = climate_zone.current_schedule[
+                Weekday[str(call.data[IMPORT_SCHEDULE_WEEKDAY]).upper()]
+            ]
 
-            @callback
-            async def _handle_schedule_update(subject: Event[EventStateChangedData]) -> None:
-                await synchronizer.async_export_schedule(
-                    schedule_entity_id=subject.data["entity_id"]
-                )
-
-            # Subscribe to state changes of the schedule
-            async_track_state_change_event(
-                hass=hass, entity_ids=entity_id, action=_handle_schedule_update
+            try:
+                # TODO add weekday to schedule key.
+                await synchronizer.async_import_schedule(schedule=schedule)
+            except RequiredServiceMissing as e:
+                raise RemehaIncorrectServiceCall from e
+        else:
+            raise RemehaServiceException(
+                translation_domain=DOMAIN,
+                translation_key="import_schedule_climate_state",
+                translation_placeholders={
+                    "climate_entity": climate_state.entity_id,
+                    "climate_state": climate_state.state,
+                },
             )
-        except RequiredServiceMissing as e:
-            raise RemehaIncorrectServiceCall from e
 
     hass.services.async_register(
         domain=DOMAIN,
@@ -157,8 +152,3 @@ def register_services(
         service_func=async_import_schedule,
         schema=IMPORT_SCHEDULE_SERVICE_SCHEMA,
     )
-
-    # TODO register export_schedule
-
-    # TODO figure out how to detect that a changed schedule was changed due to an update from the modbus interface,
-    # TODO in which case we don't need to send it there twice.

@@ -4,12 +4,17 @@ import logging
 from collections.abc import Callable
 from datetime import timedelta
 from typing import Any
+from uuid import UUID
 
 from dateutil.parser import parse
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import UnitOfTemperature
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from homeassistant.helpers.template import integration_entities
+from homeassistant.helpers.update_coordinator import (
+    DataUpdateCoordinator,
+    UpdateFailed,
+)
 from pymodbus import ModbusException
 
 from custom_components.remeha_modbus.api import (
@@ -18,6 +23,8 @@ from custom_components.remeha_modbus.api import (
     DeviceInstance,
     HourlyForecast,
     RemehaApi,
+    RemehaModbusStorage,
+    WaitingListEntry,
     WeatherForecast,
     ZoneSchedule,
 )
@@ -39,9 +46,12 @@ from custom_components.remeha_modbus.const import (
     WEEKDAY_TO_MODBUS_VARIABLE,
     BoilerConfiguration,
     BoilerEnergyLabel,
+    ClimateScheduleIdent,
+    ClimateZoneScheduleId,
     ModbusVariableDescription,
     PVSystem,
     PVSystemOrientation,
+    SchedulerLinkView,
 )
 from custom_components.remeha_modbus.errors import (
     RemehaIncorrectServiceCall,
@@ -80,7 +90,13 @@ def _config_to_pv_config(config: ConfigEntry) -> PVSystem:
 class RemehaUpdateCoordinator(DataUpdateCoordinator):
     """Remeha Modbus coordinator."""
 
-    def __init__(self, hass: HomeAssistant, config_entry: ConfigEntry, api: RemehaApi):
+    def __init__(
+        self,
+        hass: HomeAssistant,
+        config_entry: ConfigEntry,
+        api: RemehaApi,
+        store: RemehaModbusStorage,
+    ):
         """Create a new instance the Remeha Modbus update coordinator."""
 
         # Update every 20 seconds. This is not user-configurable, since it depends on the amount of
@@ -93,6 +109,7 @@ class RemehaUpdateCoordinator(DataUpdateCoordinator):
             always_update=False,
             config_entry=config_entry,
         )
+        self._store: RemehaModbusStorage = store
         self._api: RemehaApi = api
         self._device_instances: dict[int, DeviceInstance] = {}
 
@@ -106,6 +123,8 @@ class RemehaUpdateCoordinator(DataUpdateCoordinator):
             }
         except ModbusException as ex:
             raise UpdateFailed("Error while communicating with modbus device.") from ex
+
+        await self._store.async_load()
 
     async def _async_update_data(self) -> dict[str, dict[int, ClimateZone]]:
         try:
@@ -129,6 +148,19 @@ class RemehaUpdateCoordinator(DataUpdateCoordinator):
             "cooling_forced": is_cooling_forced,
             "sensors": sensors,
         }
+
+    def is_remeha_modbus_entity(self, entity_id: str) -> bool:
+        """Given an entity id, return whether it originates from this integration.
+
+        Args:
+            entity_id (str): The entity id.
+
+        Returns:
+            `True` if this entity originates from this integration, `False` otherwise.
+
+        """
+
+        return entity_id in integration_entities(hass=self.hass, entry_name=DOMAIN)
 
     def is_cooling_forced(self) -> bool:
         """Return whether the appliance is in forced cooling mode."""
@@ -184,6 +216,141 @@ class RemehaUpdateCoordinator(DataUpdateCoordinator):
         """Get the current value of a sensor."""
 
         return self.data["sensors"][variable]
+
+    def enqueue_for_linking(self, uuid: UUID, zone_id: int, schedule_id: ClimateZoneScheduleId):
+        """Store the given identifiers, preparing them for linking a `ZoneSchedule` to a `scheduler.schedule`.
+
+        If an equal entry already exists, this method has no effect.
+
+        Args:
+            uuid (UUID): The unique identifier added to the list of tags in the `scheduler.schedule`.
+            zone_id (int): The id of the related `ClimateZone`.
+            schedule_id (ClimateZoneScheduleId): The id of the related `ZoneSchedule`.
+
+        """
+
+        self._store.add_to_waiting_list(uuid=uuid, zone_id=zone_id, schedule_id=schedule_id)
+
+    def pop_from_linking_waiting_list(self, uuid: UUID) -> WaitingListEntry | None:
+        """Pop the waiting identifiers with uuid `uuid` from the waiting list.
+
+        Args:
+            uuid (UUID): The uuid listed in the tags of the `scheduler.schedule`
+
+        Returns:
+            A tuple containing the requested identifiers to be linked, or `None` if no such item exists.
+
+        """
+
+        return self._store.pop_from_waiting_list(uuid=uuid)
+
+    async def async_get_scheduler_links(self) -> list[SchedulerLinkView]:
+        """Return a list of all current scheduler links."""
+        return [
+            SchedulerLinkView(
+                zone_id=entry.zone_id,
+                schedule_id=ClimateZoneScheduleId(entry.schedule_id),
+                scheduler_entity_id=entry.schedule_entity_id,
+            )
+            for entry in await self._store.async_get_all()
+        ]
+
+    async def async_get_linked_scheduler_entity(
+        self, zone_id: int, schedule_id: ClimateZoneScheduleId
+    ) -> str | None:
+        """Get the entity id of the `scheduler.schedule` that is linked to the `ZoneSchedule` having the given id values.
+
+        Args:
+            zone_id (int): The id of the `ClimateZone`.
+            schedule_id (ClimateZoneScheduleId): The id of the `ZoneSchedule` within the containing `ClimateZone`.
+
+        Returns:
+            str | None: The entity id of the linked `scheduler.schedule`, or `None` if no such entity exists.
+
+        """
+
+        entry = await self._store.async_get_attributes_by_zone(
+            zone_id=zone_id, schedule_id=schedule_id
+        )
+        return entry.schedule_entity_id if entry else None
+
+    async def async_get_linked_climate_schedule_identifiers(
+        self, scheduler_entity_id: str
+    ) -> ClimateScheduleIdent | None:
+        """Get the id of the schedule linked to the given scheduler entity id.
+
+        Args:
+            scheduler_entity_id (str): The entity id of the `scheduler.schedule`.
+
+        Returns:
+            ClimateZoneScheduleId | None: The climate schedule id, or `None` if no such climate schedule exists.
+
+        """
+
+        entry = await self._store.async_get_attributes_by_entity_id(entity_id=scheduler_entity_id)
+        return (
+            ClimateScheduleIdent(entry.zone_id, ClimateZoneScheduleId(entry.schedule_id))
+            if entry
+            else None
+        )
+
+    async def async_link_scheduler_entity(
+        self, zone_id: int, schedule_id: ClimateZoneScheduleId, entity_id: str
+    ):
+        """Link the given `entity_id` to `schedule`.
+
+        Args:
+            zone_id (int): The zone id of the schedule to link the entity to.
+            schedule_id (ClimateZoneScheduleId): The schedule id to link the entity to.
+            entity_id (str): The entity id of the related `scheduler.schedule`.
+
+        """
+
+        await self._store.async_upsert_schedule_attributes(
+            zone_id=zone_id, schedule_id=schedule_id, schedule_entity_id=entity_id
+        )
+
+    async def async_unlink_climate_schedule(
+        self, zone_id: int, schedule_id: ClimateZoneScheduleId
+    ) -> bool:
+        """Unlink the given climate zone schedule from the related scheduler entity.
+
+        Args:
+            zone_id (int): The zone id of the schedule to link the entity to.
+            schedule_id (ClimateZoneScheduleId): The schedule id to link the entity to.
+
+        Returns:
+            bool: `True` if the link store was updated due to this unlink, `False` otherwise.
+
+        """
+        return await self._store.async_remove_schedule_attributes(
+            zone_id=zone_id, schedule_id=schedule_id
+        )
+
+    async def async_write_schedule(self, schedule: ZoneSchedule):
+        """Write the given schedule to the modbus interface.
+
+        If the schedule is successfully written to the modbus interface, the current
+        state cache is also updated until the next refresh.
+
+        Args:
+            schedule (ZoneSchedule): The schedule to write.
+
+        Raises:
+            ModbusException: if writing `schedule` to the modbus interface fails.
+
+        """
+        await self._api.async_write_variable(
+            variable=WEEKDAY_TO_MODBUS_VARIABLE[schedule.day],
+            value=schedule,
+            offset=self._api.get_zone_register_offset(zone=schedule.zone_id)
+            + self._api.get_schedule_register_offset(schedule=schedule.id),
+        )
+
+        # Update the schedule in the related climate zone, until the next refresh.
+        if schedule.zone_id in self.data["climates"]:
+            zone: ClimateZone = self.data["climates"][schedule.zone_id]
+            zone.current_schedule[schedule.day] = schedule
 
     async def async_read_registers(
         self, start_register: int, register_count: int, struct_format: str

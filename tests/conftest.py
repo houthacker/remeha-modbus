@@ -6,10 +6,10 @@ from collections.abc import Generator
 from datetime import timedelta, tzinfo
 from typing import Any, Final
 from unittest.mock import AsyncMock, MagicMock, Mock, patch
+from zoneinfo import ZoneInfo
 
 import pytest
 import voluptuous as vol
-from dateutil import tz
 from homeassistant.components.weather import (
     SERVICE_GET_FORECASTS,
     Forecast,
@@ -83,7 +83,7 @@ def get_api(
     mock_modbus_client: ModbusBaseClient,
     name: str = "test_api",
     device_address: int = 100,
-    time_zone: tzinfo = tz.gettz(TESTING_TIME_ZONE),
+    time_zone: ZoneInfo = ZoneInfo(TESTING_TIME_ZONE),
 ) -> RemehaApi:
     """Create a new RemehaApi instance with a mocked modbus client."""
 

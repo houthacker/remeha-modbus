@@ -214,6 +214,9 @@
     },
     "import_schedule_missing_integration": {
       "message": "Kan SWW planning niet importeren: vereiste HACS integratie `scheduler-component` is niet geïnstalleerd of de benodigde services missen."
+    },
+    "import_schedule_climate_state": {
+      "message": "Kan SWW planning niet importeren: climate entiteit {climate_entity} is in een onbruikbare state {climate_state}."
     }
   }
 }

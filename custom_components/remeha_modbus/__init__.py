@@ -1,8 +1,9 @@
 """The Remeha Modbus integration."""
 
 import logging
+from typing import TypedDict
+from zoneinfo import ZoneInfo
 
-from dateutil import tz
 from homeassistant.config_entries import (
     ConfigEntry,
     ConfigEntryError,
@@ -12,16 +13,14 @@ from homeassistant.const import CONF_NAME, CONF_TYPE, Platform
 from homeassistant.core import HomeAssistant
 from pymodbus import ModbusException
 
-from custom_components.remeha_modbus.api import (
-    ConnectionType,
-    RemehaApi,
-)
+from custom_components.remeha_modbus.api import ConnectionType, RemehaApi, RemehaModbusStorage
 from custom_components.remeha_modbus.const import (
     AUTO_SCHEDULE_SELECTED_SCHEDULE,
     CONFIG_AUTO_SCHEDULE,
     REMEHA_PRESET_SCHEDULE_1,
 )
 from custom_components.remeha_modbus.coordinator import RemehaUpdateCoordinator
+from custom_components.remeha_modbus.schedule_sync.synchronizer import ScheduleSynchronizer
 from custom_components.remeha_modbus.services import register_services
 
 PLATFORMS: list[Platform] = [
@@ -35,7 +34,23 @@ PLATFORMS: list[Platform] = [
 _LOGGER = logging.getLogger(__name__)
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+class RuntimeData(TypedDict):
+    """Describe the type of `ConfigEntry.runtime_data` in the remeha_modbus integration."""
+
+    api: RemehaApi
+    """The api instance to interact with the modbus interface."""
+
+    coordinator: RemehaUpdateCoordinator
+    """The data update coordinator."""
+
+    schedule_synchronizer: ScheduleSynchronizer
+    """Synchronization methods for schedules between the modbus interface and the `scheduler` integration."""
+
+
+type RemehaModbusConfig = ConfigEntry[RuntimeData]
+
+
+async def async_setup_entry(hass: HomeAssistant, entry: RemehaModbusConfig) -> bool:
     """Set up Remeha Modbus based on a config entry."""
 
     modbus_hub_name = entry.data[CONF_NAME]
@@ -48,7 +63,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         )
 
     api: RemehaApi = RemehaApi.create(
-        name=modbus_hub_name, config=entry.data, time_zone=tz.gettz(name=hass.config.time_zone)
+        name=modbus_hub_name, config=entry.data, time_zone=ZoneInfo(key=hass.config.time_zone)
     )
 
     # Ensure the modbus device is reachable and actually talking Modbus
@@ -59,21 +74,30 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     except ModbusException as ex:
         raise ConfigEntryNotReady(f"Error while executing modbus health check: {ex}") from ex
 
-    coordinator = RemehaUpdateCoordinator(hass=hass, config_entry=entry, api=api)
+    coordinator = RemehaUpdateCoordinator(
+        hass=hass, config_entry=entry, api=api, store=RemehaModbusStorage(hass=hass)
+    )
 
     await coordinator.async_config_entry_first_refresh()
 
-    entry.runtime_data = {"api": api, "coordinator": coordinator}
+    synchronizer = ScheduleSynchronizer(hass=hass, coordinator=coordinator)
+    entry.runtime_data = RuntimeData(
+        api=api,
+        coordinator=coordinator,
+        schedule_synchronizer=synchronizer,
+    )
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     # Register services only if everything else has been set up ssuccessfully.
-    register_services(hass=hass, config=entry, coordinator=coordinator)
+    register_services(hass=hass, config=entry)
+
+    await synchronizer.async_refresh_subscriptions()
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(hass: HomeAssistant, entry: RemehaModbusConfig) -> bool:
     """Unload the Remeha Modbus configuration."""
 
     # Close the connection to the modbus server.
@@ -83,7 +107,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
 
 
-async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
+async def async_migrate_entry(hass: HomeAssistant, config_entry: RemehaModbusConfig) -> bool:
     """Migrate config entry to latest version."""
     _LOGGER.debug(
         "Migrating configuration from version %s.%s",

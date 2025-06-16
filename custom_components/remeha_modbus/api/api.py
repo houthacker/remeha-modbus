@@ -3,13 +3,14 @@
 import asyncio
 import logging
 import struct
-from dataclasses import dataclass
-from datetime import datetime, tzinfo
+from datetime import datetime
 from enum import Enum, StrEnum, auto
 from types import MappingProxyType
 from typing import Any, Self
+from zoneinfo import ZoneInfo
 
 from homeassistant.const import CONF_HOST, CONF_PORT, CONF_TYPE
+from pydantic.dataclasses import dataclass
 from pymodbus import FramerType, ModbusException
 from pymodbus import client as ModbusClient
 from pymodbus.client import (
@@ -230,7 +231,7 @@ class RemehaApi:
         connection_type: ConnectionType,
         client: ModbusClient.ModbusBaseClient,
         device_address: int = 1,
-        time_zone: tzinfo | None = None,
+        time_zone: ZoneInfo | None = None,
     ):
         """Create a new API instance."""
         self._client: ModbusClient.ModbusBaseClient = client
@@ -243,14 +244,14 @@ class RemehaApi:
 
     @classmethod
     def create(
-        cls, name: str, config: MappingProxyType[str, Any], time_zone: tzinfo | None = None
+        cls, name: str, config: MappingProxyType[str, Any], time_zone: ZoneInfo | None = None
     ) -> Self:
         """Create a new `RemehaApi` instance.
 
         Args:
             name (str): The name of the modbus hub name.
             config (MappingProxyType[str, Any]): The dict containing the configuration of the related `ConfigEntry`.
-            time_zone (tzinfo|None): The time zone of the Remeha appliance. If `None`, local system time is used..
+            time_zone (ZoneInfo|None): The time zone of the Remeha appliance. If `None`, local system time is used..
 
         """
         connection_type: ConnectionType = config[CONF_TYPE]
@@ -272,7 +273,7 @@ class RemehaApi:
                     host=config[CONF_HOST],
                     port=int(config[CONF_PORT]),
                     framer=FramerType.SOCKET,
-                    timeout=120,
+                    timeout=150,
                 )
             case ConnectionType.UDP:
                 client = AsyncModbusUdpClient(
@@ -280,7 +281,7 @@ class RemehaApi:
                     host=config[CONF_HOST],
                     port=int(config[CONF_PORT]),
                     framer=FramerType.SOCKET,
-                    timeout=120,
+                    timeout=150,
                 )
             case ConnectionType.RTU_OVER_TCP:
                 client = AsyncModbusTcpClient(
@@ -288,7 +289,7 @@ class RemehaApi:
                     host=config[CONF_HOST],
                     port=int(config[CONF_PORT]),
                     framer=FramerType.RTU,
-                    timeout=120,
+                    timeout=150,
                 )
 
         return RemehaApi(
@@ -394,12 +395,6 @@ class RemehaApi:
 
         """
 
-        async def _async_ensure_connected() -> None:
-            """Ensure that we're connected or raise an exception."""
-            if not self._client.connected and not await self._client.connect():
-                raise ModbusException("Connection to modbus device lost.")
-
-        await _async_ensure_connected()
         response: ModbusPDU = await self._client.read_holding_registers(
             address=variable.start_address + offset,
             count=variable.count,
@@ -429,12 +424,7 @@ class RemehaApi:
 
         """
 
-        async def _async_ensure_connected() -> None:
-            if not self._client.connected and not await self._client.connect():
-                raise ModbusException("Connection to modbus device lost.")
-
         async with self._lock:
-            await _async_ensure_connected()
             response: ModbusPDU = await self._client.write_registers(
                 address=variable.start_address + offset,
                 values=registers,
@@ -606,7 +596,7 @@ class RemehaApi:
             if raw_error_priority
             else ApplianceErrorPriority.NO_ERROR
         )
-        appliance_status: ApplianceStatus = ApplianceStatus(
+        appliance_status: ApplianceStatus = ApplianceStatus.from_bits(
             bits=(
                 from_registers(
                     registers=await self._async_read_registers(
@@ -848,7 +838,7 @@ class RemehaApi:
         )
 
         # Read zone schedules
-        current_schedule: dict[Weekday, ZoneSchedule] = (
+        current_schedule: dict[Weekday, ZoneSchedule | None] = (
             {
                 day: await self.async_read_zone_schedule(
                     zone=id, schedule_id=ClimateZoneScheduleId(selected_schedule), day=day
