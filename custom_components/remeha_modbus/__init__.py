@@ -13,11 +13,19 @@ from homeassistant.const import CONF_NAME, CONF_TYPE, Platform
 from homeassistant.core import HomeAssistant
 from pymodbus import ModbusException
 
-from custom_components.remeha_modbus.api import ConnectionType, RemehaApi, RemehaModbusStorage
+from custom_components.remeha_modbus.api import (
+    ConnectionType,
+    RemehaApi,
+    RemehaModbusStorage,
+    RemehaModbusStore,
+)
 from custom_components.remeha_modbus.const import (
     AUTO_SCHEDULE_SELECTED_SCHEDULE,
     CONFIG_AUTO_SCHEDULE,
     REMEHA_PRESET_SCHEDULE_1,
+    STORAGE_FILE_KEY,
+    STORAGE_MINOR_VERSION,
+    STORAGE_VERSION,
 )
 from custom_components.remeha_modbus.coordinator import RemehaUpdateCoordinator
 from custom_components.remeha_modbus.schedule_sync.synchronizer import ScheduleSynchronizer
@@ -75,7 +83,17 @@ async def async_setup_entry(hass: HomeAssistant, entry: RemehaModbusConfig) -> b
         raise ConfigEntryNotReady(f"Error while executing modbus health check: {ex}") from ex
 
     coordinator = RemehaUpdateCoordinator(
-        hass=hass, config_entry=entry, api=api, store=RemehaModbusStorage(hass=hass)
+        hass=hass,
+        config_entry=entry,
+        api=api,
+        store=RemehaModbusStorage(
+            store=RemehaModbusStore(
+                hass=hass,
+                version=STORAGE_VERSION,
+                minor_version=STORAGE_MINOR_VERSION,
+                key=STORAGE_FILE_KEY,
+            )
+        ),
     )
 
     await coordinator.async_config_entry_first_refresh()

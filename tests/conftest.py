@@ -31,7 +31,7 @@ from pytest_homeassistant_custom_component.common import (
     load_json_value_fixture,
 )
 
-from custom_components.remeha_modbus.api import ConnectionType, RemehaApi
+from custom_components.remeha_modbus.api import ConnectionType, RemehaApi, RemehaModbusStore
 from custom_components.remeha_modbus.const import (
     AUTO_SCHEDULE_SELECTED_SCHEDULE,
     CONFIG_AUTO_SCHEDULE,
@@ -222,6 +222,19 @@ def mock_config_entry(request) -> Generator[MockConfigEntry]:
             dhw_boiler_heat_loss_rate=args.get("dhw_boiler_heat_loss_rate", 2.19),
             dhw_energy_label=args.get("dhw_energy_label"),
         )
+
+
+@pytest.fixture
+def test_store(request, hass) -> RemehaModbusStore:
+    """Create a store for usage in testing."""
+
+    args: dict[str, Any] = request.param if hasattr(request, "param") else {}
+    return RemehaModbusStore(
+        hass=hass,
+        version=args.get("version", 1),
+        minor_version=args.get("minor_version", 0),
+        key=args.get("key", "remeha-modbus-test-store"),
+    )
 
 
 async def setup_platform(hass: HomeAssistant, config_entry: MockConfigEntry):

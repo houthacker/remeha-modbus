@@ -4,14 +4,10 @@ import logging
 from collections.abc import MutableMapping
 from uuid import UUID
 
-from homeassistant.core import HomeAssistant
 from homeassistant.helpers.storage import Store
 from pydantic.dataclasses import dataclass
 
 from custom_components.remeha_modbus.const import (
-    STORAGE_FILE_KEY,
-    STORAGE_MINOR_VERSION,
-    STORAGE_VERSION,
     ClimateZoneScheduleId,
 )
 
@@ -58,9 +54,8 @@ class RemehaModbusStore(Store):
 class RemehaModbusStorage:
     """Storage for additional data for the remeha_modbus integration."""
 
-    def __init__(self, hass: HomeAssistant):
+    def __init__(self, store: RemehaModbusStore):
         """Create a new storage instance."""
-        self._hass: HomeAssistant = hass
         self._waiting_list: MutableMapping[UUID, WaitingListEntry] = {}
         """A list for zone schedule identifiers, waiting to be linked to a `scheduler.schedule`.
 
@@ -69,12 +64,7 @@ class RemehaModbusStorage:
 
         self._cache_by_entity_id: MutableMapping[str, ScheduleAttributesEntry] = {}
         self._cache_by_climate_key: MutableMapping[str, ScheduleAttributesEntry] = {}
-        self._store = RemehaModbusStore(
-            hass=hass,
-            version=STORAGE_VERSION,
-            minor_version=STORAGE_MINOR_VERSION,
-            key=STORAGE_FILE_KEY,
-        )
+        self._store = store
 
     def _climate_key(self, zone_id: int, schedule_id: ClimateZoneScheduleId) -> str:
         return f"{zone_id}.{schedule_id.value}"
