@@ -12,10 +12,10 @@ from custom_components.remeha_modbus.api import (
 from custom_components.remeha_modbus.const import ClimateZoneScheduleId
 
 
-def test_waiting_list(test_store: RemehaModbusStore):
+def test_waiting_list(modbus_test_store: RemehaModbusStore):
     """Test that an entry can be added and popped from the waiting list."""
 
-    storage = RemehaModbusStorage(store=test_store)
+    storage = RemehaModbusStorage(store=modbus_test_store)
 
     uuid: UUID = UUIDv4()
     storage.add_to_waiting_list(uuid=uuid, zone_id=1, schedule_id=ClimateZoneScheduleId.SCHEDULE_3)
@@ -25,16 +25,16 @@ def test_waiting_list(test_store: RemehaModbusStore):
     )
 
 
-async def test_get_all_from_empty_store(test_store: RemehaModbusStore):
+async def test_get_all_from_empty_store(modbus_test_store: RemehaModbusStore):
     """Test that retrieving all entries from an empty store returns an empty list."""
 
-    assert await RemehaModbusStorage(store=test_store).async_get_all() == []
+    assert await RemehaModbusStorage(store=modbus_test_store).async_get_all() == []
 
 
-async def test_remove_all(test_store: RemehaModbusStore):
+async def test_remove_all(modbus_test_store: RemehaModbusStore):
     """Test that removing all entries and then retrieving them back from storage returns an empty list."""
 
-    storage = RemehaModbusStorage(store=test_store)
+    storage = RemehaModbusStorage(store=modbus_test_store)
 
     # Insert some data
     for schedule_id in ClimateZoneScheduleId:
@@ -50,10 +50,10 @@ async def test_remove_all(test_store: RemehaModbusStore):
     assert len(await storage.async_get_all()) == 0
 
 
-async def test_get_attributes_by_entity_id(test_store: RemehaModbusStore):
+async def test_get_attributes_by_entity_id(modbus_test_store: RemehaModbusStore):
     """Test the retrieval of entries by their entity_id."""
 
-    storage = RemehaModbusStorage(store=test_store)
+    storage = RemehaModbusStorage(store=modbus_test_store)
 
     # Insert some data
     for schedule_id in ClimateZoneScheduleId:
@@ -69,10 +69,10 @@ async def test_get_attributes_by_entity_id(test_store: RemehaModbusStore):
     )
 
 
-async def test_get_attributes_by_zone(test_store: RemehaModbusStore):
+async def test_get_attributes_by_zone(modbus_test_store: RemehaModbusStore):
     """Test the retrieval of entries by their zone."""
 
-    storage = RemehaModbusStorage(store=test_store)
+    storage = RemehaModbusStorage(store=modbus_test_store)
 
     # Insert some data
     for schedule_id in ClimateZoneScheduleId:
@@ -89,10 +89,10 @@ async def test_get_attributes_by_zone(test_store: RemehaModbusStore):
     )
 
 
-async def test_load_store(test_store: RemehaModbusStore):
+async def test_load_store(modbus_test_store: RemehaModbusStore):
     """Test loading the store contents from its backing file."""
 
-    storage = RemehaModbusStorage(store=test_store)
+    storage = RemehaModbusStorage(store=modbus_test_store)
 
     # Insert some data
     for schedule_id in ClimateZoneScheduleId:
@@ -110,10 +110,10 @@ async def test_load_store(test_store: RemehaModbusStore):
         )
 
 
-async def test_remove_schedule_attributes(test_store: RemehaModbusStore):
+async def test_remove_schedule_attributes(modbus_test_store: RemehaModbusStore):
     """Test that removing an entry does not touch the other entries."""
 
-    storage = RemehaModbusStorage(store=test_store)
+    storage = RemehaModbusStorage(store=modbus_test_store)
 
     # Insert some data
     for schedule_id in ClimateZoneScheduleId:
@@ -128,10 +128,10 @@ async def test_remove_schedule_attributes(test_store: RemehaModbusStore):
     assert len(await storage.async_get_all()) == len(ClimateZoneScheduleId) - 1
 
 
-async def test_remove_non_existing_entry(test_store: RemehaModbusStore):
+async def test_remove_non_existing_entry(modbus_test_store: RemehaModbusStore):
     """Test removing a non-existing entry has no effect."""
 
-    storage = RemehaModbusStorage(store=test_store)
+    storage = RemehaModbusStorage(store=modbus_test_store)
 
     # Insert some data
     for schedule_id in ClimateZoneScheduleId:
@@ -151,10 +151,10 @@ async def test_remove_non_existing_entry(test_store: RemehaModbusStore):
     assert len(await storage.async_get_all()) == len(ClimateZoneScheduleId)
 
 
-async def test_migrate_store(test_store: RemehaModbusStore):
+async def test_migrate_store(modbus_test_store: RemehaModbusStore):
     """Test store migration."""
 
-    storage = RemehaModbusStorage(store=test_store)
+    storage = RemehaModbusStorage(store=modbus_test_store)
 
     # Insert some data
     for schedule_id in ClimateZoneScheduleId:
@@ -167,10 +167,10 @@ async def test_migrate_store(test_store: RemehaModbusStore):
 
     migrated_storage = RemehaModbusStorage(
         store=RemehaModbusStore(
-            hass=test_store.hass,
-            version=test_store.version,
-            minor_version=test_store.minor_version + 1,
-            key=test_store.key,
+            hass=modbus_test_store.hass,
+            version=modbus_test_store.version,
+            minor_version=modbus_test_store.minor_version + 1,
+            key=modbus_test_store.key,
         )
     )
     await migrated_storage.async_load()
