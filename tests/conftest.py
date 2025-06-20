@@ -3,7 +3,7 @@
 import logging
 import uuid
 from collections.abc import Generator
-from datetime import timedelta, tzinfo
+from datetime import timedelta
 from typing import Any, Final
 from unittest.mock import AsyncMock, MagicMock, Mock, patch
 from zoneinfo import ZoneInfo
@@ -27,10 +27,12 @@ from pymodbus.client import ModbusBaseClient
 from pytest_homeassistant_custom_component.common import (
     MockConfigEntry,
     MockEntity,
+    async_mock_service,
     load_json_object_fixture,
     load_json_value_fixture,
 )
 
+import custom_components.scheduler.const
 from custom_components.remeha_modbus.api import ConnectionType, RemehaApi, RemehaModbusStore
 from custom_components.remeha_modbus.const import (
     AUTO_SCHEDULE_SELECTED_SCHEDULE,
@@ -56,6 +58,10 @@ from custom_components.remeha_modbus.const import (
     BoilerEnergyLabel,
     ZoneRegisters,
 )
+from custom_components.scheduler.const import DOMAIN as SchedulerDomain
+
+TESTING_ATTR_ADD_SCHEDULING_CALLS: Final[str] = "add_scheduler_calls"
+TESTING_ATTR_EDIT_SCHEDULER_CALLS: Final[str] = "edit_scheduler_calls"
 
 TESTING_TIME_ZONE: Final[str] = "Europe/Amsterdam"
 
@@ -191,7 +197,7 @@ def mock_modbus_client(request) -> Generator[AsyncMock]:
 def mock_config_entry(request) -> Generator[MockConfigEntry]:
     """Create a mocked config entry.
 
-    If `version` and `version_minor` are provided, arguments introduced after this version are ignored.
+    If `version` and `version_minor` are provided, any passed arguments introduced in a later version are ignored.
 
     `request.param` is an optional dict with the following keys:
     * `version` (int): The config entry major version, defaults to current major version.
@@ -199,7 +205,7 @@ def mock_config_entry(request) -> Generator[MockConfigEntry]:
     * `hub_name` (str): The modbus hub name, defaults to `test_hub`.
     * `device_address` (int): The modbus device address, defaults to `100`.
     * `auto_scheduling` (bool): Whether to enable auto scheduling, defaults to `False`. Since config v1.1
-    * `time_zone` (tzinfo): The time zone. Defaults to `None`. Since config v1.1
+    * `time_zone` (ZoneInfo): The time zone. Defaults to `None`. Since config v1.1
     * `dhw_boiler_volume` (float): The DHW boiler volume in L. Defaults to 300. Since config v1.1
     * `dhw_boiler_heat_loss_rate (float): The DHW boiler heat loss rate in Watts. Defaults to 2.19. Since config v1.1
     * `dhw_energy_label (BoilerEnergyLabel | None): The DHW boiler energy label. Defaults to `None`. Since config v1.1
@@ -225,7 +231,7 @@ def mock_config_entry(request) -> Generator[MockConfigEntry]:
 
 
 @pytest.fixture
-def test_store(request, hass) -> RemehaModbusStore:
+def modbus_test_store(request, hass) -> RemehaModbusStore:
     """Create a store for usage in testing."""
 
     args: dict[str, Any] = request.param if hasattr(request, "param") else {}
@@ -238,10 +244,19 @@ def test_store(request, hass) -> RemehaModbusStore:
 
 
 async def setup_platform(hass: HomeAssistant, config_entry: MockConfigEntry):
-    """Set up the platform."""
+    """Set up the platform based on the given `config_entry`, using a `RemehaUpdateCoordinator` that does not update.
+
+    Additionally, the following entities and services are configured:
+     * A `weather.fake_weather` entity;
+     * A mocked `weather.get_forecasts` entity service;
+     * A mocked `scheduler.add` service;
+     * A mocked `scheduler.edit` service;
+     * `hass.data['remeha_modbus']['add_scheduler_calls']` contains a list of service calls to the `scheduler.add` service.
+     * `hass.data['remeha_modbus']['edit_schedule_calls']` contains a list of service calls to the `scheduler.edit` service.
+    """
 
     # Prepare hass by adding a weather entity.
-    component = EntityComponent[WeatherEntity](
+    weather_component = EntityComponent[WeatherEntity](
         logger=logging.getLogger("weather"),
         domain=WeatherDomain,
         hass=hass,
@@ -249,13 +264,13 @@ async def setup_platform(hass: HomeAssistant, config_entry: MockConfigEntry):
     )
 
     # Stop timers when HA stops.
-    component.register_shutdown()
+    weather_component.register_shutdown()
 
     # Add fake weather entity.
     entity: WeatherEntity = MockWeatherEntity(entity_id="weather.fake_weather")
-    await component.async_add_entities([entity])
+    await weather_component.async_add_entities([entity])
 
-    component.async_register_entity_service(
+    weather_component.async_register_entity_service(
         name=SERVICE_GET_FORECASTS,
         schema={vol.Required("type"): vol.In(("daily", "hourly", "twice_daily"))},
         func=async_get_forecasts_service,
@@ -267,6 +282,26 @@ async def setup_platform(hass: HomeAssistant, config_entry: MockConfigEntry):
         supports_response=SupportsResponse.ONLY,
     )
 
+    # Prepare the scheduler component
+    add_scheduler_calls = async_mock_service(
+        hass=hass,
+        domain=SchedulerDomain,
+        schema=custom_components.scheduler.const.ADD_SCHEDULE_SCHEMA,
+        service=custom_components.scheduler.const.SERVICE_ADD,
+        supports_response=SupportsResponse.OPTIONAL,
+    )
+
+    edit_scheduler_calls = async_mock_service(
+        hass=hass,
+        domain=SchedulerDomain,
+        schema=custom_components.scheduler.const.EDIT_SCHEDULE_SCHEMA,
+        service=custom_components.scheduler.const.SERVICE_EDIT,
+        supports_response=SupportsResponse.OPTIONAL,
+    )
+
+    hass.data.setdefault(DOMAIN, {})
+    hass.data[DOMAIN][TESTING_ATTR_ADD_SCHEDULING_CALLS] = add_scheduler_calls
+    hass.data[DOMAIN][TESTING_ATTR_EDIT_SCHEDULER_CALLS] = edit_scheduler_calls
     config_entry.add_to_hass(hass=hass)
 
     # We don't want lingering timers after the tests are done, so disable the updates of the update coordinator.
@@ -286,7 +321,7 @@ def _create_config_entry(
     hub_name: str = "test_hub",
     device_address: int = 100,
     auto_scheduling: bool = False,
-    time_zone: tzinfo | None = None,
+    time_zone: ZoneInfo | None = None,
     dhw_boiler_volume: float = 300,
     dhw_boiler_heat_loss_rate: float = 2.19,
     dhw_energy_label: BoilerEnergyLabel | None = None,
@@ -306,7 +341,7 @@ def _create_config_entry(
     if version[1] in [1, 2]:
         entry_data |= {CONFIG_AUTO_SCHEDULE: auto_scheduling}
 
-        if auto_scheduling is True:
+        if auto_scheduling:
             entry_data |= {
                 WEATHER_ENTITY_ID: "weather.fake_weather",
                 AUTO_SCHEDULE_SELECTED_SCHEDULE: REMEHA_PRESET_SCHEDULE_1,

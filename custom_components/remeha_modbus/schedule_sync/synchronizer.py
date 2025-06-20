@@ -68,7 +68,7 @@ SWITCH_REMOVED_LISTENER: Final[str] = "switch_removed"
 SCHEDULER_TAG_PREFIX: Final[str] = f"{DOMAIN}_"
 
 
-def EMPTY_FN() -> None:
+def empty_fn() -> None:
     """Empty no-op function."""
 
 
@@ -86,8 +86,8 @@ def to_scheduler_state(state: State) -> SchedulerState:
 
     """
 
-    Validator = TypeAdapter(SchedulerState)
-    return Validator.validate_python(dict(state.as_dict()))
+    validator = TypeAdapter(SchedulerState)
+    return validator.validate_python(dict(state.as_dict()))
 
 
 class ZoneScheduleId(TypedDict):
@@ -154,7 +154,7 @@ class ScheduleSynchronizer:
 
     async def _async_event_switch_updated(self, event: Event[EventStateChangedData]) -> None:
         # The only way we could get here was through a state-change listener on a single entity.
-        # Therefore assume the state in the event is of a `scheduler.schedule`,
+        # Therefore, assume the state in the event is of a `scheduler.schedule`,
         # otherwise the export method will raise a `ValueError`.
 
         state: SchedulerState = to_scheduler_state(state=event.data["new_state"])
@@ -173,8 +173,8 @@ class ScheduleSynchronizer:
         to be on the waiting list.
         """
 
-        def _get_waiting_list_tag(state: SchedulerState) -> UUID | None:
-            tags: list[str] = state["attributes"].get("tags", [])
+        def _get_waiting_list_tag(scheduler_state: SchedulerState) -> UUID | None:
+            tags: list[str] = scheduler_state["attributes"].get("tags", [])
             for tag in tags:
                 if tag.startswith(SCHEDULER_TAG_PREFIX):
                     return UUID(tag.removeprefix(SCHEDULER_TAG_PREFIX))
@@ -199,7 +199,7 @@ class ScheduleSynchronizer:
                     )
 
                 # Check if this schedule is on the waiting list to be linked to a ZoneSchedule
-                waiting_list_tag: UUID | None = _get_waiting_list_tag(state=state)
+                waiting_list_tag: UUID | None = _get_waiting_list_tag(scheduler_state=state)
                 waiting_link: WaitingListEntry | None = (
                     self._coordinator.pop_from_linking_waiting_list(uuid=waiting_list_tag)
                     if waiting_list_tag is not None
@@ -219,7 +219,7 @@ class ScheduleSynchronizer:
             else:
                 _LOGGER.debug(
                     "Ignoring scheduler.schedule [%s] since its 1st action entity is no Remeha Modbus climate entity.",
-                    entity_id,
+                    event.data["entity_id"],
                 )
 
         except ValidationError as e:
@@ -266,10 +266,10 @@ class ScheduleSynchronizer:
                 next_ts: Timeslot = time_slots[idx + 1]
                 yield ts, timedelta(hours=next_ts.switch_time.hour - ts.switch_time.hour)
 
-    def _to_preset_mode(self, type: TimeslotSetpointType) -> str:
-        if type is TimeslotSetpointType.ECO:
+    def _to_preset_mode(self, setpoint_type: TimeslotSetpointType) -> str:
+        if setpoint_type is TimeslotSetpointType.ECO:
             return PRESET_ECO
-        if type is TimeslotSetpointType.COMFORT:
+        if setpoint_type is TimeslotSetpointType.COMFORT:
             return PRESET_COMFORT
 
         return PRESET_NONE
@@ -307,7 +307,7 @@ class ScheduleSynchronizer:
                             entity_id=f"climate.{DOMAIN}_{zone.short_name}",
                             service="climate.set_preset_mode",
                             service_data={
-                                "preset_mode": self._to_preset_mode(type=ts.setpoint_type)
+                                "preset_mode": self._to_preset_mode(setpoint_type=ts.setpoint_type)
                             },
                         )
                     ],
@@ -324,7 +324,7 @@ class ScheduleSynchronizer:
 
             # When creating a new schedule, a unique tag is added so it can be identified
             # when the new-schedule-event is received. It can then be linked to the correct modbus schedule.
-            # This tag can be removed afterwards.
+            # This tag can be removed afterward.
             data["tags"] = [f"{linking_tag}"]
 
         return data
@@ -390,11 +390,11 @@ class ScheduleSynchronizer:
         tag: UUID = uuid4()
         operation: ServiceOperation = ServiceOperation.ADD
         data: SchedulerSchedule = self._to_scheduler_schedule(
-            schedule=schedule, operation=operation, linking_tag=f"{SCHEDULER_TAG_PREFIX}{tag!s}"
+            schedule=schedule, operation=operation, linking_tag=tag
         )
 
         # Add linking information to the waiting list.
-        # This info is used to link the schedules when an schedule-added event is received.
+        # This info is used to link the schedules when a schedule-added event is received.
         self._coordinator.enqueue_for_linking(
             uuid=tag, zone_id=schedule.zone_id, schedule_id=schedule.id
         )
@@ -442,7 +442,7 @@ class ScheduleSynchronizer:
 
         self._subscriptions = refreshed
 
-    async def async_import_schedule(self, schedule: ZoneSchedule) -> str:
+    async def async_import_schedule(self, schedule: ZoneSchedule):
         """Import the given modbus schedule into the scheduler integration.
 
         If the schedule already exists, it is updated. Otherwise, it is created.
@@ -453,9 +453,6 @@ class ScheduleSynchronizer:
 
         Args:
           schedule (ZoneSchedule): The schedule to import.
-
-        Returns:
-          str: The entity id of the created (or updated) `scheduler.schedule`.
 
         """
 
