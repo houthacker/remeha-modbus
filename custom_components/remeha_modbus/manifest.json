@@ -1,10 +1,10 @@
 {
   "domain": "remeha_modbus",
   "name": "Remeha Modbus",
+  "after_dependencies": ["knmi", "scheduler"],
   "codeowners": ["@houthacker"],
   "config_flow": true,
   "dependencies": ["modbus"],
-  "after_dependencies": ["knmi", "scheduler"],
   "documentation": "https://github.com/houthacker/remeha_modbus/blob/main/README.md",
   "integration_type": "hub",
   "iot_class": "local_polling",
