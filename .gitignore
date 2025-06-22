@@ -263,8 +263,6 @@ junit-coverage.xml
 config/custom_components
 config/www/community
 custom_components/hacs
-custom_components/knmi
-custom_components/scheduler
 
 # pycharm
 .idea
