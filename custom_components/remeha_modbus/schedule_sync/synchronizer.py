@@ -190,8 +190,10 @@ class ScheduleSynchronizer:
 
                 # Subscribe to entity changes if not already listening to them.
                 @callback
-                def _switch_updated(e: Event[EventStateChangedData]):
-                    self._hass.loop.create_task(self._async_event_switch_updated(event=e))
+                def _switch_updated(update_event: Event[EventStateChangedData]):
+                    self._hass.loop.create_task(
+                        self._async_event_switch_updated(event=update_event)
+                    )
 
                 if entity_id not in self._subscriptions:
                     self._subscriptions[entity_id] = async_track_state_change_event(
@@ -274,7 +276,7 @@ class ScheduleSynchronizer:
 
         return PRESET_NONE
 
-    def _to_scheduler_schedule(
+    async def _to_scheduler_schedule(
         self,
         schedule: ZoneSchedule,
         operation: ServiceOperation,
@@ -283,6 +285,15 @@ class ScheduleSynchronizer:
     ) -> SchedulerSchedule:
         durations: dict[Timeslot, timedelta] = dict(self._get_durations(schedule=schedule))
         zone: ClimateZone = self._coordinator.get_climate(id=schedule.zone_id)
+        climate_entity = next(
+            iter(
+                [
+                    state
+                    for state in self._hass.states.async_all(domain_filter="climate")
+                    if state.attributes.get("zone_id") == zone.id
+                ]
+            )
+        )
 
         data = SchedulerSchedule(
             weekdays=[WEEKDAY_TO_SHORT_DESC[schedule.day]],
@@ -304,7 +315,7 @@ class ScheduleSynchronizer:
                     condition_type="and",
                     actions=[
                         SchedulerAction(
-                            entity_id=f"climate.{DOMAIN}_{zone.short_name}",
+                            entity_id=climate_entity.entity_id,
                             service="climate.set_preset_mode",
                             service_data={
                                 "preset_mode": self._to_preset_mode(setpoint_type=ts.setpoint_type)
@@ -325,7 +336,7 @@ class ScheduleSynchronizer:
             # When creating a new schedule, a unique tag is added so it can be identified
             # when the new-schedule-event is received. It can then be linked to the correct modbus schedule.
             # This tag can be removed afterward.
-            data["tags"] = [f"{linking_tag}"]
+            data["tags"] = [f"{SCHEDULER_TAG_PREFIX}{linking_tag}"]
 
         return data
 
@@ -389,7 +400,7 @@ class ScheduleSynchronizer:
     async def _async_add_scheduler_schedule(self, schedule: ZoneSchedule):
         tag: UUID = uuid4()
         operation: ServiceOperation = ServiceOperation.ADD
-        data: SchedulerSchedule = self._to_scheduler_schedule(
+        data: SchedulerSchedule = await self._to_scheduler_schedule(
             schedule=schedule, operation=operation, linking_tag=tag
         )
 
@@ -409,7 +420,7 @@ class ScheduleSynchronizer:
 
     async def _async_update_scheduler_schedule(self, schedule: ZoneSchedule, scheduler_entity: str):
         operation = ServiceOperation.EDIT
-        data: SchedulerSchedule = self._to_scheduler_schedule(
+        data: SchedulerSchedule = await self._to_scheduler_schedule(
             schedule=schedule, operation=operation, linked_scheduler_entity=scheduler_entity
         )
 

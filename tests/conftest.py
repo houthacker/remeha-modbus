@@ -2,7 +2,7 @@
 
 import logging
 import uuid
-from collections.abc import Generator
+from collections.abc import Callable, Generator
 from datetime import timedelta
 from typing import Any, Final
 from unittest.mock import AsyncMock, MagicMock, Mock, patch
@@ -27,12 +27,10 @@ from pymodbus.client import ModbusBaseClient
 from pytest_homeassistant_custom_component.common import (
     MockConfigEntry,
     MockEntity,
-    async_mock_service,
     load_json_object_fixture,
     load_json_value_fixture,
 )
 
-import custom_components.scheduler.const
 from custom_components.remeha_modbus.api import ConnectionType, RemehaApi, RemehaModbusStore
 from custom_components.remeha_modbus.const import (
     AUTO_SCHEDULE_SELECTED_SCHEDULE,
@@ -58,7 +56,8 @@ from custom_components.remeha_modbus.const import (
     BoilerEnergyLabel,
     ZoneRegisters,
 )
-from custom_components.scheduler.const import DOMAIN as SchedulerDomain
+from custom_components.scheduler.store import ScheduleEntry
+from tests.util import SchedulerComponentStub
 
 TESTING_ATTR_ADD_SCHEDULING_CALLS: Final[str] = "add_scheduler_calls"
 TESTING_ATTR_EDIT_SCHEDULER_CALLS: Final[str] = "edit_scheduler_calls"
@@ -243,7 +242,12 @@ def modbus_test_store(request, hass) -> RemehaModbusStore:
     )
 
 
-async def setup_platform(hass: HomeAssistant, config_entry: MockConfigEntry):
+async def setup_platform(
+    hass: HomeAssistant,
+    config_entry: MockConfigEntry,
+    add_schedule_callback: Callable[[ScheduleEntry], None] | None = None,
+    edit_schedule_callback: Callable[[ScheduleEntry], None] | None = None,
+) -> None:
     """Set up the platform based on the given `config_entry`, using a `RemehaUpdateCoordinator` that does not update.
 
     Additionally, the following entities and services are configured:
@@ -253,6 +257,15 @@ async def setup_platform(hass: HomeAssistant, config_entry: MockConfigEntry):
      * A mocked `scheduler.edit` service;
      * `hass.data['remeha_modbus']['add_scheduler_calls']` contains a list of service calls to the `scheduler.add` service.
      * `hass.data['remeha_modbus']['edit_schedule_calls']` contains a list of service calls to the `scheduler.edit` service.
+
+    If the scheduler services require a side effect, provide the respective callback.
+
+    Args:
+        hass (HomeAssistant): Home Assistant instance.
+        config_entry (MockConfigEntry): The config entry to use for setting up the platform.
+        add_schedule_callback (Callable[[ServiceCall], None] | None): A callback function for the `scheduler.add` service.
+        edit_schedule_callback (Callable[[ServiceCall], None] | None): A callback function for the `scheduler.edit` service.
+
     """
 
     # Prepare hass by adding a weather entity.
@@ -282,26 +295,14 @@ async def setup_platform(hass: HomeAssistant, config_entry: MockConfigEntry):
         supports_response=SupportsResponse.ONLY,
     )
 
-    # Prepare the scheduler component
-    add_scheduler_calls = async_mock_service(
-        hass=hass,
-        domain=SchedulerDomain,
-        schema=custom_components.scheduler.const.ADD_SCHEDULE_SCHEMA,
-        service=custom_components.scheduler.const.SERVICE_ADD,
-        supports_response=SupportsResponse.OPTIONAL,
-    )
-
-    edit_scheduler_calls = async_mock_service(
-        hass=hass,
-        domain=SchedulerDomain,
-        schema=custom_components.scheduler.const.EDIT_SCHEDULE_SCHEMA,
-        service=custom_components.scheduler.const.SERVICE_EDIT,
-        supports_response=SupportsResponse.OPTIONAL,
-    )
-
     hass.data.setdefault(DOMAIN, {})
-    hass.data[DOMAIN][TESTING_ATTR_ADD_SCHEDULING_CALLS] = add_scheduler_calls
-    hass.data[DOMAIN][TESTING_ATTR_EDIT_SCHEDULER_CALLS] = edit_scheduler_calls
+
+    # Prepare the scheduler component
+    scheduler_component = SchedulerComponentStub(
+        add_schedule_callback=add_schedule_callback, edit_schedule_callback=edit_schedule_callback
+    )
+    await scheduler_component.async_add_to_hass(hass=hass)
+
     config_entry.add_to_hass(hass=hass)
 
     # We don't want lingering timers after the tests are done, so disable the updates of the update coordinator.

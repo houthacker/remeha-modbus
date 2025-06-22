@@ -107,7 +107,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: RemehaModbusConfig) -> b
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
-    # Register services only if everything else has been set up ssuccessfully.
+    # Register services only if everything else has been set up successfully.
     register_services(hass=hass, config=entry)
 
     await synchronizer.async_refresh_subscriptions()
