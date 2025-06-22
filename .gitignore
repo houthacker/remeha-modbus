@@ -263,6 +263,5 @@ junit-coverage.xml
 config/custom_components
 config/www/community
 custom_components/hacs
-
 # pycharm
 .idea
