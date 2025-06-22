@@ -81,6 +81,7 @@ class MockWeatherEntity(MockEntity, WeatherEntity):
         """Return the hourly forecast in native units."""
 
         # TODO Update timestamps to now() + relative hours.
+        # Is this required? Maybe for testing leave configurable.
         return load_json_value_fixture("weather_forecast.json")
 
 
