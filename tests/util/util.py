@@ -104,6 +104,9 @@ class SchedulerCoordinatorStub(DataUpdateCoordinator):
         self._schedules: dict[str, ScheduleEntry] = {}
         self._tags: dict[str, list[str]] = {}
 
+        self.state = "ready"
+        """Stub state of scheduler coordinator."""
+
     def clear_schedules(self):
         """Clear all stored schedules."""
 
