@@ -16,6 +16,7 @@ mutagen
 pre-commit
 PyTurboJPEG
 pycares
+pyclean
 pymicro-vad
 pymodbus
 pyserial
@@ -24,5 +25,3 @@ pytest
 pytest-asyncio
 pytest-cov
 pytest-homeassistant-custom-component
-python-dateutil==2.9.0.post0
-ruff>=0.15.1
