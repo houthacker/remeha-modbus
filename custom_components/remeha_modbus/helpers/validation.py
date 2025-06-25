@@ -5,11 +5,13 @@ from typing import TypeVar
 T = TypeVar("T")
 
 
-def require_not_none(value: T) -> T:
+def require_not_none(value: T, message: str = "Require a value, but got None", *args) -> T:
     """Require a value to be not `None`.
 
     Args:
         value (T): The value to test.
+        message: str: A percent-format string containing the message.
+        *args: Any
 
     Raises:
         ValueError if the value is `None`.
@@ -19,4 +21,4 @@ def require_not_none(value: T) -> T:
     if value is not None:
         return value
 
-    raise ValueError("Require a value, bot got None.")
+    raise ValueError(message, args)
