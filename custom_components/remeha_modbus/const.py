@@ -34,6 +34,8 @@ STORAGE_MINOR_VERSION = 0
 STORAGE_FILE_KEY = f"{DOMAIN}.storage"
 STORAGE_RUNTIME_KEY = f"{DOMAIN}_storage"
 
+SCHEDULER_TAG_PREFIX: Final[str] = f"{DOMAIN}_"
+
 MAXIMUM_NORMAL_SURFACE_IRRADIANCE_NL: Final[int] = 1000
 """The maximum normal surface irradiance in The Netherlands, in W/m²"""
 
