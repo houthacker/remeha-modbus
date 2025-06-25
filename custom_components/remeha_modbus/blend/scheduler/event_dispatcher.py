@@ -110,21 +110,42 @@ class EventDispatcher:
         self, domain: Literal["switch", "climate"], event: Event[EventStateChangedData]
     ) -> None:
         """Notify all listeners that a new entity was added to the domain they subscribed to."""
-        for cb in self._add_entity_listeners[domain]:
-            cb(event)
+
+        if self._is_acceptable(entity_id=event.data["entity_id"]):
+            for cb in self._add_entity_listeners[domain]:
+                cb(event)
+        else:
+            _LOGGER.debug(
+                "Ignoring event for added entity %s since it's not owned by one of these integrations: [%s, %s].",
+                event.data["entity_id"],
+                SchedulerDomain,
+                DOMAIN,
+            )
 
     @callback
     def _dispatch_entity_removed_event(
         self, domain: Literal["switch", "climate"], event: Event[EventStateChangedData]
     ) -> None:
         """Notify all listeners that an entity was removed from the domain they subscribed to."""
-        for cb in self._remove_entity_listeners[domain]:
-            cb(event)
+
+        if self._is_acceptable(entity_id=event.data["entity_id"]):
+            for cb in self._remove_entity_listeners[domain]:
+                cb(event)
+        else:
+            _LOGGER.debug(
+                "Ignoring event for removed entity %s since it was not owned by one of these integrations: [%s, %s].",
+                event.data["entity_id"],
+                SchedulerDomain,
+                DOMAIN,
+            )
 
     def subscribe_to_added_entities(
         self, domain: Literal["switch", "climate"], listener: EntityEventCallback
     ) -> UnsubscribeCallback:
         """Register the listener for entities that are added to the given domain.
+
+        Note: events are only dispatched to the listener if its related entity is owned by either
+        the `scheduler`- or `remeha_modbus` integration.
 
         Args:
             domain (Literal['switch', 'climate']): The domain to listen to.
@@ -143,6 +164,9 @@ class EventDispatcher:
         self, domain: Literal["switch", "climate"], listener: EntityEventCallback
     ) -> UnsubscribeCallback:
         """Register the listener for entities that are removed from the given domain.
+
+        Note: events are only dispatched to the listener if its related entity is owned by either
+        the `scheduler`- or `remeha_modbus` integration.
 
         Args:
             domain (Literal['switch', 'climate']): The domain to listen to.
