@@ -87,7 +87,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: RemehaModbusConfig) -> b
         config_entry=entry,
         api=api,
         store=RemehaModbusStorage(
-            store=RemehaModbusStore(
+            store=RemehaModbusStore.create(
                 hass=hass,
                 version=STORAGE_VERSION,
                 minor_version=STORAGE_MINOR_VERSION,

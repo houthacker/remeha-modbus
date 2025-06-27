@@ -1,7 +1,7 @@
 """Implementation of schenario 1 where a new `scheduler.schedule` is created."""
 
-import datetime
 import logging
+from datetime import datetime
 from typing import Final
 from uuid import UUID
 
@@ -53,7 +53,8 @@ def _get_tag_uuid(schedule: SchedulerState) -> UUID | None:
                 for tag in schedule["attributes"].get("tags", [])
                 if tag.startswith(SCHEDULER_TAG_PREFIX)
             ]
-        )
+        ),
+        None,
     )
 
     return UUID(stripped_tag) if stripped_tag is not None else None
@@ -177,6 +178,7 @@ class ScheduleCreated:
             await self._coordinator.async_link_scheduler_entity(
                 zone_id=entry.zone_id,
                 schedule_id=entry.schedule_id,
+                weekday=entry.weekday,
                 entity_id=self._schedule["entity_id"],
             )
         else:
@@ -207,7 +209,8 @@ class ScheduleCreated:
             # TODO If writing fails, reschedule it right after the next successful coordinator update.
             await self._coordinator.async_write_schedule(schedule=zone_schedule)
             await self._coordinator.async_link_scheduler_entity(
-                zone_id=entry.zone_id,
-                schedule_id=entry.schedule_id,
+                zone_id=zone_id,
+                schedule_id=schedule_id,
                 entity_id=self._schedule["entity_id"],
+                weekday=SHORT_DESC_TO_WEEKDAY[self._schedule["attributes"]["weekdays"][0]],
             )

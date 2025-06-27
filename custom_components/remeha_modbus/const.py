@@ -417,6 +417,8 @@ class ClimateScheduleIdent(NamedTuple):
 
     schedule_id: ClimateZoneScheduleId
 
+    weekday: Weekday
+
 
 @dataclass(frozen=True, slots=True)
 class SchedulerLinkView:
@@ -425,6 +427,8 @@ class SchedulerLinkView:
     zone_id: int
 
     schedule_id: ClimateZoneScheduleId
+
+    weekday: Weekday
 
     scheduler_entity_id: str
 

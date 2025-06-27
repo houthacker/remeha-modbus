@@ -52,6 +52,7 @@ from custom_components.remeha_modbus.const import (
     PVSystem,
     PVSystemOrientation,
     SchedulerLinkView,
+    Weekday,
 )
 from custom_components.remeha_modbus.errors import (
     RemehaIncorrectServiceCall,
@@ -217,7 +218,9 @@ class RemehaUpdateCoordinator(DataUpdateCoordinator):
 
         return self.data["sensors"][variable]
 
-    def enqueue_for_linking(self, uuid: UUID, zone_id: int, schedule_id: ClimateZoneScheduleId):
+    def enqueue_for_linking(
+        self, uuid: UUID, zone_id: int, schedule_id: ClimateZoneScheduleId, weekday: Weekday
+    ):
         """Store the given identifiers, preparing them for linking a `ZoneSchedule` to a `scheduler.schedule`.
 
         If an equal entry already exists, this method has no effect.
@@ -226,10 +229,13 @@ class RemehaUpdateCoordinator(DataUpdateCoordinator):
             uuid (UUID): The unique identifier added to the list of tags in the `scheduler.schedule`.
             zone_id (int): The id of the related `ClimateZone`.
             schedule_id (ClimateZoneScheduleId): The id of the related `ZoneSchedule`.
+            weekday (Weekday): The weekday at which the zone schedule is active.
 
         """
 
-        self._store.add_to_waiting_list(uuid=uuid, zone_id=zone_id, schedule_id=schedule_id)
+        self._store.add_to_waiting_list(
+            uuid=uuid, zone_id=zone_id, schedule_id=schedule_id, weekday=weekday
+        )
 
     def pop_from_linking_waiting_list(self, uuid: UUID) -> WaitingListEntry | None:
         """Pop the waiting identifiers with uuid `uuid` from the waiting list.
@@ -250,19 +256,21 @@ class RemehaUpdateCoordinator(DataUpdateCoordinator):
             SchedulerLinkView(
                 zone_id=entry.zone_id,
                 schedule_id=ClimateZoneScheduleId(entry.schedule_id),
+                weekday=entry.weekday,
                 scheduler_entity_id=entry.schedule_entity_id,
             )
             for entry in await self._store.async_get_all()
         ]
 
     async def async_get_linked_scheduler_entity(
-        self, zone_id: int, schedule_id: ClimateZoneScheduleId
+        self, zone_id: int, schedule_id: ClimateZoneScheduleId, weekday: Weekday
     ) -> str | None:
         """Get the entity id of the `scheduler.schedule` that is linked to the `ZoneSchedule` having the given id values.
 
         Args:
             zone_id (int): The id of the `ClimateZone`.
             schedule_id (ClimateZoneScheduleId): The id of the `ZoneSchedule` within the containing `ClimateZone`.
+            weekday (Weekday): The weekday at which the zone schedule is active.
 
         Returns:
             str | None: The entity id of the linked `scheduler.schedule`, or `None` if no such entity exists.
@@ -270,7 +278,7 @@ class RemehaUpdateCoordinator(DataUpdateCoordinator):
         """
 
         entry = await self._store.async_get_attributes_by_zone(
-            zone_id=zone_id, schedule_id=schedule_id
+            zone_id=zone_id, schedule_id=schedule_id, weekday=weekday
         )
         return entry.schedule_entity_id if entry else None
 
@@ -289,42 +297,46 @@ class RemehaUpdateCoordinator(DataUpdateCoordinator):
 
         entry = await self._store.async_get_attributes_by_entity_id(entity_id=scheduler_entity_id)
         return (
-            ClimateScheduleIdent(entry.zone_id, ClimateZoneScheduleId(entry.schedule_id))
+            ClimateScheduleIdent(
+                entry.zone_id, ClimateZoneScheduleId(entry.schedule_id), entry.weekday
+            )
             if entry
             else None
         )
 
     async def async_link_scheduler_entity(
-        self, zone_id: int, schedule_id: ClimateZoneScheduleId, entity_id: str
+        self, zone_id: int, schedule_id: ClimateZoneScheduleId, weekday: Weekday, entity_id: str
     ):
         """Link the given `entity_id` to `schedule`.
 
         Args:
             zone_id (int): The zone id of the schedule to link the entity to.
             schedule_id (ClimateZoneScheduleId): The schedule id to link the entity to.
+            weekday (Weekday): The weekday at which the zone schedule is active.
             entity_id (str): The entity id of the related `scheduler.schedule`.
 
         """
 
         await self._store.async_upsert_schedule_attributes(
-            zone_id=zone_id, schedule_id=schedule_id, schedule_entity_id=entity_id
+            zone_id=zone_id, schedule_id=schedule_id, schedule_entity_id=entity_id, weekday=weekday
         )
 
     async def async_unlink_climate_schedule(
-        self, zone_id: int, schedule_id: ClimateZoneScheduleId
+        self, zone_id: int, schedule_id: ClimateZoneScheduleId, weekday: Weekday
     ) -> bool:
         """Unlink the given climate zone schedule from the related scheduler entity.
 
         Args:
             zone_id (int): The zone id of the schedule to link the entity to.
             schedule_id (ClimateZoneScheduleId): The schedule id to link the entity to.
+            weekday (Weekday): The weekday at which the zone schedule is active.
 
         Returns:
             bool: `True` if the link store was updated due to this unlink, `False` otherwise.
 
         """
         return await self._store.async_remove_schedule_attributes(
-            zone_id=zone_id, schedule_id=schedule_id
+            zone_id=zone_id, schedule_id=schedule_id, weekday=weekday
         )
 
     async def async_write_schedule(self, schedule: ZoneSchedule):

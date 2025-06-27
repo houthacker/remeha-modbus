@@ -214,6 +214,7 @@ class ScheduleSynchronizer:
                         zone_id=waiting_link.zone_id,
                         schedule_id=waiting_link.schedule_id,
                         entity_id=entity_id,
+                        weekday=waiting_link.weekday,
                     )
                 else:
                     # Otherwise export the schedule to the modbus interface.
@@ -407,7 +408,7 @@ class ScheduleSynchronizer:
         # Add linking information to the waiting list.
         # This info is used to link the schedules when a schedule-added event is received.
         self._coordinator.enqueue_for_linking(
-            uuid=tag, zone_id=schedule.zone_id, schedule_id=schedule.id
+            uuid=tag, zone_id=schedule.zone_id, schedule_id=schedule.id, weekday=schedule.day
         )
 
         await self._hass.services.async_call(
@@ -479,7 +480,7 @@ class ScheduleSynchronizer:
         linked_scheduler_entity: (
             str | None
         ) = await self._coordinator.async_get_linked_scheduler_entity(
-            zone_id=schedule.zone_id, schedule_id=schedule.id
+            zone_id=schedule.zone_id, schedule_id=schedule.id, weekday=schedule.day
         )
 
         if linked_scheduler_entity is not None:
@@ -570,6 +571,7 @@ class ScheduleSynchronizer:
                 zone_id=link.zone_id,
                 schedule_id=link.schedule_id,
                 entity_id=scheduler_entity_id,
+                weekday=link.weekday,
             )
 
             _LOGGER.debug(
