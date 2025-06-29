@@ -4,3 +4,5 @@
 [submodule "submodules/scheduler-component"]
 	path = submodules/scheduler-component
 	url = git@github.com:houthacker/remeha-scheduler-component.git
+	ignore = dirty
+
