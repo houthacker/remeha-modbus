@@ -50,6 +50,7 @@ Planned features and features under discussion are available in the [issues](htt
     - Climate features are enabled depending on the climate zone type (for instance, a DHW zone is only able to heat, not cool).
 - DHW auto scheduling:
     - This integration exposes a service called `dhw_auto_schedule` that can be used in automations or scripts. A detailed explanation follows below.
+- Optional synchronization of climate schedules between this integration and `@nielsfaber`'s [scheduler-card](https://github.com/nielsfaber/scheduler-card)
 
 ## Services
 ### dhw_auto_schedule
@@ -94,3 +95,10 @@ To start using the auto scheduling feature, execute the following steps:
 #### Set the correct DHW preset mode
 After creating the automation, a new schedule for the next day will automatically be created. If the preset is not set in the
 automation, manually change the preset mode of your DHW boiler climate to `Schedule 1`, otherwise the schedule will of course be inactive.
+
+## Schedule synchronization with `scheduler-card`
+Schedules (or time programs, as Remeha calls them) can be synchronized with the `scheduler-card` integration if you have it installed.
+
+### Usage
+To use this synchronization, enable the configuration checkmark _Synchronize with `scheduler-card`_. This can only be configured if you have
+the `scheduler-card` integration installed.

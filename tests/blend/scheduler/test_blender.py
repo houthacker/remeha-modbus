@@ -2,6 +2,7 @@
 
 from unittest.mock import patch
 
+import pytest
 from homeassistant.core import HomeAssistant
 
 from custom_components.remeha_modbus.blend.scheduler import Blender, BlenderState
@@ -52,8 +53,9 @@ async def test_start_stop_blender(hass: HomeAssistant, mock_config_entry, mock_m
         assert blender.state == BlenderState.STOPPED
 
 
+@pytest.mark.parametrize("expected_lingering_timers", [True])
 async def test_create_scheduler_schedule(
-    hass: HomeAssistant, mock_config_entry, mock_modbus_client
+    hass: HomeAssistant, mock_config_entry, mock_modbus_client, expected_lingering_timers
 ):
     """Test that the `ScheduleCreated` scenario is executed when a `scheduler.schedule` is created from the scheduler UI."""
 

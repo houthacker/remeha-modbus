@@ -6,7 +6,7 @@ from homeassistant.components.weather import SERVICE_GET_FORECASTS
 from homeassistant.components.weather.const import ATTR_WEATHER_TEMPERATURE_UNIT
 from homeassistant.components.weather.const import DOMAIN as WeatherDomain
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import STATE_UNAVAILABLE, STATE_UNKNOWN, UnitOfTemperature
+from homeassistant.const import UnitOfTemperature
 from homeassistant.core import (
     HomeAssistant,
     ServiceCall,
@@ -19,25 +19,18 @@ from custom_components.remeha_modbus.const import (
     AUTO_SCHEDULE_SERVICE_NAME,
     CONFIG_AUTO_SCHEDULE,
     DOMAIN,
-    IMPORT_SCHEDULE_CLIMATE_ENTITY,
-    IMPORT_SCHEDULE_SERVICE_NAME,
-    IMPORT_SCHEDULE_SERVICE_SCHEMA,
-    IMPORT_SCHEDULE_WEEKDAY,
     READ_REGISTERS_REGISTER_COUNT,
     READ_REGISTERS_SERVICE_NAME,
     READ_REGISTERS_SERVICE_SCHEMA,
     READ_REGISTERS_START_REGISTER,
     READ_REGISTERS_STRUCT_FORMAT,
     WEATHER_ENTITY_ID,
-    Weekday,
 )
 from custom_components.remeha_modbus.coordinator import RemehaUpdateCoordinator
 from custom_components.remeha_modbus.errors import (
     RemehaIncorrectServiceCall,
     RemehaServiceException,
-    RequiredServiceMissing,
 )
-from custom_components.remeha_modbus.schedule_sync.synchronizer import ScheduleSynchronizer
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -107,31 +100,6 @@ def register_services(hass: HomeAssistant, config: ConfigEntry) -> None:
                 translation_domain=DOMAIN, translation_key="read_registers_modbus_error"
             ) from e
 
-    async def async_import_schedule(call: ServiceCall) -> None:
-        synchronizer: ScheduleSynchronizer = config.runtime_data["schedule_synchronizer"]
-        climate_state = hass.states.get(call.data[IMPORT_SCHEDULE_CLIMATE_ENTITY])
-
-        if climate_state.state not in [STATE_UNAVAILABLE, STATE_UNKNOWN]:
-            climate_zone = coordinator.get_climate(id=climate_state.attributes["zone_id"])
-            schedule = climate_zone.current_schedule[
-                Weekday[str(call.data[IMPORT_SCHEDULE_WEEKDAY]).upper()]
-            ]
-
-            try:
-                # TODO add weekday to schedule key.
-                await synchronizer.async_import_schedule(schedule=schedule)
-            except RequiredServiceMissing as e:
-                raise RemehaIncorrectServiceCall from e
-        else:
-            raise RemehaServiceException(
-                translation_domain=DOMAIN,
-                translation_key="import_schedule_climate_state",
-                translation_placeholders={
-                    "climate_entity": climate_state.entity_id,
-                    "climate_state": climate_state.state,
-                },
-            )
-
     hass.services.async_register(
         domain=DOMAIN,
         service=AUTO_SCHEDULE_SERVICE_NAME,
@@ -144,11 +112,4 @@ def register_services(hass: HomeAssistant, config: ConfigEntry) -> None:
         service_func=async_read_registers,
         schema=READ_REGISTERS_SERVICE_SCHEMA,
         supports_response=SupportsResponse.ONLY,
-    )
-
-    hass.services.async_register(
-        domain=DOMAIN,
-        service=IMPORT_SCHEDULE_SERVICE_NAME,
-        service_func=async_import_schedule,
-        schema=IMPORT_SCHEDULE_SERVICE_SCHEMA,
     )

@@ -44,6 +44,7 @@ async def test_to_scheduler_state(hass: HomeAssistant, mock_modbus_client, mock_
             to_scheduler_state(state=climate_state)
 
 
+@pytest.mark.skip(reason="schedule_sync module is due for removal.")
 @pytest.mark.parametrize("expected_lingering_timers", [True])
 async def test_import_schedule(
     hass: HomeAssistant, mock_modbus_client, mock_config_entry, expected_lingering_timers
@@ -93,6 +94,7 @@ async def test_import_schedule(
             )
 
 
+@pytest.mark.skip(reason="schedule_sync module is due for removal.")
 @pytest.mark.parametrize("expected_lingering_timers", [True])
 async def test_export_schedule(
     hass: HomeAssistant, mock_modbus_client, mock_config_entry, expected_lingering_timers

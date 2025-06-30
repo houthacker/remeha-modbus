@@ -29,7 +29,6 @@ from custom_components.remeha_modbus.const import (
     STORAGE_VERSION,
 )
 from custom_components.remeha_modbus.coordinator import RemehaUpdateCoordinator
-from custom_components.remeha_modbus.schedule_sync.synchronizer import ScheduleSynchronizer
 from custom_components.remeha_modbus.services import register_services
 
 PLATFORMS: list[Platform] = [
@@ -51,9 +50,6 @@ class RuntimeData(TypedDict):
 
     coordinator: RemehaUpdateCoordinator
     """The data update coordinator."""
-
-    schedule_synchronizer: ScheduleSynchronizer
-    """Synchronization methods for schedules between the modbus interface and the `scheduler` integration."""
 
     event_dispatcher: EventDispatcher
     """Dispatch incoming events to subscribers."""
@@ -102,11 +98,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: RemehaModbusConfig) -> b
 
     await coordinator.async_config_entry_first_refresh()
 
-    synchronizer = ScheduleSynchronizer(hass=hass, coordinator=coordinator)
     entry.runtime_data = RuntimeData(
         api=api,
         coordinator=coordinator,
-        schedule_synchronizer=synchronizer,
         event_dispatcher=EventDispatcher(hass=hass),
     )
 
@@ -114,8 +108,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: RemehaModbusConfig) -> b
 
     # Register services only if everything else has been set up successfully.
     register_services(hass=hass, config=entry)
-
-    await synchronizer.async_refresh_subscriptions()
 
     return True
 
