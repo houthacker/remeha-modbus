@@ -57,7 +57,7 @@ from custom_components.remeha_modbus.const import (
     ZoneRegisters,
 )
 from custom_components.scheduler.store import ScheduleEntry
-from tests.util import SchedulerComponentStub
+from tests.util import SchedulerPlatformStub
 
 TESTING_ATTR_ADD_SCHEDULING_CALLS: Final[str] = "add_scheduler_calls"
 TESTING_ATTR_EDIT_SCHEDULER_CALLS: Final[str] = "edit_scheduler_calls"
@@ -299,7 +299,7 @@ async def setup_platform(
     hass.data.setdefault(DOMAIN, {})
 
     # Prepare the scheduler component
-    scheduler_component = SchedulerComponentStub(
+    scheduler_component = SchedulerPlatformStub(
         add_schedule_callback=add_schedule_callback, edit_schedule_callback=edit_schedule_callback
     )
     await scheduler_component.async_add_to_hass(hass=hass)

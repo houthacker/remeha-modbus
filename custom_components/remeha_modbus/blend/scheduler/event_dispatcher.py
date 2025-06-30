@@ -8,12 +8,12 @@ from homeassistant.components.climate.const import DOMAIN as ClimateEntityPlatfo
 from homeassistant.components.switch.const import DOMAIN as SchedulerEntityPlatform
 from homeassistant.core import CALLBACK_TYPE as HomeAssistantCallback
 from homeassistant.core import Event, EventStateChangedData, HomeAssistant, callback
+from homeassistant.helpers.entity import entity_sources
 from homeassistant.helpers.event import (
     async_track_state_added_domain,
     async_track_state_change_event,
     async_track_state_removed_domain,
 )
-from homeassistant.helpers.template import integration_entities
 
 from custom_components.remeha_modbus.const import DOMAIN
 from custom_components.remeha_modbus.helpers.iterators import UnmodifiableDict
@@ -103,7 +103,8 @@ class EventDispatcher:
             return False
 
         required_domain = SchedulerDomain if state.domain == SchedulerEntityPlatform else DOMAIN
-        return entity_id in integration_entities(hass=self._hass, entry_name=required_domain)
+        entity_info = entity_sources(self._hass).get(entity_id, None)
+        return entity_info["domain"] == required_domain if entity_info else False
 
     @callback
     def _dispatch_entity_added_event(

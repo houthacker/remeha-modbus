@@ -19,6 +19,7 @@ from custom_components.remeha_modbus.api import (
     RemehaModbusStorage,
     RemehaModbusStore,
 )
+from custom_components.remeha_modbus.blend.scheduler import EventDispatcher
 from custom_components.remeha_modbus.const import (
     AUTO_SCHEDULE_SELECTED_SCHEDULE,
     CONFIG_AUTO_SCHEDULE,
@@ -53,6 +54,9 @@ class RuntimeData(TypedDict):
 
     schedule_synchronizer: ScheduleSynchronizer
     """Synchronization methods for schedules between the modbus interface and the `scheduler` integration."""
+
+    event_dispatcher: EventDispatcher
+    """Dispatch incoming events to subscribers."""
 
 
 type RemehaModbusConfig = ConfigEntry[RuntimeData]
@@ -103,6 +107,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: RemehaModbusConfig) -> b
         api=api,
         coordinator=coordinator,
         schedule_synchronizer=synchronizer,
+        event_dispatcher=EventDispatcher(hass=hass),
     )
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)

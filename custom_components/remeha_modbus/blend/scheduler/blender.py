@@ -3,8 +3,6 @@
 import logging
 from enum import Enum
 
-from event_dispatcher import EventDispatcher, UnsubscribeCallback
-from helpers import links_exclusively_to_remeha_climate, to_scheduler_state
 from homeassistant.components.switch.const import DOMAIN as SwitchDomain
 from homeassistant.core import Event, EventStateChangedData, HomeAssistant
 from pydantic import ValidationError
@@ -14,6 +12,9 @@ from custom_components.remeha_modbus.blend.scheduler.scenarios.schedule_created 
 )
 from custom_components.remeha_modbus.const import SchedulerState
 from custom_components.remeha_modbus.coordinator import RemehaUpdateCoordinator
+
+from .event_dispatcher import EventDispatcher, UnsubscribeCallback
+from .helpers import links_exclusively_to_remeha_climate, to_scheduler_state
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -87,7 +88,9 @@ class Blender:
             try:
                 schedule: SchedulerState = to_scheduler_state(state=event.data["new_state"])
                 if links_exclusively_to_remeha_climate(hass=self._hass, scheduler_state=schedule):
-                    scenario = ScheduleCreated(schedule=schedule)
+                    scenario = ScheduleCreated(
+                        hass=self._hass, schedule=schedule, coordinator=self._coordinator
+                    )
 
                     # Spawn a new task to execute the scenario.
                     self._coordinator.config_entry.async_create_task(
@@ -114,6 +117,11 @@ class Blender:
                 event.data["entity_id"],
                 self._state.name,
             )
+
+    @property
+    def state(self) -> BlenderState:
+        """Return the current state of the Blernder."""
+        return self._state
 
     def start(self):
         """Start listening for relevant events to enable executing the defined scenarios.
@@ -146,6 +154,11 @@ class Blender:
         if self._state is BlenderState.STARTED:
             _LOGGER.debug("Going to unsubscribe from all entity- and domain events.")
             self._state = BlenderState.STOPPING
+
+            # Unsubscribe from all subscriptions, then clear the list.
+            for unsub in self._subscriptions:
+                unsub()
+
             self._subscriptions = []
             self._state = BlenderState.STOPPED
             _LOGGER.debug("Successfully stopped listening for events.")

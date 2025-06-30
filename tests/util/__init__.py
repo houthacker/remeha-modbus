@@ -1,15 +1,15 @@
 """Testing utilities."""
 
 from .util import (
-    SchedulerComponentStub,
     SchedulerCoordinatorStub,
+    SchedulerPlatformStub,
     async_add_mock_service,
     set_storage_stub_return_value,
 )
 
 __all__ = [
-    "SchedulerComponentStub",
     "SchedulerCoordinatorStub",
+    "SchedulerPlatformStub",
     "async_add_mock_service",
     "set_storage_stub_return_value",
 ]

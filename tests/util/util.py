@@ -10,7 +10,6 @@ from typing import Any
 import attr
 import voluptuous as vol
 from homeassistant.components.switch import DOMAIN as ScheduleEntityPlatform
-from homeassistant.components.switch import SwitchEntity
 from homeassistant.const import ATTR_ENTITY_ID
 from homeassistant.core import (
     HomeAssistant,
@@ -21,10 +20,11 @@ from homeassistant.core import (
 )
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.dispatcher import async_dispatcher_send
-from homeassistant.helpers.entity_component import EntityComponent
+from homeassistant.helpers.entity_platform import EntityPlatform
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from homeassistant.util import slugify
 
+from custom_components.scheduler import switch as SwitchPlatformModule
 from custom_components.scheduler.const import (
     ADD_SCHEDULE_SCHEMA,
     ATTR_TAGS,
@@ -280,7 +280,7 @@ def set_storage_stub_return_value(hass: HomeAssistant, scheduler_storage):
     return scheduler_storage
 
 
-class SchedulerComponentStub:
+class SchedulerPlatformStub:
     """A stub supporting the scheduler service features used by `remeha_modbus`."""
 
     def __init__(
@@ -298,7 +298,7 @@ class SchedulerComponentStub:
 
         """
         self._hass: HomeAssistant | None = None
-        self._component: EntityComponent[SwitchEntity] | None = None
+        self._platform: EntityPlatform | None = None
         self._user_callbacks: dict[str, Callable[[ScheduleEntry], None]] = {
             SERVICE_ADD: add_schedule_callback,
             SERVICE_EDIT: edit_schedule_callback,
@@ -313,13 +313,15 @@ class SchedulerComponentStub:
     async def async_add_to_hass(self, hass: HomeAssistant):
         """Add this service stub to home assistant."""
 
-        self._component = EntityComponent[SwitchEntity](
+        self._platform = EntityPlatform(
+            hass=hass,
             logger=_LOGGER,
             domain=ScheduleEntityPlatform,
-            hass=hass,
-            scan_interval=timedelta(seconds=-1),
+            platform_name=SchedulerDomain,
+            platform=SwitchPlatformModule,
+            scan_interval=timedelta(seconds=0),
+            entity_namespace=None,
         )
-        self._component.register_shutdown()
 
         self._coordinator = SchedulerCoordinatorStub(hass)
         hass.data[SchedulerDomain] = {
@@ -331,7 +333,7 @@ class SchedulerComponentStub:
         async def _async_add_callback(call: ServiceCall):
             await self._coordinator.async_create_schedule(
                 call=call,
-                async_add_entities=self._component.async_add_entities,
+                async_add_entities=self._platform.async_add_entities,
                 user_callback=self._user_callbacks.get(SERVICE_ADD),
             )
 
