@@ -35,6 +35,7 @@ from custom_components.remeha_modbus.api import ConnectionType, RemehaApi, Remeh
 from custom_components.remeha_modbus.const import (
     AUTO_SCHEDULE_SELECTED_SCHEDULE,
     CONFIG_AUTO_SCHEDULE,
+    CONFIG_SCHEDULE_EDITING,
     CONNECTION_RTU_OVER_TCP,
     DHW_BOILER_CONFIG_SECTION,
     DHW_BOILER_ENERGY_LABEL,
@@ -204,6 +205,7 @@ def mock_config_entry(request) -> Generator[MockConfigEntry]:
     * `version_minor` (int): The config entry minor version, defaults to current minor version.
     * `hub_name` (str): The modbus hub name, defaults to `test_hub`.
     * `device_address` (int): The modbus device address, defaults to `100`.
+    * `schedule_editing` (bool): Whether to enable schedule ediging, defaults to `False`. Since config v1.3
     * `auto_scheduling` (bool): Whether to enable auto scheduling, defaults to `False`. Since config v1.1
     * `time_zone` (ZoneInfo): The time zone. Defaults to `None`. Since config v1.1
     * `dhw_boiler_volume` (float): The DHW boiler volume in L. Defaults to 300. Since config v1.1
@@ -222,6 +224,7 @@ def mock_config_entry(request) -> Generator[MockConfigEntry]:
             ),
             hub_name=args.get("hub_name", "test_hub"),
             device_address=args.get("device_address", 100),
+            schedule_editing=args.get("schedule_editing", False),
             auto_scheduling=args.get("auto_scheduling", False),
             time_zone=args.get("time_zone"),
             dhw_boiler_volume=args.get("dhw_boiler_volume", 300),
@@ -322,6 +325,7 @@ def _create_config_entry(
     version: tuple[int, int] = (HA_CONFIG_VERSION, HA_CONFIG_MINOR_VERSION),
     hub_name: str = "test_hub",
     device_address: int = 100,
+    schedule_editing: bool = False,
     auto_scheduling: bool = False,
     time_zone: ZoneInfo | None = None,
     dhw_boiler_volume: float = 300,
@@ -340,7 +344,7 @@ def _create_config_entry(
     }
 
     # v1.1, v1.2
-    if version[1] in [1, 2]:
+    if version[1] > 0:
         entry_data |= {CONFIG_AUTO_SCHEDULE: auto_scheduling}
 
         if auto_scheduling:
@@ -362,6 +366,9 @@ def _create_config_entry(
 
             if dhw_energy_label is not None:
                 entry_data[DHW_BOILER_CONFIG_SECTION] |= {DHW_BOILER_ENERGY_LABEL: dhw_energy_label}
+
+    if version[1] > 2:
+        entry_data |= {CONFIG_SCHEDULE_EDITING: schedule_editing}
 
     return MockConfigEntry(
         domain=DOMAIN,
