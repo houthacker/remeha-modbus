@@ -62,101 +62,161 @@ from custom_components.remeha_modbus.helpers import config_validation as remeha_
 
 _LOGGER = logging.getLogger(__name__)
 
-# Schema for first form, configuring generic modbus properties.
-STEP_MODBUS_GENERIC_SCHEMA = vol.Schema(
-    {
-        vol.Required(CONF_NAME): cv.string,
-        vol.Required(CONF_TYPE): vol.In(
-            [CONNECTION_TCP, CONNECTION_UDP, CONNECTION_RTU_OVER_TCP, CONNECTION_SERIAL]
-        ),
-        vol.Required(MODBUS_DEVICE_ADDRESS, default=100): cv.positive_int,
-        vol.Optional(CONFIG_AUTO_SCHEDULE, default=False): cv.boolean,
-    }
-)
-
-STEP_RECONFIGURE_GENERIC_DATA = vol.Schema(
-    {
-        vol.Required(CONF_TYPE): vol.In(
-            [CONNECTION_TCP, CONNECTION_UDP, CONNECTION_RTU_OVER_TCP, CONNECTION_SERIAL]
-        ),
-        vol.Required(MODBUS_DEVICE_ADDRESS, default=100): cv.positive_int,
-        vol.Required(CONFIG_AUTO_SCHEDULE, default=False): cv.boolean,
-    }
-)
 
 # Schema for auto scheduling support
-STEP_AUTO_SCHEDULING = vol.Schema(
-    {
-        vol.Required(WEATHER_ENTITY_ID): selector(
-            {"entity": {"filter": {"domain": WeatherDomain}}}
-        ),
-        vol.Required(AUTO_SCHEDULE_SELECTED_SCHEDULE, default=REMEHA_PRESET_SCHEDULE_1): selector(
-            {
-                "select": {
-                    "mode": "dropdown",
-                    "translation_key": "select_default_auto_schedule_id",
-                    "options": [
-                        REMEHA_PRESET_SCHEDULE_1,
-                        REMEHA_PRESET_SCHEDULE_2,
-                        REMEHA_PRESET_SCHEDULE_3,
-                    ],
-                }
-            }
-        ),
-        vol.Required(PV_CONFIG_SECTION): section(
-            vol.Schema(
+def _auto_scheduling_schema(current: ConfigEntry | None = None) -> vol.Schema:
+    return vol.Schema(
+        {
+            vol.Required(
+                WEATHER_ENTITY_ID,
+                default=current.data[WEATHER_ENTITY_ID] if current else vol.UNDEFINED,
+            ): selector({"entity": {"filter": {"domain": WeatherDomain}}}),
+            vol.Required(
+                AUTO_SCHEDULE_SELECTED_SCHEDULE,
+                default=current.data[AUTO_SCHEDULE_SELECTED_SCHEDULE]
+                if current
+                else REMEHA_PRESET_SCHEDULE_1,
+            ): selector(
                 {
-                    vol.Required(PV_NOMINAL_POWER_WP): cv.positive_int,
-                    vol.Optional(
-                        PV_ORIENTATION, default=PVSystemOrientation.SOUTH
-                    ): remeha_cv.str_enum(PVSystemOrientation),
-                    vol.Optional(PV_TILT, default=30.0): vol.All(
-                        vol.Coerce(float),
-                        vol.Range(min=PV_MIN_TILT_DEGREES, max=PV_MAX_TILT_DEGREES),
-                    ),
-                    vol.Optional(PV_ANNUAL_EFFICIENCY_DECREASE, default=0.0): cv.positive_float,
-                    vol.Optional(PV_INSTALLATION_DATE): selector({"date": {}}),
+                    "select": {
+                        "mode": "dropdown",
+                        "translation_key": "select_default_auto_schedule_id",
+                        "options": [
+                            REMEHA_PRESET_SCHEDULE_1,
+                            REMEHA_PRESET_SCHEDULE_2,
+                            REMEHA_PRESET_SCHEDULE_3,
+                        ],
+                    }
                 }
             ),
-            {"collapsed": False},
-        ),
-        vol.Required(DHW_BOILER_CONFIG_SECTION): section(
-            vol.Schema(
-                {
-                    vol.Required(DHW_BOILER_VOLUME): cv.positive_int,
-                    vol.Optional(DHW_BOILER_HEAT_LOSS_RATE, default=0.0): cv.positive_float,
-                    vol.Optional(DHW_BOILER_ENERGY_LABEL): remeha_cv.str_enum(BoilerEnergyLabel),
-                }
+            vol.Required(PV_CONFIG_SECTION): section(
+                vol.Schema(
+                    {
+                        vol.Required(
+                            PV_NOMINAL_POWER_WP,
+                            default=current.data[PV_CONFIG_SECTION][PV_NOMINAL_POWER_WP]
+                            if current
+                            else vol.UNDEFINED,
+                        ): cv.positive_int,
+                        vol.Optional(
+                            PV_ORIENTATION,
+                            default=current.data[PV_CONFIG_SECTION].get(
+                                PV_ORIENTATION, vol.UNDEFINED
+                            )
+                            if current
+                            else PVSystemOrientation.SOUTH,
+                        ): remeha_cv.str_enum(PVSystemOrientation),
+                        vol.Optional(
+                            PV_TILT,
+                            default=current.data[PV_CONFIG_SECTION].get(PV_TILT, vol.UNDEFINED)
+                            if current
+                            else 30.0,
+                        ): vol.All(
+                            vol.Coerce(float),
+                            vol.Range(min=PV_MIN_TILT_DEGREES, max=PV_MAX_TILT_DEGREES),
+                        ),
+                        vol.Optional(
+                            PV_ANNUAL_EFFICIENCY_DECREASE,
+                            default=current.data[PV_CONFIG_SECTION].get(
+                                PV_ANNUAL_EFFICIENCY_DECREASE, vol.UNDEFINED
+                            )
+                            if current
+                            else 0.0,
+                        ): cv.positive_float,
+                        vol.Optional(
+                            PV_INSTALLATION_DATE,
+                            default=current.data[PV_CONFIG_SECTION].get(
+                                PV_INSTALLATION_DATE, vol.UNDEFINED
+                            )
+                            if current
+                            else vol.UNDEFINED,
+                        ): selector({"date": {}}),
+                    }
+                ),
+                {"collapsed": False},
             ),
-            {"collapsed": False},
-        ),
-    }
-)
+            vol.Required(DHW_BOILER_CONFIG_SECTION): section(
+                vol.Schema(
+                    {
+                        vol.Required(
+                            DHW_BOILER_VOLUME,
+                            default=current.data[DHW_BOILER_CONFIG_SECTION][DHW_BOILER_VOLUME]
+                            if current
+                            else vol.UNDEFINED,
+                        ): cv.positive_int,
+                        vol.Optional(
+                            DHW_BOILER_HEAT_LOSS_RATE,
+                            default=current.data[DHW_BOILER_CONFIG_SECTION].get(
+                                DHW_BOILER_HEAT_LOSS_RATE, vol.UNDEFINED
+                            )
+                            if current
+                            else 0.0,
+                        ): cv.positive_float,
+                        vol.Optional(
+                            DHW_BOILER_ENERGY_LABEL,
+                            current.data[DHW_BOILER_CONFIG_SECTION].get(
+                                DHW_BOILER_ENERGY_LABEL, vol.UNDEFINED
+                            )
+                            if current
+                            else vol.UNDEFINED,
+                        ): remeha_cv.str_enum(BoilerEnergyLabel),
+                    }
+                ),
+                {"collapsed": False},
+            ),
+        }
+    )
 
-# Schema for modbus serial connections.
-STEP_MODBUS_SERIAL_SCHEMA = vol.Schema(
-    {
-        vol.Required(MODBUS_SERIAL_BAUDRATE, default=115200): cv.positive_int,
-        vol.Required(MODBUS_SERIAL_BYTESIZE, default=8): vol.All(int, vol.In([5, 6, 7, 8])),
-        vol.Required(MODBUS_SERIAL_METHOD, default=MODBUS_SERIAL_METHOD_RTU): vol.In(
-            [MODBUS_SERIAL_METHOD_RTU, MODBUS_SERIAL_METHOD_ASCII]
-        ),
-        vol.Required(MODBUS_SERIAL_PARITY, default=MODBUS_SERIAL_PARITY_NONE): vol.In(
-            [
-                MODBUS_SERIAL_PARITY_EVEN,
-                MODBUS_SERIAL_PARITY_ODD,
-                MODBUS_SERIAL_PARITY_NONE,
-            ]
-        ),
-        vol.Required(CONF_PORT): vol.Any(cv.port, cv.string),
-        vol.Required(MODBUS_SERIAL_STOPBITS, default=2): vol.All(int, vol.In([1, 2])),
-    }
-)
 
-# Schema for modbus socket connections.
-STEP_MODBUS_SOCKET_SCHEMA = vol.Schema(
-    {vol.Required(CONF_HOST): cv.string, vol.Required(CONF_PORT): cv.port}
-)
+def _modbus_serial_schema(current: ConfigEntry | None = None) -> vol.Schema:
+    return vol.Schema(
+        {
+            vol.Required(
+                MODBUS_SERIAL_BAUDRATE,
+                default=current.data[MODBUS_SERIAL_BAUDRATE] if current else 115200,
+            ): cv.positive_int,
+            vol.Required(
+                MODBUS_SERIAL_BYTESIZE,
+                default=current.data[MODBUS_SERIAL_BYTESIZE] if current else 8,
+            ): vol.All(int, vol.In([5, 6, 7, 8])),
+            vol.Required(
+                MODBUS_SERIAL_METHOD,
+                default=current.data[MODBUS_SERIAL_METHOD] if current else MODBUS_SERIAL_METHOD_RTU,
+            ): vol.In([MODBUS_SERIAL_METHOD_RTU, MODBUS_SERIAL_METHOD_ASCII]),
+            vol.Required(
+                MODBUS_SERIAL_PARITY,
+                default=current.data[MODBUS_SERIAL_PARITY]
+                if current
+                else MODBUS_SERIAL_PARITY_NONE,
+            ): vol.In(
+                [
+                    MODBUS_SERIAL_PARITY_EVEN,
+                    MODBUS_SERIAL_PARITY_ODD,
+                    MODBUS_SERIAL_PARITY_NONE,
+                ]
+            ),
+            vol.Required(
+                CONF_PORT, default=current.data[CONF_PORT] if current else vol.UNDEFINED
+            ): vol.Any(cv.port, cv.string),
+            vol.Required(
+                MODBUS_SERIAL_STOPBITS,
+                default=current.data[MODBUS_SERIAL_STOPBITS] if current else 2,
+            ): vol.All(int, vol.In([1, 2])),
+        }
+    )
+
+
+def _modbus_socket_schema(current: ConfigEntry | None = None) -> vol.Schema:
+    return vol.Schema(
+        {
+            vol.Required(
+                CONF_HOST, default=current.data[CONF_HOST] if current else vol.UNDEFINED
+            ): cv.string,
+            vol.Required(
+                CONF_PORT, default=current.data[CONF_PORT] if current else vol.UNDEFINED
+            ): cv.port,
+        }
+    )
 
 
 def _validate_modbus_generic_config(data: dict[str, Any]) -> dict[str, Any]:
@@ -193,7 +253,7 @@ def _validate_auto_scheduling_config(data: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-class ConfigFlow(ConfigFlow, domain=DOMAIN):
+class RemehaConfigFlow(ConfigFlow, domain=DOMAIN):
     """Handle a config flow for Remeha Modbus."""
 
     VERSION = HA_CONFIG_VERSION
@@ -221,24 +281,37 @@ class ConfigFlow(ConfigFlow, domain=DOMAIN):
             else:
                 if self.data[CONFIG_AUTO_SCHEDULE] is True:
                     return self.async_show_form(
-                        step_id="auto_scheduling", data_schema=STEP_AUTO_SCHEDULING, errors=errors
+                        step_id="auto_scheduling",
+                        data_schema=_auto_scheduling_schema(),
+                        errors=errors,
                     )
 
                 if self.data[CONF_TYPE] == CONNECTION_SERIAL:
                     return self.async_show_form(
                         step_id="modbus_serial",
-                        data_schema=STEP_MODBUS_SERIAL_SCHEMA,
+                        data_schema=_modbus_serial_schema(),
                         errors=errors,
                     )
 
                 return self.async_show_form(
                     step_id="modbus_socket",
-                    data_schema=STEP_MODBUS_SOCKET_SCHEMA,
+                    data_schema=_modbus_socket_schema(),
                     errors=errors,
                 )
 
         return self.async_show_form(
-            step_id="user", data_schema=STEP_MODBUS_GENERIC_SCHEMA, errors=errors
+            step_id="user",
+            data_schema=vol.Schema(
+                {
+                    vol.Required(CONF_NAME): cv.string,
+                    vol.Required(CONF_TYPE): vol.In(
+                        [CONNECTION_TCP, CONNECTION_UDP, CONNECTION_RTU_OVER_TCP, CONNECTION_SERIAL]
+                    ),
+                    vol.Required(MODBUS_DEVICE_ADDRESS, default=100): cv.positive_int,
+                    vol.Optional(CONFIG_AUTO_SCHEDULE, default=False): cv.boolean,
+                }
+            ),
+            errors=errors,
         )
 
     async def async_step_auto_scheduling(
@@ -258,17 +331,27 @@ class ConfigFlow(ConfigFlow, domain=DOMAIN):
 
             if self.data[CONF_TYPE] == CONNECTION_SERIAL:
                 return self.async_show_form(
-                    step_id="modbus_serial", data_schema=STEP_MODBUS_SERIAL_SCHEMA, errors=errors
+                    step_id="modbus_serial",
+                    data_schema=_modbus_serial_schema(
+                        current=self._get_reconfigure_entry()
+                        if self.source == SOURCE_RECONFIGURE
+                        else None
+                    ),
+                    errors=errors,
                 )
 
             return self.async_show_form(
                 step_id="modbus_socket",
-                data_schema=STEP_MODBUS_SOCKET_SCHEMA,
+                data_schema=_modbus_socket_schema(
+                    current=self._get_reconfigure_entry()
+                    if self.source == SOURCE_RECONFIGURE
+                    else None
+                ),
                 errors=errors,
             )
 
         return self.async_show_form(
-            step_id="auto_scheduling", data_schema=STEP_AUTO_SCHEDULING, errors=errors
+            step_id="auto_scheduling", data_schema=_auto_scheduling_schema(), errors=errors
         )
 
     async def async_step_modbus_serial(
@@ -283,7 +366,12 @@ class ConfigFlow(ConfigFlow, domain=DOMAIN):
                 )
             return self.async_create_entry(title="Remeha Modbus", data=self.data | user_input)
 
-        return self.async_show_form(step_id="modbus_serial", data_schema=STEP_MODBUS_SERIAL_SCHEMA)
+        return self.async_show_form(
+            step_id="modbus_serial",
+            data_schema=_modbus_serial_schema(
+                current=self._get_reconfigure_entry() if self.source == SOURCE_RECONFIGURE else None
+            ),
+        )
 
     async def async_step_modbus_socket(
         self, user_input: dict[str, Any] | None = None
@@ -299,7 +387,11 @@ class ConfigFlow(ConfigFlow, domain=DOMAIN):
             return self.async_create_entry(title="Remeha Modbus", data=self.data | user_input)
 
         return self.async_show_form(
-            step_id="modbus_socket", data_schema=STEP_MODBUS_SOCKET_SCHEMA, errors=errors
+            step_id="modbus_socket",
+            data_schema=_modbus_socket_schema(
+                current=self._get_reconfigure_entry() if self.source == SOURCE_RECONFIGURE else None
+            ),
+            errors=errors,
         )
 
     async def async_step_reconfigure(self: ConfigFlow, user_input: dict[str, Any] | None = None):
@@ -307,9 +399,9 @@ class ConfigFlow(ConfigFlow, domain=DOMAIN):
 
         errors: dict[str, str] = {}
         self.data: dict[str, Any] = {}
-        if user_input is not None:
-            reconf_entry: ConfigEntry = self._get_reconfigure_entry()
+        reconf_entry: ConfigEntry = self._get_reconfigure_entry()
 
+        if user_input is not None:
             self.data = _validate_modbus_generic_config(
                 user_input | {CONF_NAME: reconf_entry.data[CONF_NAME]}
             )
@@ -318,19 +410,39 @@ class ConfigFlow(ConfigFlow, domain=DOMAIN):
 
             if self.data[CONFIG_AUTO_SCHEDULE] is True:
                 return self.async_show_form(
-                    step_id="auto_scheduling", data_schema=STEP_AUTO_SCHEDULING, errors=errors
+                    step_id="auto_scheduling",
+                    data_schema=_auto_scheduling_schema(current=reconf_entry),
+                    errors=errors,
                 )
 
             # Forward to either serial or socket settings.
             if self.data[CONF_TYPE] == CONNECTION_SERIAL:
                 return self.async_show_form(
-                    step_id="modbus_serial", data_schema=STEP_MODBUS_SERIAL_SCHEMA, errors=errors
+                    step_id="modbus_serial",
+                    data_schema=_modbus_serial_schema(current=reconf_entry),
+                    errors=errors,
                 )
 
             return self.async_show_form(
-                step_id="modbus_socket", data_schema=STEP_MODBUS_SOCKET_SCHEMA, errors=errors
+                step_id="modbus_socket",
+                data_schema=_modbus_socket_schema(current=reconf_entry),
+                errors=errors,
             )
 
         return self.async_show_form(
-            step_id="reconfigure", data_schema=STEP_RECONFIGURE_GENERIC_DATA, errors=errors
+            step_id="reconfigure",
+            data_schema=vol.Schema(
+                {
+                    vol.Required(CONF_TYPE, default=reconf_entry.data[CONF_TYPE]): vol.In(
+                        [CONNECTION_TCP, CONNECTION_UDP, CONNECTION_RTU_OVER_TCP, CONNECTION_SERIAL]
+                    ),
+                    vol.Required(
+                        MODBUS_DEVICE_ADDRESS, default=reconf_entry.data[MODBUS_DEVICE_ADDRESS]
+                    ): cv.positive_int,
+                    vol.Required(
+                        CONFIG_AUTO_SCHEDULE, default=reconf_entry.data[CONFIG_AUTO_SCHEDULE]
+                    ): cv.boolean,
+                }
+            ),
+            errors=errors,
         )
