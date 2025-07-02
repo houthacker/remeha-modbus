@@ -13,12 +13,28 @@
           "name": "Naam",
           "type": "Type verbinding",
           "slave": "Modbus adres",
-          "auto_schedule": "DHW planning"
+          "schedule_editing": "CV/SWW planning bewerken",
+          "auto_schedule": "Automatische SWW planning"
         },
         "data_description": {
           "name": "De unieke naam van de modbus hub.",
           "type": "Het type modbus verbinding.",
           "slave": "Het GTW-08 modbus adres.",
+          "schedule_editing": "Bewerk CV- of SWW-planning (vereist de `scheduler-card` integratie).",
+          "auto_schedule": "Configureer geautomatiseerde DHW planning."
+        }
+      },
+      "reconfigure": {
+        "data": {
+          "type": "Het type modbus verbinding.",
+          "slave": "Het GTW-08 modbus adres.",
+          "schedule_editing":"Bewerk CV- of SWW-planning (vereist de `scheduler-card` integratie).",
+          "auto_schedule": "Configureer geautomatiseerde DHW planning."
+        },
+        "data_description": {
+          "type": "Het type modbus verbinding.",
+          "slave": "Het GTW-08 modbus adres.",
+          "schedule_editing":"Bewerk CV- of SWW-planning (vereist de `scheduler-card` integratie).",
           "auto_schedule": "Configureer geautomatiseerde DHW planning."
         }
       },
@@ -156,20 +172,6 @@
           "description": "Het Python struct format van de te lezen registers."
         }
       }
-    },
-    "import_schedule": {
-      "name": "SWW planning import",
-      "description": "Importeer een SWW-planning in Home Assistant. Hiervoor is de HACS integratie `scheduler-card` vereist.",
-      "fields": {
-        "climate_entity": {
-          "name": "Bron",
-          "description": "De klimaat-entiteit waarvan de planning moet worden uitgelezen."
-        },
-        "weekday": {
-          "name": "Dag van de week",
-          "description": "De weekdag van de planning die in Home Assistant geïmporteerd moet worden."
-        }
-      }
     }
   },
   "exceptions": {
@@ -211,12 +213,6 @@
     },
     "read_registers_unknown_error": {
       "message": "Onbekende fout tijdens het lezen van de registers. Zie log voor details."
-    },
-    "import_schedule_missing_integration": {
-      "message": "Kan SWW planning niet importeren: vereiste HACS integratie `scheduler-component` is niet geïnstalleerd of de benodigde services missen."
-    },
-    "import_schedule_climate_state": {
-      "message": "Kan SWW planning niet importeren: climate entiteit {climate_entity} is in een onbruikbare state {climate_state}."
     }
   }
 }

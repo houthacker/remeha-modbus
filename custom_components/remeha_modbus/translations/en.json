@@ -41,13 +41,29 @@
           "name": "Name",
           "slave": "Modbus address",
           "type": "Connection type",
+          "schedule_editing": "CH/DHW Schedule editing",
           "auto_schedule": "DHW scheduling"
         },
         "data_description": {
           "name": "The name of the modbus hub. Must be unique.",
           "slave": "The GTW-08 modbus address",
           "type": "The type of modbus connection.",
-          "auto_schedule": "Set up automatic DHW scheduling"
+          "schedule_editing": "Editable CH- and DHW schedules (requires `scheduler-card` integration).",
+          "auto_schedule": "Configure automatic DHW scheduling"
+        }
+      },
+      "reconfigure": {
+        "data": {
+          "type": "Connection type",
+          "slave": "Modbus address",
+          "schedule_editing":"CH/DHW Schedule editing",
+          "auto_schedule": "DHW scheduling"
+        },
+        "data_description": {
+          "type": "The type of modbus connection.",
+          "slave": "The GTW-08 modbus address",
+          "schedule_editing":"Editable CH- and DHW schedules (requires `scheduler-card` integration).",
+          "auto_schedule": "Configure automatic DHW scheduling"
         }
       },
       "auto_scheduling": {
@@ -157,20 +173,6 @@
           "description": "The python struct formatting string of the returned value(s)."
         }
       }
-    },
-    "import_schedule": {
-      "name": "Import DHW schedule",
-      "description": "Import a DHW schedule into Home Assistant. This requires the `scheduler-card` HACS integration.",
-      "fields": {
-        "climate_entity": {
-          "name": "Source",
-          "description": "The source climate entity to read the schedule from."
-        },
-        "weekday": {
-          "name": "Weekday",
-          "description": "The weekday of the schedule to import."
-        }
-      }
     }
   },
   "exceptions": {
@@ -212,12 +214,6 @@
     },
     "read_registers_unknown_error": {
       "message": "An unknown error occurred while reading modbus registers. See log for details."
-    },
-    "import_schedule_missing_integration": {
-      "message": "Cannot import schedule: required HACS integration `scheduler-component` is not installed or it's services are missing."
-    },
-    "import_schedule_climate_state": {
-      "message": "Cannot import schedule: climate {climate_entity} is in unusable state {climate_state}."
     }
   }
 }

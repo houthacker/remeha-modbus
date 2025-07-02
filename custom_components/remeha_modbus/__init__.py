@@ -23,6 +23,7 @@ from custom_components.remeha_modbus.blend.scheduler import EventDispatcher
 from custom_components.remeha_modbus.const import (
     AUTO_SCHEDULE_SELECTED_SCHEDULE,
     CONFIG_AUTO_SCHEDULE,
+    CONFIG_SCHEDULE_EDITING,
     REMEHA_PRESET_SCHEDULE_1,
     STORAGE_FILE_KEY,
     STORAGE_MINOR_VERSION,
@@ -149,7 +150,13 @@ async def async_migrate_entry(hass: HomeAssistant, config_entry: RemehaModbusCon
         if new_data[CONFIG_AUTO_SCHEDULE] is True:
             new_data[AUTO_SCHEDULE_SELECTED_SCHEDULE] = REMEHA_PRESET_SCHEDULE_1
 
-    hass.config_entries.async_update_entry(config_entry, data=new_data, minor_version=2, version=1)
+    if config_entry.minor_version < 3:
+        # Version 1.3 adds editable schedules in the HA frontend, using the scheduler-card integration.
+        # This functionality can be turned on and off in the configuration. It defaults to disabled.
+        if CONFIG_SCHEDULE_EDITING not in new_data:
+            new_data[CONFIG_SCHEDULE_EDITING] = False
+
+    hass.config_entries.async_update_entry(config_entry, data=new_data, minor_version=3, version=1)
     _LOGGER.debug(
         "Migration to configuration version %s.%s successful",
         config_entry.version,

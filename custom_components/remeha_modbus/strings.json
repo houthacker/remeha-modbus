@@ -6,13 +6,29 @@
           "name": "[%key:common::config_flow::data::name%]",
           "type": "Connection type",
           "slave": "Modbus address",
+          "schedule_editing": "Schedule editing",
           "auto_schedule": "DHW scheduling"
         },
         "data_description": {
           "name": "The name of the modbus hub. Must be unique.",
           "type": "The type of modbus connection.",
           "slave": "The GTW-08 modbus address",
-          "auto_schedule": "Set up automatic DHW scheduling"
+          "schedule_editing": "Editable CH- and DHW schedules (requires `scheduler-card` integration).",
+          "auto_schedule": "Configure automatic DHW scheduling"
+        }
+      },
+      "reconfigure": {
+        "data": {
+          "type": "Connection type",
+          "slave": "Modbus address",
+          "schedule_editing":"CH/DHW Schedule editing",
+          "auto_schedule": "DHW scheduling"
+        },
+        "data_description": {
+          "type": "The type of modbus connection.",
+          "slave": "The GTW-08 modbus address",
+          "schedule_editing":"Editable CH- and DHW schedules (requires `scheduler-card` integration).",
+          "auto_schedule": "Configure automatic DHW scheduling"
         }
       },
       "auto_scheduling": {

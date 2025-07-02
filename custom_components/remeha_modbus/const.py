@@ -26,7 +26,7 @@ DOMAIN: Final[str] = "remeha_modbus"
 
 # Versioning for the config flow.
 HA_CONFIG_VERSION = 1
-HA_CONFIG_MINOR_VERSION = 2
+HA_CONFIG_MINOR_VERSION = 3
 
 # JSON storage version
 STORAGE_VERSION = 1
@@ -567,6 +567,8 @@ class SchedulerState(TypedDict):
 
 
 CONFIG_AUTO_SCHEDULE: Final[str] = "auto_schedule"
+
+CONFIG_SCHEDULE_EDITING: Final[str] = "schedule_editing"
 
 READ_REGISTERS_SERVICE_NAME: Final[str] = "read_registers"
 READ_REGISTERS_START_REGISTER: Final[str] = "start_register"

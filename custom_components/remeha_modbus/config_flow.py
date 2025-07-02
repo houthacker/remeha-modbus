@@ -21,6 +21,7 @@ from homeassistant.helpers.selector import selector
 from custom_components.remeha_modbus.const import (
     AUTO_SCHEDULE_SELECTED_SCHEDULE,
     CONFIG_AUTO_SCHEDULE,
+    CONFIG_SCHEDULE_EDITING,
     CONNECTION_RTU_OVER_TCP,
     CONNECTION_SERIAL,
     CONNECTION_TCP,
@@ -227,6 +228,7 @@ def _validate_modbus_generic_config(data: dict[str, Any]) -> dict[str, Any]:
         CONF_TYPE: data[CONF_TYPE],
         MODBUS_DEVICE_ADDRESS: int(data[MODBUS_DEVICE_ADDRESS]),
         CONFIG_AUTO_SCHEDULE: bool(data[CONFIG_AUTO_SCHEDULE]),
+        CONFIG_SCHEDULE_EDITING: bool(data[CONFIG_SCHEDULE_EDITING]),
     }
 
 
@@ -308,6 +310,7 @@ class RemehaConfigFlow(ConfigFlow, domain=DOMAIN):
                         [CONNECTION_TCP, CONNECTION_UDP, CONNECTION_RTU_OVER_TCP, CONNECTION_SERIAL]
                     ),
                     vol.Required(MODBUS_DEVICE_ADDRESS, default=100): cv.positive_int,
+                    vol.Optional(CONFIG_SCHEDULE_EDITING, default=False): cv.boolean,
                     vol.Optional(CONFIG_AUTO_SCHEDULE, default=False): cv.boolean,
                 }
             ),
@@ -439,6 +442,9 @@ class RemehaConfigFlow(ConfigFlow, domain=DOMAIN):
                     vol.Required(
                         MODBUS_DEVICE_ADDRESS, default=reconf_entry.data[MODBUS_DEVICE_ADDRESS]
                     ): cv.positive_int,
+                    vol.Required(
+                        CONFIG_SCHEDULE_EDITING, default=reconf_entry.data[CONFIG_SCHEDULE_EDITING]
+                    ): cv.boolean,
                     vol.Required(
                         CONFIG_AUTO_SCHEDULE, default=reconf_entry.data[CONFIG_AUTO_SCHEDULE]
                     ): cv.boolean,
