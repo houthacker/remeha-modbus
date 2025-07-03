@@ -7,6 +7,7 @@ from homeassistant.components.switch.const import DOMAIN as SwitchDomain
 from homeassistant.core import Event, EventStateChangedData, HomeAssistant
 from pydantic import ValidationError
 
+from custom_components.remeha_modbus.blend import Blender
 from custom_components.remeha_modbus.blend.scheduler.scenarios.schedule_created import (
     ScheduleCreated,
 )
@@ -38,7 +39,7 @@ class BlenderState(Enum):
     """The `Blender` has unsubscribed from all relevant events and will not execute any scenarios."""
 
 
-class Blender:
+class SchedulerBlender(Blender):
     """The `Blender` runs the required scenarios to integrate between the `remeha_modbus` and `scheduler` schedules.
 
     In general, the schedule entities from the `scheduler` integration live in the `switch` domain, whereas schedules
@@ -118,12 +119,20 @@ class Blender:
                 self._state.name,
             )
 
+    def _modbus_entity_updated(self, event: Event[EventStateChangedData]) -> None:
+        """Handle an updated modbus `ZoneSchedule`.
+
+        Args:
+            event (Event[EventStateChangedData]): The event containing the data of the updated zone schedule.
+
+        """
+
     @property
     def state(self) -> BlenderState:
         """Return the current state of the Blernder."""
         return self._state
 
-    def start(self):
+    def blend(self):
         """Start listening for relevant events to enable executing the defined scenarios.
 
         If already started, this method has no effect. If stopped, this instance re-subscribes
@@ -133,10 +142,17 @@ class Blender:
         if self._state in [BlenderState.INITIAL, BlenderState.STOPPED]:
             _LOGGER.debug("Going to subscribe to relevant scheduler- and remeha_modbus events.")
             self._state = BlenderState.STARTING
+
             self._subscriptions = [
                 self._dispatcher.subscribe_to_added_entities(
                     domain=SwitchDomain, listener=self._scheduler_entity_added
-                )
+                ),
+                *[
+                    self._dispatcher.subscribe_to_entity_updates(
+                        entity_id=entity_id, listener=self._modbus_entity_updated
+                    )
+                    for entity_id in self._coordinator.climate_entities
+                ],
             ]
             self._state = BlenderState.STARTED
             _LOGGER.debug(
@@ -148,7 +164,7 @@ class Blender:
                 self._state.name,
             )
 
-    def stop(self):
+    def unblend(self):
         """Stop listening for all events and stop executing scenarios."""
 
         if self._state is BlenderState.STARTED:

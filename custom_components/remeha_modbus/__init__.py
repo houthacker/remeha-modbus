@@ -19,7 +19,8 @@ from custom_components.remeha_modbus.api import (
     RemehaModbusStorage,
     RemehaModbusStore,
 )
-from custom_components.remeha_modbus.blend.scheduler import EventDispatcher
+from custom_components.remeha_modbus.blend import Blender
+from custom_components.remeha_modbus.blend.scheduler import EventDispatcher, SchedulerBlender
 from custom_components.remeha_modbus.const import (
     AUTO_SCHEDULE_SELECTED_SCHEDULE,
     CONFIG_AUTO_SCHEDULE,
@@ -43,6 +44,13 @@ PLATFORMS: list[Platform] = [
 _LOGGER = logging.getLogger(__name__)
 
 
+class AllowedBlenders(TypedDict):
+    """Describe blenders that are allowed to be active."""
+
+    scheduler: Blender
+    """The SchedulerBlender"""
+
+
 class RuntimeData(TypedDict):
     """Describe the type of `ConfigEntry.runtime_data` in the remeha_modbus integration."""
 
@@ -54,6 +62,9 @@ class RuntimeData(TypedDict):
 
     event_dispatcher: EventDispatcher
     """Dispatch incoming events to subscribers."""
+
+    blenders: AllowedBlenders
+    """Configured blenders."""
 
 
 type RemehaModbusConfig = ConfigEntry[RuntimeData]
@@ -100,9 +111,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: RemehaModbusConfig) -> b
     await coordinator.async_config_entry_first_refresh()
 
     entry.runtime_data = RuntimeData(
-        api=api,
-        coordinator=coordinator,
-        event_dispatcher=EventDispatcher(hass=hass),
+        api=api, coordinator=coordinator, event_dispatcher=EventDispatcher(hass=hass), blenders={}
     )
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
@@ -110,11 +119,27 @@ async def async_setup_entry(hass: HomeAssistant, entry: RemehaModbusConfig) -> b
     # Register services only if everything else has been set up successfully.
     register_services(hass=hass, config=entry)
 
+    # Finally blend what must be blent. This must happen as late as possible,
+    # but always *after* entity.added_to_hass() has been called, so any entities that want to
+    # can register their entity ids at the coordinator.
+    if entry.data[CONFIG_SCHEDULE_EDITING] is True:
+        scheduler_blender = SchedulerBlender(
+            hass=hass, coordinator=coordinator, dispatcher=entry.runtime_data["event_dispatcher"]
+        )
+        scheduler_blender.blend()
+
+        entry.runtime_data["blenders"]["scheduler"] = scheduler_blender
+
     return True
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: RemehaModbusConfig) -> bool:
     """Unload the Remeha Modbus configuration."""
+
+    # Remove the blenders
+    for key in entry.runtime_data["blenders"]:
+        blender = entry.runtime_data["blenders"].pop(key)
+        blender.unblend()
 
     # Close the connection to the modbus server.
     coordinator: RemehaUpdateCoordinator = entry.runtime_data["coordinator"]

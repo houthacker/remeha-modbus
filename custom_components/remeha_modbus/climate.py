@@ -205,6 +205,13 @@ class RemehaClimateEntity(CoordinatorEntity, ClimateEntity):
 
         return override_end_time
 
+    async def async_added_to_hass(self) -> None:
+        """Register the assigned entity_id at the coordinator."""
+
+        self.coordinator.register_entity_id_of(entity=self)
+
+        return await super().async_added_to_hass()
+
 
 class RemehaDhwEntity(RemehaClimateEntity):
     """Remeha climate entity for Domestic Hot Water climates."""

@@ -1,12 +1,12 @@
 """Scheduler blend module."""
 
-from .blender import Blender, BlenderState
+from .blender import BlenderState, SchedulerBlender
 from .event_dispatcher import EntityEventCallback, EventDispatcher, UnsubscribeCallback
 
 __all__ = [
-    "Blender",
     "BlenderState",
     "EntityEventCallback",
     "EventDispatcher",
+    "SchedulerBlender",
     "UnsubscribeCallback",
 ]

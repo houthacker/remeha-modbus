@@ -7,6 +7,7 @@ from typing import Any
 from uuid import UUID
 
 from dateutil.parser import parse
+from homeassistant.components.climate import ClimateEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import UnitOfTemperature
 from homeassistant.core import HomeAssistant
@@ -56,6 +57,7 @@ from custom_components.remeha_modbus.const import (
 )
 from custom_components.remeha_modbus.errors import (
     RemehaIncorrectServiceCall,
+    RemehaModbusError,
     RemehaServiceException,
 )
 
@@ -114,6 +116,9 @@ class RemehaUpdateCoordinator(DataUpdateCoordinator):
         self._api: RemehaApi = api
         self._device_instances: dict[int, DeviceInstance] = {}
 
+        # This list is populated by the added_to_hass() callback of the climate entities.
+        self._climate_entity_ids: list[str] = []
+
     def _before_first_update(self) -> bool:
         return not self.data or "climates" not in self.data
 
@@ -149,6 +154,31 @@ class RemehaUpdateCoordinator(DataUpdateCoordinator):
             "cooling_forced": is_cooling_forced,
             "sensors": sensors,
         }
+
+    @property
+    def climate_entities(self) -> list[str]:
+        """Return the list of owned climate entity ids."""
+        return list(self._climate_entity_ids)
+
+    def register_entity_id_of(self, entity: ClimateEntity) -> None:
+        """Cache the entity_id of the given climate entity.
+
+        Args:
+            entity (RemehaClimateEntity): The entity to cache the id of.
+
+        Raises:
+            RemehaModbusError if the given entity is not owned by this integration.
+
+        """
+
+        if not entity.platform or entity.platform.platform_name != DOMAIN:
+            raise RemehaModbusError(
+                translation_domain=DOMAIN,
+                translation_key="non_owned_entity",
+                translation_placeholders={"entity_id": entity.entity_id},
+            )
+
+        self._climate_entity_ids.append(entity.entity_id)
 
     def is_remeha_modbus_entity(self, entity_id: str) -> bool:
         """Given an entity id, return whether it originates from this integration.
