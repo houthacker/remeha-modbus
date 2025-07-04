@@ -1,6 +1,7 @@
 """Blender super class."""
 
 import abc
+import inspect
 
 
 class Blender(metaclass=abc.ABCMeta):
@@ -11,9 +12,9 @@ class Blender(metaclass=abc.ABCMeta):
         """Return whether `subclass` is a duck=typed subclass of a `Blender`."""
         return (
             hasattr(subclass, "blend")
-            and callable(subclass.blend)
+            and inspect.ismethod(subclass.blend)
             and hasattr(subclass, "unblend")
-            and callable(subclass.unblend)
+            and inspect.ismethod(subclass.unblend)
         )
 
     @abc.abstractmethod

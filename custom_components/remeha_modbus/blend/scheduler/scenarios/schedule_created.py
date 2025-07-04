@@ -2,7 +2,7 @@
 
 import logging
 from datetime import datetime
-from typing import Final
+from typing import Final, override
 from uuid import UUID
 
 from homeassistant.core import HomeAssistant, State
@@ -15,6 +15,7 @@ from custom_components.remeha_modbus.api import (
     ZoneSchedule,
 )
 from custom_components.remeha_modbus.api.store import WaitingListEntry
+from custom_components.remeha_modbus.blend.scheduler.scenario import Scenario
 from custom_components.remeha_modbus.const import (
     ATTR_ZONE_ID,
     SCHEDULER_TAG_PREFIX,
@@ -114,7 +115,7 @@ def _to_zone_schedule(
     )
 
 
-class ScheduleCreated:
+class ScheduleCreated(Scenario):
     """Handle a newly created `scheduler.schedule`.
 
     When a new schedule is created in the `scheduler` integration, and it is exclusively linked
@@ -142,6 +143,7 @@ class ScheduleCreated:
         self._schedule: SchedulerState = schedule
         self._coordinator: RemehaUpdateCoordinator = coordinator
 
+    @override
     async def async_execute(self) -> None:
         """Push the schedule to the modbus interface.
 
