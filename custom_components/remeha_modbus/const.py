@@ -570,6 +570,8 @@ CONFIG_AUTO_SCHEDULE: Final[str] = "auto_schedule"
 
 CONFIG_SCHEDULE_EDITING: Final[str] = "schedule_editing"
 
+EVENT_ZONE_SCHEDULE_UPDATED: Final[str] = f"{DOMAIN}_schedule_updated"
+
 READ_REGISTERS_SERVICE_NAME: Final[str] = "read_registers"
 READ_REGISTERS_START_REGISTER: Final[str] = "start_register"
 READ_REGISTERS_REGISTER_COUNT: Final[str] = "register_count"

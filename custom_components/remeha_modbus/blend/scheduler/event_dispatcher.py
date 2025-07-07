@@ -2,7 +2,7 @@
 
 import logging
 from collections.abc import Callable
-from typing import Final, Literal
+from typing import Final, Literal, TypedDict
 
 from homeassistant.components.climate.const import DOMAIN as ClimateEntityPlatform
 from homeassistant.components.switch.const import DOMAIN as SchedulerEntityPlatform
@@ -11,11 +11,11 @@ from homeassistant.core import Event, EventStateChangedData, HomeAssistant, call
 from homeassistant.helpers.entity import entity_sources
 from homeassistant.helpers.event import (
     async_track_state_added_domain,
-    async_track_state_change_event,
     async_track_state_removed_domain,
 )
 
-from custom_components.remeha_modbus.const import DOMAIN
+from custom_components.remeha_modbus.api import ZoneSchedule
+from custom_components.remeha_modbus.const import DOMAIN, EVENT_ZONE_SCHEDULE_UPDATED
 from custom_components.remeha_modbus.helpers.iterators import UnmodifiableDict
 from custom_components.scheduler.const import DOMAIN as SchedulerDomain
 
@@ -26,8 +26,17 @@ ATTR_SCHEDULER_ENTITY_ADDED: Final[str] = "scheduler_entity_added"
 ATTR_SCHEDULER_ENTITY_REMOVED: Final[str] = "scheduler_entity_removed"
 ATTR_CLIMATE_ENTITY_ADDED: Final[str] = "climate_entity_added"
 ATTR_CLIMATE_ENTITY_REMOVED: Final[str] = "climate_entity_removed"
+ATTR_ZONE_SCHEDULE_UPDATED: Final[str] = "zone_schedule_updated"
+
+
+class ZoneScheduleUpdatedData(TypedDict):
+    """Event data for an `EVENT_ZONE_SCHEDULE_UPDATED`."""
+
+    schedule: ZoneSchedule
+
 
 type EntityEventCallback = Callable[[Event[EventStateChangedData]], None]
+type ZoneScheduleEventCallback = Callable[[Event[ZoneScheduleUpdatedData]], None]
 type UnsubscribeCallback = Callable[[], None]
 
 ACCEPTED_DOMAINS: Final[tuple[str, str]] = (ClimateEntityPlatform, SchedulerEntityPlatform)
@@ -72,6 +81,10 @@ class EventDispatcher:
                             domain=ClimateEntityPlatform, event=event
                         ),
                     ),
+                    ATTR_ZONE_SCHEDULE_UPDATED: self._hass.bus.async_listen(
+                        EVENT_ZONE_SCHEDULE_UPDATED,
+                        lambda event: self._dispatch_zone_schedule_updated_event(event=event),
+                    ),
                 }
             )
         )
@@ -89,10 +102,8 @@ class EventDispatcher:
         }
         """Listeners to entity-removal events for either domain."""
 
-        self._entity_update_subscriptions: dict[
-            str, tuple[HomeAssistantCallback, list[EntityEventCallback]]
-        ] = {}
-        """Tuples of an unsubscribe callback and a list of event listeners, indexed by entity id."""
+        self._zone_schedule_update_listeners: list[ZoneScheduleEventCallback] = []
+        """Listeners to zone schedule updates."""
 
     def _is_acceptable(self, entity_id: str) -> bool:
         """Return whether the given entity_id is allowed to be listened to for updates."""
@@ -140,6 +151,13 @@ class EventDispatcher:
                 DOMAIN,
             )
 
+    @callback
+    def _dispatch_zone_schedule_updated_event(self, event: Event[ZoneScheduleUpdatedData]) -> None:
+        """Notify all listeners that a zone schedule was updated."""
+
+        for cb in self._zone_schedule_update_listeners:
+            cb(event)
+
     def subscribe_to_added_entities(
         self, domain: Literal["switch", "climate"], listener: EntityEventCallback
     ) -> UnsubscribeCallback:
@@ -182,54 +200,19 @@ class EventDispatcher:
 
         return lambda: self._remove_entity_listeners[domain].remove(listener)
 
-    def subscribe_to_entity_updates(
-        self, entity_id: str, listener: EntityEventCallback
+    def subscribe_to_zone_schedule_updates(
+        self, listener: ZoneScheduleEventCallback
     ) -> UnsubscribeCallback:
-        """Register the listener to receive updates if the entity with `entity_id` changed.
+        """Register the listener to receive updates of all zone schedules.
+
+        Note: The `RemehaApi` only tracks zone schedules of the currently selected time program. So if for example
+        the selected schedule is `SCHEDULE_1`, no updates will be fired for schedules in `SCHEDULE_2` or `SCHEDULE_3`.
 
         Args:
-            entity_id (str): The entity id to listen to. This must be either a `switch` from the `scheduler` integration
-                or a `climate` from the `remeha_modbus` integration.
-            listener (EntityEventCallback): The callback to call when the entity was updated.
-
-        Returns:
-            A callback which unsubscribes the listener from receiving updates about the entity.
-
-        Raises:
-            ValueError: if `entity_id` is not the id of an entity of an accepted domain.
+            listener (ZoneScheduleEventCallback): The callback to call when a `ZoneSchedule` was updated.
 
         """
 
-        if not self._is_acceptable(entity_id=entity_id):
-            raise ValueError(
-                f"Not registering listener for updates of {entity_id}: entity domain or originating platform not acceptable."
-            )
+        self._zone_schedule_update_listeners.append(listener)
 
-        have_listeners: bool = entity_id in self._entity_update_subscriptions
-        if have_listeners:
-            _, subscriptions = self._entity_update_subscriptions[entity_id]
-            subscriptions.append(listener)
-        else:
-
-            def _notify_all(event: Event[EventStateChangedData]):
-                """Notify all subscribers of the change event."""
-                _, all_subscribers = self._entity_update_subscriptions.get(entity_id, [])
-                for subscriber in all_subscribers:
-                    subscriber(event)
-
-            unsubscribe = async_track_state_change_event(
-                hass=self._hass, entity_ids=entity_id, action=_notify_all
-            )
-            self._entity_update_subscriptions[entity_id] = (unsubscribe, [listener])
-
-        def _unsubscribe_and_remove():
-            """Unsubscribe the listener and if no listeners exist after that, stop listening to updates of the related entity."""
-            unsubscribe_all, all_listeners = self._entity_update_subscriptions[entity_id]
-            all_listeners.remove(listener)
-
-            # If the callback-list is empty, unsubscribe from the entity updates and remove its entry.
-            if not all_listeners:
-                unsubscribe_all()
-                del self._entity_update_subscriptions[entity_id]
-
-        return _unsubscribe_and_remove
+        return lambda: self._zone_schedule_update_listeners.remove(listener)

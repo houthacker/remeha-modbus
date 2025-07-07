@@ -36,6 +36,7 @@ from custom_components.remeha_modbus.const import (
     DHW_BOILER_HEAT_LOSS_RATE,
     DHW_BOILER_VOLUME,
     DOMAIN,
+    EVENT_ZONE_SCHEDULE_UPDATED,
     HA_SCHEDULE_TO_REMEHA_SCHEDULE,
     PV_ANNUAL_EFFICIENCY_DECREASE,
     PV_CONFIG_SECTION,
@@ -88,6 +89,30 @@ def _config_to_pv_config(config: ConfigEntry) -> PVSystem:
         if PV_INSTALLATION_DATE in section
         else None,
     )
+
+
+def _get_updated_schedules(
+    old: dict[str, ClimateZone], new: dict[str, ClimateZone]
+) -> list[ZoneSchedule]:
+    """Get the updated zone schedules from `new`."""
+
+    updated_new_schedules: list[ZoneSchedule] = []
+    for key, old_zone in old.items():
+        new_zone: ClimateZone = new[key]
+
+        # Either both zones have a selected schedule,
+        if old_zone.selected_schedule is not None and new_zone.selected_schedule is not None:
+            updated_new_schedules += [
+                schedule
+                for key, schedule in new_zone.current_schedule.items()
+                if old_zone.current_schedule[key] != schedule
+            ]
+        elif new_zone.selected_schedule is not None:
+            updated_new_schedules += [
+                schedule for schedule in new_zone.current_schedule.values() if schedule is not None
+            ]
+
+    return updated_new_schedules
 
 
 class RemehaUpdateCoordinator(DataUpdateCoordinator):
@@ -145,6 +170,11 @@ class RemehaUpdateCoordinator(DataUpdateCoordinator):
                     await self._api.async_read_zone_update(zone)
                     for zone in list(self.data["climates"].values())
                 ]
+
+                # Fire an event for each updated climate schedule.
+                self._fire_schedule_update_events(
+                    old_zones=self.data["climates"], new_zones={zone.id: zone for zone in zones}
+                )
         except ModbusException as ex:
             raise UpdateFailed("Error while communicating with modbus device.") from ex
 
@@ -154,6 +184,17 @@ class RemehaUpdateCoordinator(DataUpdateCoordinator):
             "cooling_forced": is_cooling_forced,
             "sensors": sensors,
         }
+
+    def _fire_schedule_update_events(
+        self, old_zones: dict[str, ClimateZone], new_zones: dict[str, ClimateZone]
+    ) -> None:
+        # Assume that both dicts contain the same keys. If not, that would indicate
+        # a zone has been added or removed in the Remeha appliance.
+        # This scenario is explicitly not supported.
+
+        for schedule in _get_updated_schedules(old=old_zones, new=new_zones):
+            event_data = {"schedule": schedule}
+            self.hass.bus.async_fire(EVENT_ZONE_SCHEDULE_UPDATED, event_data)
 
     @property
     def climate_entities(self) -> list[str]:

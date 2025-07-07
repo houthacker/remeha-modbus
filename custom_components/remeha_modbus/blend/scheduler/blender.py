@@ -8,13 +8,14 @@ from homeassistant.core import Event, EventStateChangedData, HomeAssistant
 from pydantic import ValidationError
 
 from custom_components.remeha_modbus.blend import Blender
-from custom_components.remeha_modbus.blend.scheduler.scenarios.schedule_created import (
+from custom_components.remeha_modbus.blend.scheduler.scenarios import (
+    ModbusScheduleUpdated,
     ScheduleCreated,
 )
 from custom_components.remeha_modbus.const import SchedulerState
 from custom_components.remeha_modbus.coordinator import RemehaUpdateCoordinator
 
-from .event_dispatcher import EventDispatcher, UnsubscribeCallback
+from .event_dispatcher import EventDispatcher, UnsubscribeCallback, ZoneScheduleUpdatedData
 from .helpers import links_exclusively_to_remeha_climate, to_scheduler_state
 
 _LOGGER = logging.getLogger(__name__)
@@ -93,7 +94,7 @@ class SchedulerBlender(Blender):
                         hass=self._hass, schedule=schedule, coordinator=self._coordinator
                     )
 
-                    # Spawn a new task to execute the scenario.
+                    # Execute the scenario in a separate task since it requires I/O.
                     self._coordinator.config_entry.async_create_task(
                         self._hass, scenario.async_execute()
                     )
@@ -119,17 +120,35 @@ class SchedulerBlender(Blender):
                 self._state.name,
             )
 
-    def _modbus_entity_updated(self, event: Event[EventStateChangedData]) -> None:
-        """Handle an updated modbus `ZoneSchedule`.
+    def _zone_schedule_updated(self, event: Event[ZoneScheduleUpdatedData]) -> None:
+        """Handle a modbus `ZoneSchedule` update.
 
         Args:
-            event (Event[EventStateChangedData]): The event containing the data of the updated zone schedule.
+            event (Event[ZoneScheduleUpdatedData]): The event containing the updated zone schedule.
 
         """
 
+        schedule = event.data["schedule"]
+        if self._ready_for_scenario_execution():
+            scenario = ModbusScheduleUpdated(
+                hass=self._hass, coordinator=self._coordinator, schedule=schedule
+            )
+
+            # Execute the scenario in a separate task since it requires I/O.
+            self._coordinator.config_entry.async_create_task(self._hass, scenario.async_execute())
+        else:
+            _LOGGER.debug(
+                "Ignoring ZoneSchedule-update event (zone_id=%d, schedule_id=%d, day=%s) because current blender state %s\
+                    prevents us from handling it.",
+                schedule.zone_id,
+                schedule.id.value,
+                schedule.day.name,
+                self._state.name,
+            )
+
     @property
     def state(self) -> BlenderState:
-        """Return the current state of the Blernder."""
+        """Return the current state of the Blender."""
         return self._state
 
     def blend(self):
@@ -143,17 +162,19 @@ class SchedulerBlender(Blender):
             _LOGGER.debug("Going to subscribe to relevant scheduler- and remeha_modbus events.")
             self._state = BlenderState.STARTING
 
+            # Subscribe to state changes required to blend in.
             self._subscriptions = [
                 self._dispatcher.subscribe_to_added_entities(
                     domain=SwitchDomain, listener=self._scheduler_entity_added
                 ),
-                *[
-                    self._dispatcher.subscribe_to_entity_updates(
-                        entity_id=entity_id, listener=self._modbus_entity_updated
-                    )
-                    for entity_id in self._coordinator.climate_entities
-                ],
+                self._dispatcher.subscribe_to_zone_schedule_updates(
+                    listener=self._zone_schedule_updated
+                ),
             ]
+
+            # TODO Create an initial scenario because the blender
+            # is started _after_ the first coordinator refresh.
+
             self._state = BlenderState.STARTED
             _LOGGER.debug(
                 "Successfully subscribed to relevant scheduler- and remeha_modbus events."
