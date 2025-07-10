@@ -4,6 +4,7 @@ import logging
 from enum import Enum
 
 from homeassistant.components.switch.const import DOMAIN as SwitchDomain
+from homeassistant.const import EVENT_HOMEASSISTANT_STARTED
 from homeassistant.core import Event, EventStateChangedData, HomeAssistant
 from pydantic import ValidationError
 
@@ -146,6 +147,35 @@ class SchedulerBlender(Blender):
                 self._state.name,
             )
 
+    def _home_assistant_started(self, _: Event) -> None:
+        """Sync schedules after HA started."""
+
+        if self._ready_for_scenario_execution():
+            _LOGGER.debug("Executing initial modbus schedule synchronization")
+
+            for climate in [
+                c
+                for c in self._coordinator.get_climates(predicate=lambda _: True)
+                if c.selected_schedule is not None
+            ]:
+                for schedule in climate.current_schedule.values():
+                    scenario = ModbusScheduleUpdated(
+                        hass=self._hass, coordinator=self._coordinator, schedule=schedule
+                    )
+
+                    # Create a background task to synchronize the schedules between modbus
+                    # and the scheduler component.
+                    # Waiting on it is not required, so a background task is sufficient.
+                    self._coordinator.config_entry.async_create_background_task(
+                        self._hass, scenario.async_execute()
+                    )
+        else:
+            _LOGGER.warning(
+                "Not executing initial modbus schedule synchronization because current blender state %s\
+                prevents us from doing that.",
+                self._state.name,
+            )
+
     @property
     def state(self) -> BlenderState:
         """Return the current state of the Blender."""
@@ -172,8 +202,12 @@ class SchedulerBlender(Blender):
                 ),
             ]
 
-            # TODO Create an initial scenario because the blender
-            # is started _after_ the first coordinator refresh.
+            # After Home Assistant has started, exeecute an initial synchronization.
+            self._hass.bus.async_listen_once(
+                event_type=EVENT_HOMEASSISTANT_STARTED,
+                listener=self._home_assistant_started,
+                run_immediately=False,
+            )
 
             self._state = BlenderState.STARTED
             _LOGGER.debug(
