@@ -22,8 +22,10 @@ SOFTWARE.
 
 """
 
+from collections.abc import Mapping
 from itertools import groupby
 from operator import itemgetter
+from typing import Generic, Self, TypeVar
 
 
 def consecutive_groups(iterable, ordering=lambda x: x):
@@ -75,3 +77,70 @@ def consecutive_groups(iterable, ordering=lambda x: x):
     """
     for _, g in groupby(enumerate(iterable), key=lambda x: x[0] - ordering(x[1])):
         yield map(itemgetter(1), g)
+
+
+K = TypeVar("K")
+V = TypeVar("V")
+
+
+class UnmodifiableDict(Mapping, Generic[K, V]):
+    """A `Mapping` implementation ."""
+
+    def __init__(self, data: dict[K, V]):
+        """Create a new read-only mapping using `data` as its backing dictionary."""
+
+        self._store: dict[K, V] = data
+
+    @classmethod
+    def snapshot(cls, data: dict[K, V]) -> Self:
+        """Take a snapshot of `data` and use that to create a new unmodifiable mapping.`.
+
+        Args:
+            data (dict[K, V]): The source dictionary.
+
+        Returns:
+            The new mapping.
+
+        """
+
+        return UnmodifiableDict(data=dict(data))
+
+    @classmethod
+    def create(cls, data: dict[K, V]) -> Self:
+        """Create a read-only view of `data`.
+
+        Note: since `data` is referenced and not copied, changing it from another point of view
+        change the backing data of the returned dict.
+
+        Args:
+            data (dict[K, V]): The dictionary to create a view from.
+
+        Returns:
+            The new mapping.
+
+        """
+
+        return UnmodifiableDict(data=data)
+
+    def __getitem__(self, key: K) -> V:
+        """Return the value of the mapping with key `key`.
+
+        Args:
+            key (K): The key of the value to retrieve.
+
+        Raises:
+            KeyError: if the key does not exist in this mapping.
+
+        """
+
+        return self._data[key]
+
+    def __iter__(self):
+        """Return an iterator over the keys of this dict."""
+
+        yield from self._store
+
+    def __len__(self) -> int:
+        """Return the amount of key/value pairs in this dict."""
+
+        return len(self._store)

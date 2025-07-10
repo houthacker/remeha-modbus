@@ -6,13 +6,29 @@
           "name": "[%key:common::config_flow::data::name%]",
           "type": "Connection type",
           "slave": "Modbus address",
+          "schedule_editing": "Schedule editing",
           "auto_schedule": "DHW scheduling"
         },
         "data_description": {
           "name": "The name of the modbus hub. Must be unique.",
           "type": "The type of modbus connection.",
           "slave": "The GTW-08 modbus address",
-          "auto_schedule": "Set up automatic DHW scheduling"
+          "schedule_editing": "Editable CH- and DHW schedules (requires `scheduler-card` integration).",
+          "auto_schedule": "Configure automatic DHW scheduling"
+        }
+      },
+      "reconfigure": {
+        "data": {
+          "type": "Connection type",
+          "slave": "Modbus address",
+          "schedule_editing":"CH/DHW Schedule editing",
+          "auto_schedule": "DHW scheduling"
+        },
+        "data_description": {
+          "type": "The type of modbus connection.",
+          "slave": "The GTW-08 modbus address",
+          "schedule_editing":"Editable CH- and DHW schedules (requires `scheduler-card` integration).",
+          "auto_schedule": "Configure automatic DHW scheduling"
         }
       },
       "auto_scheduling": {
@@ -102,6 +118,17 @@
         "schedule_2": "Schedule 2",
         "schedule_3": "Schedule 3"
       }
+    },
+    "weekday": {
+      "options": {
+        "monday": "Monday",
+        "tuesday": "Tuesday",
+        "wednesday": "Wednesday",
+        "thursday": "Thursday",
+        "friday": "Friday",
+        "saturday": "Saturday",
+        "sunday": "Sunday"
+      }
     }
   },
   "entity": {
@@ -127,6 +154,38 @@
     "dhw_auto_schedule": {
       "name": "DHW auto scheduling",
       "description": "Create a DHW schedule for the next day based on weather forecast and boiler/solar configuration. Requires a weather integration that provides solar irradiance in hourly forecasts."
+    },
+    "read_registers": {
+      "name": "Read modbus registers",
+      "description": "Read arbitrary registers from the Remeha modbus interface.",
+      "fields": {
+        "start_register": {
+          "name": "Register",
+          "description": "The first register to read."
+        },
+        "register_count": {
+          "name": "Register count",
+          "description": "The amount of registers to read."
+        },
+        "struct_format": {
+          "name": "Struct format",
+          "description": "The python struct formatting string of the returned value(s)."
+        }
+      }
+    },
+    "import_schedule": {
+      "name": "Import DHW schedule",
+      "description": "Import a DHW schedule into Home Assistant. This requires the `scheduler-card` HACS integration.",
+      "fields": {
+        "climate_entity": {
+          "name": "Source",
+          "description": "The source climate entity to read the schedule from."
+        },
+        "weekday": {
+          "name": "Weekday",
+          "description": "The weekday of the schedule to import."
+        }
+      }
     }
   },
   "exceptions": {
@@ -159,6 +218,21 @@
     },
     "auto_schedule_value_error": {
       "message": "Cannot auto schedule: error while deserializing modbus response, see logs for details."
+    },
+    "read_registers_modbus_error": {
+      "message": "Modbus error while reading registers."
+    },
+    "read_registers_illegal_struct_format": {
+      "message": "Cannot parse result: illegal struct format {struct-format}."
+    },
+    "read_registers_unknown_error": {
+      "message": "An unknown error occurred while reading modbus registers. See log for details."
+    },
+    "import_schedule_missing_integration": {
+      "message": "Cannot import schedule: required HACS integration `scheduler-component` is not installed or it's services are missing."
+    },
+    "import_schedule_climate_state": {
+      "message": "Cannot import schedule: climate {climate_entity} is in unusable state {climate_state}."
     }
   }
 }

@@ -1,8 +1,10 @@
 """Implementation of climate zones within the Remeha Modbus integration."""
 
 import logging
-from dataclasses import dataclass
-from datetime import datetime, tzinfo
+from datetime import datetime
+from zoneinfo import ZoneInfo
+
+from pydantic.dataclasses import dataclass
 
 from custom_components.remeha_modbus.const import (
     ClimateZoneFunction,
@@ -53,10 +55,10 @@ class ClimateZone:
     Although this property is optional, it needn't be `None` if `mode != ClimateZoneMode.SCHEDULING`.
     """
 
-    current_schedule: dict[Weekday, ZoneSchedule]
+    current_schedule: dict[Weekday, ZoneSchedule | None]
     """If `selected_schedule` has a value, `current_schedule` contains the schedule for all week days."""
 
-    heating_mode: ClimateZoneHeatingMode
+    heating_mode: ClimateZoneHeatingMode | None
     """The current heating mode of the climate zone"""
 
     temporary_setpoint: float | None
@@ -86,8 +88,8 @@ class ClimateZone:
     pump_running: bool
     """Whether the zone pump is currently running"""
 
-    time_zone: tzinfo | None
-    """The time zone of the repated appliance"""
+    time_zone: ZoneInfo | None
+    """The time zone of the related appliance"""
 
     def _current_dhw_scheduling_setpoint(self) -> float:
         if self.temporary_setpoint_end_time is not None:

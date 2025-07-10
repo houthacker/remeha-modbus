@@ -21,3 +21,7 @@ class RemehaIncorrectServiceCall(ServiceValidationError):
 
 class RemehaServiceException(RemehaModbusError):
     """Exception to indicate that a service call failed, although it was used correctly."""
+
+
+class RequiredServiceMissing(RemehaModbusError):
+    """Exception to indicate that a required service is missing."""

@@ -35,7 +35,7 @@ def test_decode_time_schedule():
         id=2, zone_id=1, day=Weekday.MONDAY, encoded_schedule=encoded_schedule
     )
 
-    assert schedule.id == 2
+    assert schedule.id == ClimateZoneScheduleId.SCHEDULE_3
     assert schedule.zone_id == 1
     assert schedule.day == Weekday.MONDAY
     assert schedule.time_slots == [

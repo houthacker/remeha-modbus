@@ -1,0 +1,23 @@
+{
+  "entity_id": "switch.schedule_climate_dhw_zone_1",
+  "state": "on",
+  "attributes": {
+    "weekdays": ["tue"],
+    "timeslots": ["00:00:00 - 12:00:00 -", "12:00:00 - 20:00:00", "20:00:00 - 00:00:00"],
+    "entities": ["climate.remeha_modbus_test_hub_dhw"],
+    "actions": [
+      {
+        "service": "climate.set_preset_mode",
+        "data": {"preset_mode": "eco"}
+      },
+      {
+        "service": "climate.set_preset_mode",
+        "data": {"preset_mode": "comfort"}
+      },
+      {
+        "service": "climate.set_preset_mode",
+        "data": {"preset_mode": "eco"}
+      }
+    ]
+  }
+}

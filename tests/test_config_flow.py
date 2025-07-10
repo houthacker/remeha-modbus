@@ -16,6 +16,7 @@ from homeassistant.helpers.entity_component import EntityComponent
 from custom_components.remeha_modbus.const import (
     AUTO_SCHEDULE_SELECTED_SCHEDULE,
     CONFIG_AUTO_SCHEDULE,
+    CONFIG_SCHEDULE_EDITING,
     CONNECTION_RTU_OVER_TCP,
     CONNECTION_SERIAL,
     CONNECTION_TCP,
@@ -117,6 +118,7 @@ async def test_config_modbus_serial(hass: HomeAssistant, mock_setup_entry: Async
         MODBUS_SERIAL_PARITY: MODBUS_SERIAL_PARITY_NONE,
         CONF_PORT: "/dev/ttyUSB0",
         MODBUS_SERIAL_STOPBITS: 2,
+        CONFIG_SCHEDULE_EDITING: False,
         CONFIG_AUTO_SCHEDULE: False,
     }
     assert len(mock_setup_entry.mock_calls) == 1
@@ -155,6 +157,7 @@ async def test_config_modbus_socket(hass: HomeAssistant, mock_setup_entry: Async
         MODBUS_DEVICE_ADDRESS: 100,
         CONF_HOST: "192.168.1.1",
         CONF_PORT: 502,
+        CONFIG_SCHEDULE_EDITING: False,
         CONFIG_AUTO_SCHEDULE: False,
     }
     assert len(mock_setup_entry.mock_calls) == 1
@@ -222,6 +225,7 @@ async def test_config_auto_scheduling(hass: HomeAssistant, mock_setup_entry: Asy
         MODBUS_DEVICE_ADDRESS: 100,
         CONF_HOST: "192.168.1.1",
         CONF_PORT: 502,
+        CONFIG_SCHEDULE_EDITING: False,
         CONFIG_AUTO_SCHEDULE: True,
         WEATHER_ENTITY_ID: "weather.fake_weather",
         AUTO_SCHEDULE_SELECTED_SCHEDULE: REMEHA_PRESET_SCHEDULE_1,
@@ -319,6 +323,7 @@ async def test_config_auto_scheduling_no_installation_date(
         MODBUS_DEVICE_ADDRESS: 100,
         CONF_HOST: "192.168.1.1",
         CONF_PORT: 502,
+        CONFIG_SCHEDULE_EDITING: False,
         CONFIG_AUTO_SCHEDULE: True,
         WEATHER_ENTITY_ID: "weather.fake_weather",
         AUTO_SCHEDULE_SELECTED_SCHEDULE: REMEHA_PRESET_SCHEDULE_1,
@@ -398,6 +403,7 @@ async def test_reconfigure_non_unique_id(
             MODBUS_DEVICE_ADDRESS: 100,
             CONF_HOST: "also.does.not.matter",
             CONF_PORT: 502,
+            CONFIG_SCHEDULE_EDITING: False,
             CONFIG_AUTO_SCHEDULE: False,
         }
 

@@ -35,3 +35,11 @@ repos:
           - --pretty
           - --show-error-codes
           - --show-error-context
+  - repo: local
+    hooks:
+      - id: pyclean
+        name: pyclean
+        entry: pyclean .
+        language: system
+        always_run: true
+        pass_filenames: false
