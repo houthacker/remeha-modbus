@@ -369,7 +369,7 @@ class RemehaApi:
         response: ModbusPDU = await self._client.read_holding_registers(
             address=variable.start_address + offset,
             count=variable.count,
-            slave=self._device_address,
+            device_id=self._device_address,
         )
         if response.isError():
             raise ModbusException(
@@ -404,7 +404,7 @@ class RemehaApi:
             response: ModbusPDU = await self._client.write_registers(
                 address=variable.start_address + offset,
                 values=registers,
-                slave=self._device_address,
+                device_id=self._device_address,
             )
             if response.isError():
                 raise ModbusException("Modbus device returned an error while writing registers.")
