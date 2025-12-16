@@ -72,6 +72,10 @@ To start using the auto scheduling feature, execute the following steps:
 - Reconfigure this integration and provide the required information about your PV system and DHW boiler. Select the KNMI weather
   entity to retrieve the weather forecast.
 
+#### Example configuration:
+
+![Example configuration](/.github/assets/remeha-dhw-scheduling-config.png)
+
 #### Create an automation
 - Then just create a new automation with the following properties:
     - Trigger at any time between 22:00 and 23:59
@@ -81,3 +85,17 @@ To start using the auto scheduling feature, execute the following steps:
 #### Set the correct DHW preset mode
 After creating the automation, a new schedule for the next day will automatically be created. If the preset is not set in the
 automation, manually change the preset mode of your DHW boiler climate to `Schedule 1`, otherwise the schedule will of course be inactive.
+
+
+### Screenshots
+#### Remeha Appliance Info
+![Remeha Appliance Info](/.github/assets/remeha-device.png)
+
+#### Central Heating and Domestic Hot Water (DHW) climates
+![Central Heating and Domesting Hot Water climates](/.github/assets/remeha-ch-dhw.png)
+
+#### DHW History View
+Showing current temperature, target temperature and heating status.
+
+
+![DHW History View](/.github/assets/remeha-dhw-history.png)
