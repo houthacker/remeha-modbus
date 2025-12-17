@@ -1,8 +1,9 @@
 """The Remeha Modbus integration."""
 
 import logging
+from typing import TypedDict
+from zoneinfo import ZoneInfo
 
-from dateutil import tz
 from homeassistant.config_entries import (
     ConfigEntry,
     ConfigEntryError,
@@ -15,11 +16,19 @@ from pymodbus import ModbusException
 from custom_components.remeha_modbus.api import (
     ConnectionType,
     RemehaApi,
+    RemehaModbusStorage,
+    RemehaModbusStore,
 )
+from custom_components.remeha_modbus.blend import Blender
+from custom_components.remeha_modbus.blend.scheduler import EventDispatcher, SchedulerBlender
 from custom_components.remeha_modbus.const import (
     AUTO_SCHEDULE_SELECTED_SCHEDULE,
     CONFIG_AUTO_SCHEDULE,
+    CONFIG_SCHEDULE_EDITING,
     REMEHA_PRESET_SCHEDULE_1,
+    STORAGE_FILE_KEY,
+    STORAGE_MINOR_VERSION,
+    STORAGE_VERSION,
 )
 from custom_components.remeha_modbus.coordinator import RemehaUpdateCoordinator
 from custom_components.remeha_modbus.services import register_services
@@ -29,12 +38,39 @@ PLATFORMS: list[Platform] = [
     Platform.NUMBER,
     Platform.SENSOR,
     Platform.BINARY_SENSOR,
+    Platform.SWITCH,
 ]
 
 _LOGGER = logging.getLogger(__name__)
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+class AllowedBlenders(TypedDict):
+    """Describe blenders that are allowed to be active."""
+
+    scheduler: Blender
+    """The SchedulerBlender"""
+
+
+class RuntimeData(TypedDict):
+    """Describe the type of `ConfigEntry.runtime_data` in the remeha_modbus integration."""
+
+    api: RemehaApi
+    """The api instance to interact with the modbus interface."""
+
+    coordinator: RemehaUpdateCoordinator
+    """The data update coordinator."""
+
+    event_dispatcher: EventDispatcher
+    """Dispatch incoming events to subscribers."""
+
+    blenders: AllowedBlenders
+    """Configured blenders."""
+
+
+type RemehaModbusConfig = ConfigEntry[RuntimeData]
+
+
+async def async_setup_entry(hass: HomeAssistant, entry: RemehaModbusConfig) -> bool:
     """Set up Remeha Modbus based on a config entry."""
 
     modbus_hub_name = entry.data[CONF_NAME]
@@ -47,7 +83,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         )
 
     api: RemehaApi = RemehaApi.create(
-        name=modbus_hub_name, config=entry.data, time_zone=tz.gettz(name=hass.config.time_zone)
+        name=modbus_hub_name, config=entry.data, time_zone=ZoneInfo(key=hass.config.time_zone)
     )
 
     # Ensure the modbus device is reachable and actually talking Modbus
@@ -58,22 +94,52 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     except ModbusException as ex:
         raise ConfigEntryNotReady(f"Error while executing modbus health check: {ex}") from ex
 
-    coordinator = RemehaUpdateCoordinator(hass=hass, config_entry=entry, api=api)
+    coordinator = RemehaUpdateCoordinator(
+        hass=hass,
+        config_entry=entry,
+        api=api,
+        store=RemehaModbusStorage(
+            store=RemehaModbusStore.create(
+                hass=hass,
+                version=STORAGE_VERSION,
+                minor_version=STORAGE_MINOR_VERSION,
+                key=STORAGE_FILE_KEY,
+            )
+        ),
+    )
 
     await coordinator.async_config_entry_first_refresh()
 
-    entry.runtime_data = {"api": api, "coordinator": coordinator}
+    entry.runtime_data = RuntimeData(
+        api=api, coordinator=coordinator, event_dispatcher=EventDispatcher(hass=hass), blenders={}
+    )
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
-    # Register services only if everything else has been set up ssuccessfully.
-    register_services(hass=hass, config=entry, coordinator=coordinator)
+    # Register services only if everything else has been set up successfully.
+    register_services(hass=hass, config=entry)
+
+    # Finally blend what must be blent. This must happen as late as possible,
+    # but always *after* entity.added_to_hass() has been called, so any entities that want to
+    # can register their entity ids at the coordinator.
+    if entry.data[CONFIG_SCHEDULE_EDITING] is True:
+        scheduler_blender = SchedulerBlender(
+            hass=hass, coordinator=coordinator, dispatcher=entry.runtime_data["event_dispatcher"]
+        )
+        scheduler_blender.blend()
+
+        entry.runtime_data["blenders"]["scheduler"] = scheduler_blender
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(hass: HomeAssistant, entry: RemehaModbusConfig) -> bool:
     """Unload the Remeha Modbus configuration."""
+
+    # Remove the blenders
+    for key in entry.runtime_data["blenders"]:
+        blender = entry.runtime_data["blenders"].pop(key)
+        blender.unblend()
 
     # Close the connection to the modbus server.
     coordinator: RemehaUpdateCoordinator = entry.runtime_data["coordinator"]
@@ -82,7 +148,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
 
 
-async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
+async def async_migrate_entry(hass: HomeAssistant, config_entry: RemehaModbusConfig) -> bool:
     """Migrate config entry to latest version."""
     _LOGGER.debug(
         "Migrating configuration from version %s.%s",
@@ -109,7 +175,13 @@ async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) ->
         if new_data[CONFIG_AUTO_SCHEDULE] is True:
             new_data[AUTO_SCHEDULE_SELECTED_SCHEDULE] = REMEHA_PRESET_SCHEDULE_1
 
-    hass.config_entries.async_update_entry(config_entry, data=new_data, minor_version=2, version=1)
+    if config_entry.minor_version < 3:
+        # Version 1.3 adds editable schedules in the HA frontend, using the scheduler-card integration.
+        # This functionality can be turned on and off in the configuration. It defaults to disabled.
+        if CONFIG_SCHEDULE_EDITING not in new_data:
+            new_data[CONFIG_SCHEDULE_EDITING] = False
+
+    hass.config_entries.async_update_entry(config_entry, data=new_data, minor_version=3, version=1)
     _LOGGER.debug(
         "Migration to configuration version %s.%s successful",
         config_entry.version,

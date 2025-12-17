@@ -7,25 +7,38 @@ from homeassistant.components.weather.const import ATTR_WEATHER_TEMPERATURE_UNIT
 from homeassistant.components.weather.const import DOMAIN as WeatherDomain
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import UnitOfTemperature
-from homeassistant.core import HomeAssistant, ServiceCall
+from homeassistant.core import (
+    HomeAssistant,
+    ServiceCall,
+    ServiceResponse,
+    SupportsResponse,
+)
+from pymodbus import ModbusException
 
 from custom_components.remeha_modbus.const import (
     AUTO_SCHEDULE_SERVICE_NAME,
     CONFIG_AUTO_SCHEDULE,
     DOMAIN,
+    READ_REGISTERS_REGISTER_COUNT,
+    READ_REGISTERS_SERVICE_NAME,
+    READ_REGISTERS_SERVICE_SCHEMA,
+    READ_REGISTERS_START_REGISTER,
+    READ_REGISTERS_STRUCT_FORMAT,
     WEATHER_ENTITY_ID,
 )
 from custom_components.remeha_modbus.coordinator import RemehaUpdateCoordinator
-from custom_components.remeha_modbus.errors import RemehaIncorrectServiceCall
+from custom_components.remeha_modbus.errors import (
+    RemehaIncorrectServiceCall,
+    RemehaServiceException,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
 
-def register_services(
-    hass: HomeAssistant, config: ConfigEntry, coordinator: RemehaUpdateCoordinator
-) -> None:
+def register_services(hass: HomeAssistant, config: ConfigEntry) -> None:
     """Register all services of this integration."""
 
+    coordinator: RemehaUpdateCoordinator = config.runtime_data["coordinator"]
     if not coordinator.get_climates(lambda climate: climate.is_domestic_hot_water()):
         _LOGGER.warning(
             "Not registering service '%s' since no DHW climate was discovered by this integration.",
@@ -69,8 +82,34 @@ def register_services(
             temperature_unit=UnitOfTemperature(temperature_unit),
         )
 
+    async def async_read_registers(call: ServiceCall) -> ServiceResponse:
+        start_register: int = int(call.data[READ_REGISTERS_START_REGISTER])
+        register_count: int = int(call.data[READ_REGISTERS_REGISTER_COUNT])
+        struct_format: str = call.data[READ_REGISTERS_STRUCT_FORMAT]
+
+        try:
+            return {
+                "value": await coordinator.async_read_registers(
+                    start_register=start_register,
+                    register_count=register_count,
+                    struct_format=struct_format,
+                )
+            }
+        except ModbusException as e:
+            raise RemehaServiceException(
+                translation_domain=DOMAIN, translation_key="read_registers_modbus_error"
+            ) from e
+
     hass.services.async_register(
         domain=DOMAIN,
         service=AUTO_SCHEDULE_SERVICE_NAME,
         service_func=dhw_auto_schedule,
+    )
+
+    hass.services.async_register(
+        domain=DOMAIN,
+        service=READ_REGISTERS_SERVICE_NAME,
+        service_func=async_read_registers,
+        schema=READ_REGISTERS_SERVICE_SCHEMA,
+        supports_response=SupportsResponse.ONLY,
     )

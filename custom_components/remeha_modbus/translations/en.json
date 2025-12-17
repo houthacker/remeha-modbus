@@ -41,13 +41,29 @@
           "name": "Name",
           "slave": "Modbus address",
           "type": "Connection type",
+          "schedule_editing": "CH/DHW Schedule editing",
           "auto_schedule": "DHW scheduling"
         },
         "data_description": {
           "name": "The name of the modbus hub. Must be unique.",
           "slave": "The GTW-08 modbus address",
           "type": "The type of modbus connection.",
-          "auto_schedule": "Set up automatic DHW scheduling"
+          "schedule_editing": "Editable CH- and DHW schedules (requires `scheduler-card` integration).",
+          "auto_schedule": "Configure automatic DHW scheduling"
+        }
+      },
+      "reconfigure": {
+        "data": {
+          "type": "Connection type",
+          "slave": "Modbus address",
+          "schedule_editing":"CH/DHW Schedule editing",
+          "auto_schedule": "DHW scheduling"
+        },
+        "data_description": {
+          "type": "The type of modbus connection.",
+          "slave": "The GTW-08 modbus address",
+          "schedule_editing":"Editable CH- and DHW schedules (requires `scheduler-card` integration).",
+          "auto_schedule": "Configure automatic DHW scheduling"
         }
       },
       "auto_scheduling": {
@@ -103,6 +119,17 @@
         "schedule_2": "Schedule 2",
         "schedule_3": "Schedule 3"
       }
+    },
+    "weekday": {
+      "options": {
+        "monday": "Monday",
+        "tuesday": "Tuesday",
+        "wednesday": "Wednesday",
+        "thursday": "Thursday",
+        "friday": "Friday",
+        "saturday": "Saturday",
+        "sunday": "Sunday"
+      }
     }
   },
   "entity": {
@@ -128,6 +155,24 @@
     "dhw_auto_schedule": {
       "name": "DHW auto scheduling",
       "description": "Create a DHW schedule for the next day based on weather forecast and boiler/solar configuration. Requires a weather integration that provides solar irradiance (GHI) in hourly forecasts."
+    },
+    "read_registers": {
+      "name": "Read modbus registers",
+      "description": "Read arbitrary registers from the Remeha modbus interface.",
+      "fields": {
+        "start_register": {
+          "name": "Register",
+          "description": "The first register to read."
+        },
+        "register_count": {
+          "name": "Register count",
+          "description": "The amount of registers to read."
+        },
+        "struct_format": {
+          "name": "Struct format",
+          "description": "The python struct formatting string of the returned value(s)."
+        }
+      }
     }
   },
   "exceptions": {
@@ -160,6 +205,15 @@
     },
     "auto_schedule_value_error": {
       "message": "Cannot auto schedule: error while deserializing modbus response, see logs for details."
+    },
+    "read_registers_modbus_error": {
+      "message": "Modbus error while reading registers."
+    },
+    "read_registers_illegal_struct_format": {
+      "message": "Cannot parse result: illegal struct format {struct-format}."
+    },
+    "read_registers_unknown_error": {
+      "message": "An unknown error occurred while reading modbus registers. See log for details."
     }
   }
 }

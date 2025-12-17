@@ -9,7 +9,6 @@ from homeassistant.core import HomeAssistant
 from .conftest import get_api, setup_platform
 
 
-@pytest.mark.parametrize("mock_modbus_client", ["modbus_store.json"], indirect=True)
 async def test_climates(hass: HomeAssistant, mock_modbus_client, mock_config_entry):
     """Test climates."""
 
@@ -21,10 +20,9 @@ async def test_climates(hass: HomeAssistant, mock_modbus_client, mock_config_ent
         await setup_platform(hass=hass, config_entry=mock_config_entry)
         await hass.async_block_till_done()
 
-        assert len(hass.states.async_all(domain_filter="number")) == 1
+        assert len(hass.states.async_all(domain_filter=NumberDomain)) == 1
 
 
-@pytest.mark.parametrize("mock_modbus_client", ["modbus_store.json"], indirect=True)
 async def test_dhw_hysteresis(hass: HomeAssistant, mock_modbus_client, mock_config_entry):
     """Test a single DhwHysteresisEntity."""
 
@@ -38,7 +36,7 @@ async def test_dhw_hysteresis(hass: HomeAssistant, mock_modbus_client, mock_conf
 
         hysteresis = hass.states.get("number.remeha_modbus_test_hub_dhw_hysteresis")
         assert hysteresis.state == "3.0"
-        assert hysteresis.domain == "number"
+        assert hysteresis.domain == NumberDomain
         assert hysteresis.name == "Remeha Modbus test_hub dhw_hysteresis"
 
         # Update the state

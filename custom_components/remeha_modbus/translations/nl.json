@@ -13,12 +13,28 @@
           "name": "Naam",
           "type": "Type verbinding",
           "slave": "Modbus adres",
-          "auto_schedule": "DHW planning"
+          "schedule_editing": "CV/SWW planning bewerken",
+          "auto_schedule": "Automatische SWW planning"
         },
         "data_description": {
           "name": "De unieke naam van de modbus hub.",
           "type": "Het type modbus verbinding.",
           "slave": "Het GTW-08 modbus adres.",
+          "schedule_editing": "Bewerk CV- of SWW-planning (vereist de `scheduler-card` integratie).",
+          "auto_schedule": "Configureer geautomatiseerde DHW planning."
+        }
+      },
+      "reconfigure": {
+        "data": {
+          "type": "Het type modbus verbinding.",
+          "slave": "Het GTW-08 modbus adres.",
+          "schedule_editing":"Bewerk CV- of SWW-planning (vereist de `scheduler-card` integratie).",
+          "auto_schedule": "Configureer geautomatiseerde DHW planning."
+        },
+        "data_description": {
+          "type": "Het type modbus verbinding.",
+          "slave": "Het GTW-08 modbus adres.",
+          "schedule_editing":"Bewerk CV- of SWW-planning (vereist de `scheduler-card` integratie).",
           "auto_schedule": "Configureer geautomatiseerde DHW planning."
         }
       },
@@ -102,6 +118,17 @@
         "schedule_2": "Schema 2",
         "schedule_3": "Schema 3"
       }
+    },
+    "weekday": {
+      "options": {
+        "monday": "Maandag",
+        "tuesday": "Dinsdag",
+        "wednesday": "Woensdag",
+        "thursday": "Donderdag",
+        "friday": "Vrijdag",
+        "saturday": "Zaterdag",
+        "sunday": "Zondag"
+      }
     }
   },
   "entity": {
@@ -127,6 +154,24 @@
     "dhw_auto_schedule": {
       "name": "SWW automatische planning",
       "description": "Maak een SWW planning voor de volgende dag, gebaseerd op de weersvoorspelling en de boiler/zonnepanelen configuration. Vereiest een weather integratie die voorziet in zonnestraling (GHI) in de uurlijkse voorspellingen."
+    },
+    "read_registers": {
+      "name": "Lees modbus registers",
+      "description": "Lees willekeurige registers uit de Remeha modbus interface.",
+      "fields": {
+        "start_register": {
+          "name": "Register",
+          "description": "Het eerste uit te lezen register."
+        },
+        "register_count": {
+          "name": "Aantal registers",
+          "description": "Het aantal uit te lezen registers."
+        },
+        "struct_format": {
+          "name": "Struct format",
+          "description": "Het Python struct format van de te lezen registers."
+        }
+      }
     }
   },
   "exceptions": {
@@ -159,6 +204,15 @@
     },
     "auto_schedule_value_error": {
       "message": "Kan geen automatische planning maken: fout tijdens het deserializeren van het modbus bericht, zie logs voor details."
+    },
+    "read_registers_modbus_error": {
+      "message": "Modbus fout tijdens het lezen van de registers."
+    },
+    "read_registers_illegal_struct_format": {
+      "message": "Kan registers niet verwerken: ongeldig struct format {struct-format}."
+    },
+    "read_registers_unknown_error": {
+      "message": "Onbekende fout tijdens het lezen van de registers. Zie log voor details."
     }
   }
 }

@@ -90,6 +90,7 @@ class RemehaClimateEntity(CoordinatorEntity, ClimateEntity):
         self.climate_zone_id: int = climate_zone_id
 
         self._attr_unique_id = f"zone_{climate_zone_id}"
+        self._attr_extra_state_attributes = {"zone_id": climate_zone_id}
 
         _LOGGER.debug("Creating new RemehaModbusClimate entity [%s]", self._attr_unique_id)
 
@@ -203,6 +204,13 @@ class RemehaClimateEntity(CoordinatorEntity, ClimateEntity):
         )
 
         return override_end_time
+
+    async def async_added_to_hass(self) -> None:
+        """Register the assigned entity_id at the coordinator."""
+
+        self.coordinator.register_entity_id_of(entity=self)
+
+        return await super().async_added_to_hass()
 
 
 class RemehaDhwEntity(RemehaClimateEntity):

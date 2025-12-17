@@ -1,7 +1,8 @@
 """GTW-08 helper functions."""
 
-from datetime import datetime, timedelta, tzinfo
+from datetime import datetime, timedelta
 from typing import Final
+from zoneinfo import ZoneInfo
 
 
 class TimeOfDay:
@@ -10,7 +11,7 @@ class TimeOfDay:
     _CIA301_TOD_BASE_DATE: Final[datetime] = datetime(year=1984, month=1, day=1, hour=0, minute=0)
 
     @classmethod
-    def from_bytes(cls, data: bytes, time_zone: tzinfo | None = None) -> datetime:
+    def from_bytes(cls, data: bytes, time_zone: ZoneInfo | None = None) -> datetime:
         """Decode a CiA 301 TIME_OF_DAY to a `datetime` object.
 
         `TIME_OF_DAY` is a struct that is defined as follows:
@@ -29,13 +30,13 @@ class TimeOfDay:
 
         Args:
           data (bytes): The encoded TIME_OF_DAY struct.
-          time_zone (str): The name of the Home Assistant time zone, defaults to the local time zone of the running OS.
+          time_zone (ZoneInfo): The Home Assistant time zone; defaults to the local time zone of the running OS.
 
         Returns:
           datetime: The decoded `TIME_OF_DAY` struct.
 
         Raises:
-          `ValueError` if `time_zone` is an invalid time zone string or if `len(data) != 6`.
+          `ValueError` if `len(data) != 6`.
 
         """
 

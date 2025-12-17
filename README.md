@@ -50,13 +50,27 @@ Planned features and features under discussion are available in the [issues](htt
     - Climate features are enabled depending on the climate zone type (for instance, a DHW zone is only able to heat, not cool).
 - DHW auto scheduling:
     - This integration exposes a service called `dhw_auto_schedule` that can be used in automations or scripts. A detailed explanation follows below.
+- Optional synchronization of climate schedules between this integration and `@nielsfaber`'s [scheduler-card](https://github.com/nielsfaber/scheduler-card)
+
+## Services
+### dhw_auto_schedule
+This service has no fields and is described in [DHW auto scheduling](#dhw_auto_scheduling)
+
+### read_registers
+Read arbitrary modbus registers from the Remeha modbus interface.
+| Field | Type | Required | Description |
+|-------|------|:---------:|-------------|
+| `start_register` | `int` | &check; | The address of the first register to read. |
+| `register_count` | `int` | &check; | The amount of registers to read (max 10). Defaults to 1 |
+| `struct_format` | `str` | &check; | The struct format of the returned registers. Defaults to `=H` |
+
 
 ## Installation
 To install this integration, you need to have [HACS](https://hacs.xyz/docs/use) installed in your Home Assistant.
 
 [![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=houthacker&repository=remeha-modbus&category=integration)
 
-## DHW auto scheduling
+## DHW auto scheduling <a id="dhw_auto_scheduling"></a>
 DHW auto scheduling is a feature allowing efficient heating of your DHW boiler by using as much solar power as possible while keeping the
 interference to a minimum with other devices also using (direct) solar power.
 
@@ -79,13 +93,19 @@ To start using the auto scheduling feature, execute the following steps:
 #### Create an automation
 - Then just create a new automation with the following properties:
     - Trigger at any time between 22:00 and 23:59
-    - Call the Remeha Modbus action `dhw_auto_schedule`
+    - Call the Remeha Modbus service `dhw_auto_schedule`
     - Optionally set the DHW boiler climate to preset `schedule_1`.
 
 #### Set the correct DHW preset mode
 After creating the automation, a new schedule for the next day will automatically be created. If the preset is not set in the
 automation, manually change the preset mode of your DHW boiler climate to `Schedule 1`, otherwise the schedule will of course be inactive.
 
+## Schedule synchronization with `scheduler-card`
+Schedules (or time programs, as Remeha calls them) can be synchronized with the `scheduler-card` integration if you have it installed.
+
+### Usage
+To use this synchronization, enable the configuration checkmark _Synchronize with `scheduler-card`_. This can only be configured if you have
+the `scheduler-card` integration installed.
 
 ### Screenshots
 #### Remeha Appliance Info

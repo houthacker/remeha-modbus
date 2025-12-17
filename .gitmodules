@@ -1,0 +1,8 @@
+[submodule "submodules/ha-knmi"]
+	path = submodules/ha-knmi
+	url = git@github.com:houthacker/ha-knmi.git
+[submodule "submodules/scheduler-component"]
+	path = submodules/scheduler-component
+	url = git@github.com:houthacker/remeha-scheduler-component.git
+	ignore = dirty
+

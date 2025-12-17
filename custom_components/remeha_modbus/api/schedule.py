@@ -3,12 +3,13 @@
 import datetime
 import logging
 import math
-from dataclasses import dataclass
 from enum import Enum
 from typing import Any, Self, cast
+from zoneinfo import ZoneInfo
 
 from dateutil import parser, relativedelta
 from homeassistant.const import UnitOfTemperature
+from pydantic.dataclasses import dataclass
 
 from custom_components.remeha_modbus.const import (
     AUTO_SCHEDULE_MINIMAL_END_HOUR,
@@ -135,7 +136,7 @@ class TimeslotSetpointType(Enum):
     """Setpoint in 'evening' mode."""
 
 
-@dataclass
+@dataclass(unsafe_hash=True)
 class Timeslot:
     """A zone schedule time slot."""
 
@@ -531,13 +532,13 @@ class ZoneSchedule:
 
 
 def get_current_timeslot(
-    schedule: dict[Weekday, ZoneSchedule] | None, time_zone: datetime.tzinfo | None
+    schedule: dict[Weekday, ZoneSchedule] | None, time_zone: ZoneInfo | None
 ) -> Timeslot | None:
     """Retrieve the current schedule time slot.
 
     Args:
         schedule (dict[Weekday, ZoneSchedule]): The selected schedule
-        time_zone (datetime.tzinfo): The appliance time zone
+        time_zone (ZoneInfo): The appliance time zone
 
     Returns:
         The current schedule time slot, or `None` if `schedule` is `None`.

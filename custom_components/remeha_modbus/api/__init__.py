@@ -28,3 +28,9 @@ from .schedule import (  # noqa: F401
     Weekday,
     ZoneSchedule,
 )
+from .store import (  # noqa: F401
+    RemehaModbusStorage,
+    RemehaModbusStore,
+    ScheduleAttributesEntry,
+    WaitingListEntry,
+)

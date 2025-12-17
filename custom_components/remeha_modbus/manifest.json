@@ -1,6 +1,7 @@
 {
   "domain": "remeha_modbus",
   "name": "Remeha Modbus",
+  "after_dependencies": ["knmi", "scheduler"],
   "codeowners": ["@houthacker"],
   "config_flow": true,
   "dependencies": ["modbus"],
@@ -11,5 +12,5 @@
   "loggers": ["remeha_modbus"],
   "quality_scale": "bronze",
   "requirements": ["pymodbus", "python-dateutil==2.9.0.post0"],
-  "version": "0.7.8"
+  "version": "0.8.0-b1"
 }

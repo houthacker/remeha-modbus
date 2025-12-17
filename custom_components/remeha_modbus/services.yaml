@@ -1,3 +1,52 @@
 
 # Keep service name in sync with const.AUTO_SCHEDULE_SERVICE_NAME
 dhw_auto_schedule:
+
+read_registers:
+  fields:
+    start_register:
+      required: true
+      example: 128
+      selector:
+        number:
+          mode: box
+    register_count:
+      required: true
+      example: 1
+      default: 1
+      selector:
+        number:
+          mode: box
+          min: 1
+          max: 10
+    struct_format:
+      required: true
+      example: "=BB"
+      default: "=H"
+      selector:
+        text:
+          type: "text"
+
+import_schedule:
+  fields:
+    climate_entity:
+      required: true
+      selector:
+        entity:
+          filter:
+            integration: "remeha_modbus"
+            domain: "climate"
+    weekday:
+      required: true
+      selector:
+        select:
+          translation_key: "weekday"
+          mode: "dropdown"
+          options:
+            - "monday"
+            - "tuesday"
+            - "wednesday"
+            - "thursday"
+            - "friday"
+            - "saturday"
+            - "sunday"

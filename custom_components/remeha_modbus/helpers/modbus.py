@@ -54,7 +54,7 @@ def _from_registers(
 ) -> str | int | float | tuple[int, int] | bytes | None:
     # If variable requires a bytes result, use our own conversion since the ModbusClientMixin doesn't support them.
     val = (
-        b"".join([x.to_bytes(2) for x in registers])
+        bytes_from_registers(registers=registers)
         if variable.data_type in [DataType.CIA_301_TIME_OF_DAY, DataType.ZONE_TIME_PROGRAM]
         else ModbusClientMixin.convert_from_registers(
             registers=registers, data_type=HA_TO_PYMODBUS_TYPE[variable.data_type]
@@ -191,3 +191,9 @@ def from_registers(
         )
 
     return _from_registers(variable=destination_variable, registers=registers)
+
+
+def bytes_from_registers(registers: list[int]) -> bytes:
+    """Return the raw bytes from the given list of registers."""
+
+    return b"".join([x.to_bytes(2) for x in registers])
