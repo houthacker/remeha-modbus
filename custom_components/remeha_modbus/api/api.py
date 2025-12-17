@@ -376,7 +376,9 @@ class RemehaApi:
                 _LOGGER.info("Modbus connection closed.")
 
     async def _async_read_registers(
-        self, variable: ModbusVariableDescription, offset: int = 0
+        self,
+        variable: ModbusVariableDescription,
+        offset: int = 0,
     ) -> list[int]:
         """Read the registers representing the requested variable from the modbus device.
 
@@ -395,17 +397,37 @@ class RemehaApi:
 
         """
 
-        response: ModbusPDU = await self._client.read_holding_registers(
-            address=variable.start_address + offset,
-            count=variable.count,
-            slave=self._device_address,
-        )
-        if response.isError():
-            raise ModbusException(
-                "Modbus device returned an error while reading holding registers."
+        async def _async_ensure_connected() -> None:
+            """Ensure that we're connected or raise an exception."""
+            if not self._client.connected and not await self._client.connect():
+                raise ModbusException("Connection to modbus device lost.")
+
+        retries: int = 0
+        response: ModbusPDU = None
+        while retries < 3:
+            await _async_ensure_connected()
+            response = await self._client.read_holding_registers(
+                address=variable.start_address + offset,
+                count=variable.count,
+                device_id=self._device_address,
             )
 
-        return response.registers
+            if response.isError():
+                retries += 1
+                await asyncio.sleep(0.001)
+            else:
+                if retries > 0:
+                    _LOGGER.debug(
+                        "Required %d retries to read address %d.",
+                        retries,
+                        variable.start_address + offset,
+                    )
+
+                return response.registers
+
+        raise ModbusException(
+            f"Modbus device returned an error while reading registers. Error code: {response.exception_code}"
+        )
 
     async def _async_write_registers(
         self, variable: ModbusVariableDescription, registers: list[int], offset: int = 0
@@ -428,7 +450,7 @@ class RemehaApi:
             response: ModbusPDU = await self._client.write_registers(
                 address=variable.start_address + offset,
                 values=registers,
-                slave=self._device_address,
+                device_id=self._device_address,
             )
             if response.isError():
                 raise ModbusException("Modbus device returned an error while writing registers.")

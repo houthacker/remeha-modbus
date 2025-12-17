@@ -133,7 +133,7 @@ class RemehaUpdateCoordinator(DataUpdateCoordinator):
             hass,
             _LOGGER,
             name=DOMAIN,
-            update_interval=timedelta(seconds=20),
+            update_interval=timedelta(seconds=30),
             always_update=False,
             config_entry=config_entry,
         )
