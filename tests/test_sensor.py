@@ -23,7 +23,7 @@ async def test_sensors(hass: HomeAssistant, mock_modbus_client, mock_config_entr
         await setup_platform(hass=hass, config_entry=mock_config_entry)
         await hass.async_block_till_done()
 
-        assert len(hass.states.async_all(domain_filter=SensorDomain)) == 9
+        assert len(hass.states.async_all(domain_filter=SensorDomain)) == 21
 
         for sd in REMEHA_SENSORS.values():
             state = hass.states.get(f"sensor.remeha_modbus_test_hub_{sd.name}")

@@ -114,7 +114,7 @@ def test_from_registers_happy_path():
     # INT16, None
     assert (
         modbus.from_registers(
-            registers=[int.from_bytes(b"\x80\x00", signed=True, byteorder="little")],
+            registers=[int.from_bytes(b"\xff\x00", signed=True, byteorder="little")],
             destination_variable=ZoneRegisters.CURRENT_ROOM_TEMPERATURE,
         )
         is None
