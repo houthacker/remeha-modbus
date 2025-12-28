@@ -11,10 +11,10 @@ _LOGGER = logging.getLogger(__name__)
 
 NULL_VALUES: Final[dict[DataType, int | bytes]] = {
     DataType.UINT8: int.from_bytes(b"\xff"),
-    DataType.UINT16: int.from_bytes(b"\x00\xff", byteorder="little"),
-    DataType.UINT32: int.from_bytes(b"\x00\x00\xff\xff", byteorder="little"),
-    DataType.INT16: int.from_bytes(b"\x80\x00", signed=True, byteorder="little"),
-    DataType.INT32: int.from_bytes(b"\x80\x00\x00\x00", signed=True, byteorder="little"),
+    DataType.UINT16: int.from_bytes(b"\xff\xff", byteorder="little"),
+    DataType.UINT32: int.from_bytes(b"\xff\xff\xff\xff", byteorder="little"),
+    DataType.INT16: int.from_bytes(b"\xff\x00", signed=True, byteorder="little"),
+    DataType.INT32: int.from_bytes(b"\xff\x00\x00\x00", signed=True, byteorder="little"),
     DataType.CIA_301_TIME_OF_DAY: b"\xff\x00\xff\x00\xff\x00",
     DataType.ZONE_TIME_PROGRAM: b"\xff\x00\xff\x00\xff\x00\xff\x00\xff\x00\xff\x00\xff\x00\xff\x00\xff\x00\xff\x00",
 }

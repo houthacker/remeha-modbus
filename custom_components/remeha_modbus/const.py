@@ -675,6 +675,50 @@ class MetaRegisters:
         start_address=410, name="varApFlowmeter", data_type=DataType.UINT16, scale=0.01
     )
 
+    STATUS: Final[ModbusVariableDescription] = ModbusVariableDescription(
+        start_address=411, name="varApStatus", data_type=DataType.UINT8
+    )
+
+    SUBSTATUS: Final[ModbusVariableDescription] = ModbusVariableDescription(
+        start_address=412, name="varApSubStatus", data_type=DataType.UINT8
+    )
+
+    POWER_ACTUAL: Final[ModbusVariableDescription] = ModbusVariableDescription(
+        start_address=413, name="varApPowerActual", data_type=DataType.UINT16, scale=0.01
+    )
+
+    TOTAL_ENERGY_CONSUMPTION: Final[ModbusVariableDescription] = ModbusVariableDescription(
+        start_address=439, name="varApTotalEnergyConsumption", data_type=DataType.UINT32
+    )
+
+    TOTAL_ENERGY_DELIVERY: Final[ModbusVariableDescription] = ModbusVariableDescription(
+        start_address=443, name="varApTotalEnergyDelivery", data_type=DataType.UINT32
+    )
+
+    CH_ENERGY_DELIVERY: Final[ModbusVariableDescription] = ModbusVariableDescription(
+        start_address=445, name="varApChEnergyDelivery", data_type=DataType.UINT32
+    )
+
+    DHW_ENERGY_DELIVERY: Final[ModbusVariableDescription] = ModbusVariableDescription(
+        start_address=447, name="varApDhwEnergyDelivery", data_type=DataType.UINT32
+    )
+
+    COOLING_ENERGY_DELIVERY: Final[ModbusVariableDescription] = ModbusVariableDescription(
+        start_address=449, name="varApCoolingEnergyDelivery", data_type=DataType.UINT32
+    )
+
+    BACKUP_ENERGY_DELIVERY: Final[ModbusVariableDescription] = ModbusVariableDescription(
+        start_address=451, name="varApBackupEnergyDelivery", data_type=DataType.UINT32
+    )
+
+    PUMP_SPEED: Final[ModbusVariableDescription] = ModbusVariableDescription(
+        start_address=459, name="varApPumpSpeed", data_type=DataType.UINT16, scale=0.01
+    )
+
+    ACTUAL_PRODUCED_POWER: Final[ModbusVariableDescription] = ModbusVariableDescription(
+        start_address=460, name="varApActualProducerPower", data_type=DataType.UINT32, scale=0.01
+    )
+
     # This variable exists on the appliance level. In the Remeha Home app however, this variable
     # is configurable in two places: in the CH zone and at the system level. Change one, change
     # the other too.
@@ -851,6 +895,14 @@ class ZoneRegisters:
     )
 
 
+class HybridRegisters:
+    """Registers for hybrid applianceds."""
+
+    COP_CALCULATED: Final[ModbusVariableDescription] = ModbusVariableDescription(
+        start_address=9230, name="varHpCOPCalculated", data_type=DataType.UINT16, scale=0.001
+    )
+
+
 WEEKDAY_TO_MODBUS_VARIABLE: Final[dict[Weekday, ModbusVariableDescription]] = {
     Weekday.MONDAY: ZoneRegisters.TIME_PROGRAM_MONDAY,
     Weekday.TUESDAY: ZoneRegisters.TIME_PROGRAM_TUESDAY,
@@ -915,6 +967,81 @@ REMEHA_SENSORS: Final[dict[ModbusVariableDescription, SensorEntityDescription]] 
         device_class=SensorDeviceClass.VOLUME_FLOW_RATE,
         name="flow_rate",
         native_unit_of_measurement="L/min",
+        state_class=SensorStateClass.MEASUREMENT,
+    ),
+    MetaRegisters.STATUS: SensorEntityDescription(  # 411
+        key=MetaRegisters.STATUS.name, name="status"
+    ),
+    MetaRegisters.SUBSTATUS: SensorEntityDescription(  # 412
+        key=MetaRegisters.SUBSTATUS.name, name="substatus"
+    ),
+    MetaRegisters.POWER_ACTUAL: SensorEntityDescription(  # 413
+        key=MetaRegisters.POWER_ACTUAL.name,
+        name="actual_relative_power",
+        native_unit_of_measurement="%",
+        device_class=SensorDeviceClass.POWER_FACTOR,
+        state_class=SensorStateClass.MEASUREMENT,
+    ),
+    MetaRegisters.TOTAL_ENERGY_CONSUMPTION: SensorEntityDescription(  # 439
+        key=MetaRegisters.TOTAL_ENERGY_CONSUMPTION.name,
+        name="total_energy_consumption",
+        native_unit_of_measurement="kWh",
+        device_class=SensorDeviceClass.ENERGY,
+        state_class=SensorStateClass.TOTAL,
+    ),
+    MetaRegisters.TOTAL_ENERGY_DELIVERY: SensorEntityDescription(  # 443
+        key=MetaRegisters.TOTAL_ENERGY_DELIVERY.name,
+        name="total_energy_delivery",
+        native_unit_of_measurement="kWh",
+        device_class=SensorDeviceClass.ENERGY,
+        state_class=SensorStateClass.TOTAL,
+    ),
+    MetaRegisters.CH_ENERGY_DELIVERY: SensorEntityDescription(  # 445
+        key=MetaRegisters.CH_ENERGY_DELIVERY.name,
+        name="ch_energy_delivery",
+        native_unit_of_measurement="kWh",
+        device_class=SensorDeviceClass.ENERGY,
+        state_class=SensorStateClass.TOTAL,
+    ),
+    MetaRegisters.DHW_ENERGY_DELIVERY: SensorEntityDescription(  # 447
+        key=MetaRegisters.DHW_ENERGY_DELIVERY.name,
+        name="dhw_energy_delivery",
+        native_unit_of_measurement="kWh",
+        device_class=SensorDeviceClass.ENERGY,
+        state_class=SensorStateClass.TOTAL,
+    ),
+    MetaRegisters.COOLING_ENERGY_DELIVERY: SensorEntityDescription(  # 449
+        key=MetaRegisters.COOLING_ENERGY_DELIVERY.name,
+        name="cooling_energy_delivery",
+        native_unit_of_measurement="kWh",
+        device_class=SensorDeviceClass.ENERGY,
+        state_class=SensorStateClass.TOTAL,
+    ),
+    MetaRegisters.BACKUP_ENERGY_DELIVERY: SensorEntityDescription(  # 451
+        key=MetaRegisters.BACKUP_ENERGY_DELIVERY.name,
+        name="backup_energy_delivery",
+        native_unit_of_measurement="kWh",
+        device_class=SensorDeviceClass.ENERGY,
+        state_class=SensorStateClass.TOTAL,
+    ),
+    MetaRegisters.PUMP_SPEED: SensorEntityDescription(  # 459
+        key=MetaRegisters.PUMP_SPEED.name,
+        name="pump_speed",
+        native_unit_of_measurement="%",
+        device_class=SensorDeviceClass.POWER_FACTOR,
+        state_class=SensorStateClass.MEASUREMENT,
+    ),
+    MetaRegisters.ACTUAL_PRODUCED_POWER: SensorEntityDescription(  # 460
+        key=MetaRegisters.ACTUAL_PRODUCED_POWER.name,
+        name="actual_produced_power",
+        native_unit_of_measurement="kW",
+        device_class=SensorDeviceClass.POWER,
+        state_class=SensorStateClass.MEASUREMENT,
+    ),
+    HybridRegisters.COP_CALCULATED: SensorEntityDescription(  # 9230
+        key=HybridRegisters.COP_CALCULATED.name,
+        name="cop_calculated",
+        native_unit_of_measurement="CoP",
         state_class=SensorStateClass.MEASUREMENT,
     ),
 }

@@ -257,6 +257,7 @@ pyrightconfig.json
 *.swp
 
 # other
+config/.ha_run.lock
 config/blueprints/**
 pytest-coverage.txt
 junit-coverage.xml
