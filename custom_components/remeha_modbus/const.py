@@ -675,6 +675,50 @@ class MetaRegisters:
         start_address=410, name="varApFlowmeter", data_type=DataType.UINT16, scale=0.01
     )
 
+    STATUS: Final[ModbusVariableDescription] = ModbusVariableDescription(
+        start_address=411, name="varApStatus", data_type=DataType.UINT8
+    )
+
+    SUBSTATUS: Final[ModbusVariableDescription] = ModbusVariableDescription(
+        start_address=412, name="varApSubStatus", data_type=DataType.UINT8
+    )
+
+    POWER_ACTUAL: Final[ModbusVariableDescription] = ModbusVariableDescription(
+        start_address=413, name="varApPowerActual", data_type=DataType.UINT16, scale=0.01
+    )
+
+    TOTAL_ENERGY_CONSUMPTION: Final[ModbusVariableDescription] = ModbusVariableDescription(
+        start_address=439, name="varApTotalEnergyConsumption", data_type=DataType.UINT32
+    )
+
+    TOTAL_ENERGY_DELIVERY: Final[ModbusVariableDescription] = ModbusVariableDescription(
+        start_address=443, name="varApTotalEnergyDelivery", data_type=DataType.UINT32
+    )
+
+    CH_ENERGY_DELIVERY: Final[ModbusVariableDescription] = ModbusVariableDescription(
+        start_address=445, name="varApChEnergyDelivery", data_type=DataType.UINT32
+    )
+
+    DHW_ENERGY_DELIVERY: Final[ModbusVariableDescription] = ModbusVariableDescription(
+        start_address=447, name="varApDhwEnergyDelivery", data_type=DataType.UINT32
+    )
+
+    COOLING_ENERGY_DELIVERY: Final[ModbusVariableDescription] = ModbusVariableDescription(
+        start_address=449, name="varApCoolingEnergyDelivery", data_type=DataType.UINT32
+    )
+
+    BACKUP_ENERGY_DELIVERY: Final[ModbusVariableDescription] = ModbusVariableDescription(
+        start_address=451, name="varApBackupEnergyDelivery", data_type=DataType.UINT32
+    )
+
+    PUMP_SPEED: Final[ModbusVariableDescription] = ModbusVariableDescription(
+        start_address=459, name="varApPumpSpeed", data_type=DataType.UINT16
+    )
+
+    ACTUAL_PRODUCER_POWER: Final[ModbusVariableDescription] = ModbusVariableDescription(
+        start_address=460, name="varApActualProducerPower", data_type=DataType.UINT32, scale=0.01
+    )
+
     # This variable exists on the appliance level. In the Remeha Home app however, this variable
     # is configurable in two places: in the CH zone and at the system level. Change one, change
     # the other too.
@@ -848,6 +892,14 @@ class ZoneRegisters:
         data_type=DataType.INT16,
         scale=0.01,
         friendly_name="CM040",
+    )
+
+
+class HybridRegisters:
+    """Registers for hybrid applianceds."""
+
+    HP_COP_CALCULATED: Final[ModbusVariableDescription] = ModbusVariableDescription(
+        start_address=9230, name="varHpCOPCalculated", data_type=DataType.UINT16, scale=0.001
     )
 
 
