@@ -4,12 +4,12 @@
   "codeowners": ["@houthacker"],
   "config_flow": true,
   "dependencies": ["modbus"],
-  "documentation": "https://github.com/houthacker/remeha_modbus/blob/main/README.md",
+  "documentation": "https://github.com/houthacker/remeha-modbus/blob/main/README.md",
   "integration_type": "hub",
   "iot_class": "local_polling",
-  "issue_tracker": "https://github.com/houthacker/remeha_modbus/issues",
+  "issue_tracker": "https://github.com/houthacker/remeha-modbus/issues",
   "loggers": ["remeha_modbus"],
   "quality_scale": "bronze",
   "requirements": ["pymodbus", "python-dateutil==2.9.0.post0"],
-  "version": "0.8.0"
+  "version": "0.8.1"
 }
