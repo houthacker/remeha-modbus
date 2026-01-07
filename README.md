@@ -23,6 +23,7 @@ According to Remeha, the following appliances can be extended with a GTW-08 (mod
 | Mercuria Ace      | &check;                       | &check;   |
 | Mercuria Ace MB   | &check;                       | &check;   |
 | Gas 220 Ace       | &check;                       | &cross;   |
+| Quinta Ace 65     | &check;                       | &check;   |
 | Quinta Ace 160    | &check;                       | &cross;   |
 | Gas 320/620 Ace   | &check;                       | &cross;   |
 | miTerra           | &check;                       | &cross;   |
