@@ -514,7 +514,6 @@ class DataType(StrEnum):
     """A zone time program for a single day, encoded in bytes as defined in the GTW-08 parameter list."""
 
 
-@dataclass(frozen=True)
 class Limits(float, Enum):
     """Forced limits users must not exceed."""
 
