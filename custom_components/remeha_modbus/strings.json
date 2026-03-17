@@ -102,7 +102,10 @@
         "schedule_2": "Schedule 2",
         "schedule_3": "Schedule 3"
       }
-    }
+    },
+    "modbus_register": {},
+    "register_count": {},
+    "struct_format": {}
   },
   "entity": {
     "climate": {
@@ -127,6 +130,24 @@
     "dhw_auto_schedule": {
       "name": "DHW auto scheduling",
       "description": "Create a DHW schedule for the next day based on weather forecast and boiler/solar configuration. Requires a weather integration that provides solar irradiance in hourly forecasts."
+    },
+    "read_registers": {
+      "name": "Read modbus registers",
+      "description": "Read a list of consecutive modbus registers from the GTW-08",
+      "fields": {
+        "start_register": {
+          "name": "Start register",
+          "description": "The first register to read"
+        },
+        "register_count": {
+          "name": "Register count",
+          "description": "The amount of registers to read"
+        },
+        "struct_format": {
+          "name": "Struct format",
+          "description": "The struct format, following the [python3 struct format]({python_struct_format_docs_url})."
+        }
+      }
     }
   },
   "exceptions": {

@@ -102,7 +102,10 @@
         "schedule_2": "Schema 2",
         "schedule_3": "Schema 3"
       }
-    }
+    },
+    "modbus_register": {},
+    "register_count": {},
+    "struct_format": {}
   },
   "entity": {
     "climate": {
@@ -127,6 +130,24 @@
     "dhw_auto_schedule": {
       "name": "SWW automatische planning",
       "description": "Maak een SWW planning voor de volgende dag, gebaseerd op de weersvoorspelling en de boiler/zonnepanelen configuration. Vereiest een weather integratie die voorziet in zonnestraling (GHI) in de uurlijkse voorspellingen."
+    },
+    "read_registers": {
+      "name": "Lees modbus registers",
+      "description": "Lees een aantal opeenvolgende modbus registers van de GTW-08",
+      "fields": {
+        "start_register": {
+          "name": "Startregister",
+          "description": "Het eerste te lezen register"
+        },
+        "register_count": {
+          "name": "Aantal",
+          "description": "Het aantal te lezen registers"
+        },
+        "struct_format": {
+          "name": "Struct format",
+          "description": "Format voor het deserializeren van de registers. Zie [python3 struct format]({python_struct_format_docs_url})."
+        }
+      }
     }
   },
   "exceptions": {

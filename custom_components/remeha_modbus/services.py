@@ -104,6 +104,9 @@ def register_services(
 
     hass.services.async_register(
         domain=DOMAIN,
+        description_placeholders={
+            "python_struct_format_docs_url": "https://docs.python.org/3/library/struct.html#format-characters"
+        },
         service=READ_REGISTERS_SERVICE_NAME,
         service_func=async_read_registers,
         schema=READ_REGISTERS_SERVICE_SCHEMA,

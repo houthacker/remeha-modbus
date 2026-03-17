@@ -1,8 +1,8 @@
-
 # Keep service name in sync with const.AUTO_SCHEDULE_SERVICE_NAME
 dhw_auto_schedule:
 
 read_registers:
+  target:
   fields:
     start_register:
       required: true
@@ -27,4 +27,4 @@ read_registers:
       default: "=H"
       selector:
         text:
-          translation_key: "struct_format"
+          multiline: false
