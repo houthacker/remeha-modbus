@@ -10,12 +10,12 @@ jobs:
   build:
     runs-on: ubuntu-latest
     outputs:
-        coverage_percent: ${{ steps.coverage_comment.outputs.coverage }}
-        coverage_color: ${{ steps.coverage_comment.outputs.color }}
+      coverage_percent: ${{ steps.coverage_comment.outputs.coverage }}
+      coverage_color: ${{ steps.coverage_comment.outputs.color }}
 
     steps:
       - name: Download coverage artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: coverage-reports
           merge-multiple: true
