@@ -344,7 +344,7 @@ class RemehaApi:
         """
 
         response: ModbusPDU = await self._client.read_holding_registers(
-            address=start_register, count=register_count, slave=self._device_address
+            address=start_register, count=register_count, device_id=self._device_address
         )
         if response.isError():
             raise ModbusException(
