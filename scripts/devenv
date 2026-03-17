@@ -8,6 +8,10 @@ cd "$(dirname "$0")/.."
 ## This let's us have the structure we want <root>/custom_components/integration_blueprint
 ## while at the same time have Home Assistant configuration inside <root>/config
 ## without resorting to symlinks.
-export PYTHONPATH="${PYTHONPATH}:${PWD}/custom_components"
+#export PYTHONPATH="${PYTHONPATH}:${PWD}/custom_components"
 
-# Start Home Assistant
+# Load venv
+source ${VIRTUAL_ENV}/bin/activate
+
+# Ensure pre-commit hooks are installed
+pre-commit install

@@ -4,5 +4,11 @@ set -e
 
 cd "$(dirname "$0")/.."
 
-python3 -m pip install -r requirements.test.txt
-pre-commit install
+if ! [ -x "$(which uv)" ]; then
+  curl -LsSf https://astral.sh/uv/install.sh | sh
+fi
+
+if ! [ -d ".venv" ]; then
+  uv venv $VIRTUAL_ENV
+  uv pip install -r requirements.test.txt
+fi
