@@ -1,6 +1,7 @@
 {
   "domain": "remeha_modbus",
   "name": "Remeha Modbus",
+  "after_dependencies": ["knmi", "scheduler"],
   "codeowners": ["@houthacker"],
   "config_flow": true,
   "dependencies": ["modbus"],
