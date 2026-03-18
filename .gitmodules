@@ -6,3 +6,7 @@
 	path = submodules/scheduler-card
 	url = https://github.com/nielsfaber/scheduler-card.git
 	ignore = dirty
+[submodule "submodules/ha-knmi"]
+	path = submodules/ha-knmi
+	url = https://github.com/golles/ha-knmi.git
+	ignore = dirty
