@@ -1,0 +1,1 @@
+../../../submodules/scheduler-card/dist/scheduler-card.js
