@@ -1,0 +1,6 @@
+[submodule "submodules/scheduler-component"]
+	path = submodules/scheduler-component
+	url = https://github.com/nielsfaber/scheduler-component.git
+[submodule "submodules/scheduler-card"]
+	path = submodules/scheduler-card
+	url = https://github.com/nielsfaber/scheduler-card.git
