@@ -25,7 +25,7 @@ SOFTWARE.
 from collections.abc import Mapping
 from itertools import groupby
 from operator import itemgetter
-from typing import Generic, Self, TypeVar
+from typing import Self, TypeVar
 
 
 def consecutive_groups(iterable, ordering=lambda x: x):
@@ -83,7 +83,7 @@ K = TypeVar("K")
 V = TypeVar("V")
 
 
-class UnmodifiableDict(Mapping, Generic[K, V]):
+class UnmodifiableDict[K, V](Mapping):
     """A `Mapping` implementation ."""
 
     def __init__(self, data: dict[K, V]):
