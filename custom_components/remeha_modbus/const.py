@@ -27,6 +27,12 @@ DOMAIN: Final[str] = "remeha_modbus"
 HA_CONFIG_VERSION = 1
 HA_CONFIG_MINOR_VERSION = 2
 
+# Versioning for the json storage
+STORAGE_MAJOR_VERSION = 1
+STORAGE_MINOR_VERSION = 0
+STORAGE_FILE_KEY = f"{DOMAIN}.storage"
+STORAGE_RUNTIME_KEY = f"{DOMAIN}_storage"
+
 MAXIMUM_NORMAL_SURFACE_IRRADIANCE_NL: Final[int] = 1000
 """The maximum normal surface irradiance in The Netherlands, in W/m²"""
 
