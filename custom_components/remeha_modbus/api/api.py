@@ -79,6 +79,9 @@ class DeviceBoardType(Enum):
 
     EEC = int("1b", 16)
     """Motherboard for gas boilers like GAS 120 Ace"""
+    
+    EHC_ALT = int("21", 16)
+    """Unknown/alternate heatpump mainboard (seen on Confida)"""
 
     GATEWAY = int("1e", 16)
     """A gateway, for example GTW-08 (modbus gateway)"""
@@ -90,6 +93,7 @@ class DeviceBoardType(Enum):
             DeviceBoardType.CU_GH,
             DeviceBoardType.CU_OH,
             DeviceBoardType.EHC,
+            DeviceBoardType.EHC_ALT,
             DeviceBoardType.EEC,
         ]
 
