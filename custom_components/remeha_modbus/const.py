@@ -2,7 +2,7 @@
 
 from datetime import date
 from enum import Enum, StrEnum
-from typing import Final, Self
+from typing import Any, Final, Literal, NamedTuple, Self, TypedDict
 
 import voluptuous as vol
 from homeassistant.components.climate.const import (
@@ -15,6 +15,7 @@ from homeassistant.components.sensor import (
     SensorEntityDescription,
     SensorStateClass,
 )
+from homeassistant.const import STATE_OFF, STATE_ON, STATE_UNAVAILABLE, STATE_UNKNOWN
 from homeassistant.helpers import config_validation as cv
 from pydantic import Field, model_validator
 from pydantic.dataclasses import dataclass
@@ -403,6 +404,64 @@ class ClimateZoneHeatingMode(Enum):
     STANDBY = 0
     HEATING = 1
     COOLING = 2
+
+
+class ClimateScheduleIdentity(NamedTuple):
+    """A key class to uniquely identify a climate zone schedule."""
+
+    zone_id: int
+
+    schedule_id: ClimateZoneScheduleId
+
+    weekday: Weekday
+
+
+class SchedulerStateAction(TypedDict):
+    """An action as defined in the attributes of a scheduler.schedule `State`."""
+
+    service: str
+    """The full name of the service to call, for example `climate.set_preset_mode`."""
+
+    data: dict[str, Any]
+    """The service data to go with the service call, for example `{'preset_mode': 'comfort'}`."""
+
+
+class SchedulerStateAttributes(TypedDict):
+    """The attributes field in a scheduler `State` instance."""
+
+    weekdays: list[Literal["mon", "tue", "wed", "thu", "fri", "sat", "sun"]]
+    """Weekdays at which the scheduler.schedule is active."""
+
+    timeslots: list[str]
+    """The timeslot ranges in the scheduler.schedule, in a format like `%H:%M:S - %H:%M:%S`.
+    For every timeslot there is a corresponding action.
+    """
+
+    entities: list[str]
+    """A list of entity ids to apply the scheduler.schedule to."""
+
+    actions: list[SchedulerStateAction]
+    """The actions for each timeslot."""
+
+    tags: list[str]
+    """An optional list of tags for the scheduler.schedule."""
+
+
+class SchedulerState(TypedDict):
+    """Represents the state attributes of a scheduler.schedule.
+
+    These attributes are not necessarily a 1:1 copy, but only refer to
+    those that are relevant for `remeha-modbus`.
+    """
+
+    entity_id: str
+    """The entity id of the scheduler.schedule."""
+
+    state: Literal[f"{STATE_ON}", f"{STATE_OFF}", f"{STATE_UNKNOWN}", f"{STATE_UNAVAILABLE}"]
+    """The state of the scheduler.schedule."""
+
+    attributes: SchedulerStateAttributes
+    """The attributes of the scheduler state."""
 
 
 CONFIG_AUTO_SCHEDULE: Final[str] = "auto_schedule"
