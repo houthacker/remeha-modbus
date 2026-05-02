@@ -1,8 +1,8 @@
 [submodule "submodules/scheduler-component"]
 	path = submodules/scheduler-component
 	url = https://github.com/nielsfaber/scheduler-component.git
-	ignore = dirty
+	ignore = all
 [submodule "submodules/ha-knmi"]
 	path = submodules/ha-knmi
 	url = https://github.com/golles/ha-knmi.git
-	ignore = dirty
+	ignore = all

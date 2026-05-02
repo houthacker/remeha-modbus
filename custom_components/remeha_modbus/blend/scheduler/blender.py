@@ -1,7 +1,9 @@
 """Module for synchronization between a `scheduler.schedule` and a `remeha_modbus.ZoneSchedule`."""
 
 import logging
+from typing import Any, cast
 
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import Event, HomeAssistant
 from remeha_modbus.blend.blender import BlenderState
 
@@ -77,7 +79,9 @@ class SchedulerBlender(Blender):
             )
 
             # Execute the scenario in a separate task since it requires I/O.
-            self._coordinator.config_entry.async_create_task(self._hass, scenario.async_execute())
+            cast(ConfigEntry[Any], self._coordinator.config_entry).async_create_task(
+                self._hass, scenario.async_execute()
+            )
         else:
             _LOGGER.debug(
                 "Ignoring ZoneSchedule-update event (zone_id=%d, schedule_id=%d, day=%s) because current blender state %s\
