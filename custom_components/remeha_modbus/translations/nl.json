@@ -126,10 +126,8 @@
       }
     },
     "switch": {
-      "remeha_modbus": {
-        "enable_schedule_sync": {
-          "name": "Schema synchronisatie."
-        }
+      "enable_schedule_sync": {
+        "name": "Schema synchronisatie."
       }
     }
   },
