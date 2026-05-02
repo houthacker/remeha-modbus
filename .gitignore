@@ -264,6 +264,6 @@ junit-coverage.xml
 config/custom_components
 config/www/community
 custom_components/hacs
-config/www/scheduler-card
+config/www/scheduler-card/**
 # pycharm
 .idea
