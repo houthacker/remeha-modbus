@@ -1,4 +1,4 @@
-"""Implementation of scenario 4 where an updated modbus schedule is synced with a scheduler.schedule, if linked."""
+"""Implementation of scenario 5 where an updated modbus schedule is synced with a scheduler.schedule, if linked."""
 
 from datetime import time, timedelta
 from enum import StrEnum
@@ -18,6 +18,7 @@ from custom_components.remeha_modbus.blend.scheduler.const import (
     SCHEDULER_TAG_PREFIX,
     SchedulerAction,
     SchedulerCondition,
+    SchedulerDomain,
     SchedulerSchedule,
     SchedulerTimeslot,
 )
@@ -209,7 +210,7 @@ class ModbusScheduleUpdated(Scenario):
             )
 
             await self._hass.services.async_call(
-                domain="scheduler",
+                domain=SchedulerDomain,
                 service=str(operation),
                 blocking=False,
                 return_response=False,
@@ -221,7 +222,7 @@ class ModbusScheduleUpdated(Scenario):
             operation: ServiceOperation = ServiceOperation.EDIT
 
             await self._hass.services.async_call(
-                domain="scheduler",
+                domain=SchedulerDomain,
                 service=str(operation),
                 blocking=False,
                 return_response=False,

@@ -430,6 +430,8 @@ class ZoneScheduleUID(NamedTuple):
 
 CONFIG_AUTO_SCHEDULE: Final[str] = "auto_schedule"
 
+EVENT_ZONE_SCHEDULE_UPDATED: Final[str] = f"{DOMAIN}_schedule_updated"
+
 BOOTSTRAP_BLENDERS_SERVICE_NAME: Final[str] = "bootstrap_blenders"
 
 READ_REGISTERS_SERVICE_NAME: Final[str] = "read_registers"
