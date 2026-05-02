@@ -1,11 +1,15 @@
 """Module for synchronization between a `scheduler.schedule` and a `remeha_modbus.ZoneSchedule`."""
 
 import logging
-from typing import Any, cast
+from typing import Any, cast, override
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import Event, HomeAssistant
 from remeha_modbus.blend.blender import BlenderState
+from remeha_modbus.blend.scheduler.const import SCHEDULER_INSTALLATION_URL, SchedulerDomain
+from remeha_modbus.blend.scheduler.helpers import scheduler_is_installed
+from remeha_modbus.const import DOMAIN
+from remeha_modbus.errors import MissingExternalComponent
 
 from custom_components.remeha_modbus.blend import Blender
 from custom_components.remeha_modbus.blend.scheduler.scenarios import (
@@ -126,6 +130,7 @@ class SchedulerBlender(Blender):
         """Return the current state of the Blender."""
         return self._state
 
+    @override
     def bootstrap(self):
         """Start listening for relevant events to enable executing the defined scenarios.
 
@@ -137,15 +142,15 @@ class SchedulerBlender(Blender):
 
         """
 
-        # if not scheduler_is_installed(self._hass):
-        #     raise MissingExternalComponent(
-        #         translation_domain=DOMAIN,
-        #         translation_key="missing_external_component",
-        #         translation_placeholders={
-        #             "component": SchedulerDomain,
-        #             "url": SCHEDULER_INSTALLATION_URL,
-        #         },
-        #     )
+        if not scheduler_is_installed(self._hass):
+            raise MissingExternalComponent(
+                translation_domain=DOMAIN,
+                translation_key="missing_external_component",
+                translation_placeholders={
+                    "component": SchedulerDomain,
+                    "url": SCHEDULER_INSTALLATION_URL,
+                },
+            )
 
         if self._state in [BlenderState.INITIAL, BlenderState.STOPPED]:
             _LOGGER.debug("Starting SchedulerBlender.")
@@ -170,6 +175,7 @@ class SchedulerBlender(Blender):
                 self._state.name,
             )
 
+    @override
     def unblend(self):
         """Stop listening for all events and stop executing scenarios."""
 
