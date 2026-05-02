@@ -103,7 +103,7 @@ class SchedulerBlender(Blender):
                 for c in self._coordinator.get_climates(predicate=lambda _: True)
                 if c.selected_schedule is not None
             ]:
-                for schedule in climate.current_schedule.values():
+                for schedule in [s for s in climate.current_schedule.values() if s is not None]:
                     scenario = ModbusScheduleUpdated(
                         hass=self._hass, coordinator=self._coordinator, schedule=schedule
                     )
@@ -111,7 +111,7 @@ class SchedulerBlender(Blender):
                     # Create a background task to synchronize the schedules between modbus
                     # and the scheduler component.
                     # Waiting on it is not required, so a background task is sufficient.
-                    self._coordinator.config_entry.async_create_background_task(
+                    cast(ConfigEntry[Any], self._coordinator.config_entry).async_create_task(
                         self._hass, scenario.async_execute()
                     )
         else:
