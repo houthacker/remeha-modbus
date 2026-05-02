@@ -132,7 +132,7 @@ class Appliance:
     status: ApplianceStatus
     """Shows various status fields."""
 
-    season_mode: SeasonalMode
+    season_mode: SeasonalMode | None
     """The current seasonal mode of the appliance."""
 
     def error_as_str(self) -> str:

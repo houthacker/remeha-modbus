@@ -45,7 +45,7 @@ async def async_setup_entry(
     )
 
 
-class RemehaSensorEntity(CoordinatorEntity, SensorEntity):
+class RemehaSensorEntity(CoordinatorEntity[RemehaUpdateCoordinator], SensorEntity):
     """Entity class to represent the different sensors of a Remeha appliance.
 
     All sensors that do not have a `owning_device` are linked to the first discovered device.
@@ -72,8 +72,8 @@ class RemehaSensorEntity(CoordinatorEntity, SensorEntity):
             self._parent_device_id = parent_device_id
 
         self._variable = variable
-        self._attr_name = description.name
-        self._attr_unique_id = description.name
+        self._attr_name = str(description.name)
+        self._attr_unique_id = str(description.name)
         self._attr_device_class = description.device_class
         self._attr_native_unit_of_measurement = description.native_unit_of_measurement
         self._attr_state_class = description.state_class
@@ -98,11 +98,17 @@ class RemehaSensorEntity(CoordinatorEntity, SensorEntity):
         if self._parent_device_id is None:
             return None
 
-        device_instance: DeviceInstance = self.coordinator.get_device(id=self._parent_device_id)
-        return DeviceInfo(
-            identifiers={(DOMAIN, device_instance.article_number)},
-            hw_version=f"HW{device_instance.hw_version[0]:02d}.{device_instance.hw_version[1]:02d}",
-            manufacturer="Remeha",
-            model=str(device_instance.board_category),
-            sw_version=f"SW{device_instance.sw_version[0]:02d}.{device_instance.sw_version[1]:02d}",
+        device_instance: DeviceInstance | None = self.coordinator.get_device(
+            id=self._parent_device_id
+        )
+        return (
+            DeviceInfo(
+                identifiers={(DOMAIN, str(device_instance.article_number))},
+                hw_version=f"HW{device_instance.hw_version[0]:02d}.{device_instance.hw_version[1]:02d}",
+                manufacturer="Remeha",
+                model=str(device_instance.board_category),
+                sw_version=f"SW{device_instance.sw_version[0]:02d}.{device_instance.sw_version[1]:02d}",
+            )
+            if device_instance is not None
+            else None
         )

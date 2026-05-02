@@ -1,17 +1,21 @@
 """Remeha Modbus service calls."""
 
 import logging
+from typing import cast
 
 from homeassistant.components.weather import SERVICE_GET_FORECASTS
 from homeassistant.components.weather.const import ATTR_WEATHER_TEMPERATURE_UNIT
 from homeassistant.components.weather.const import DOMAIN as WeatherDomain
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import UnitOfTemperature
-from homeassistant.core import HomeAssistant, ServiceCall, ServiceResponse, SupportsResponse
+from homeassistant.core import HomeAssistant, ServiceCall, ServiceResponse, State, SupportsResponse
 from pymodbus import ModbusException
+from remeha_modbus.blend.scheduler.blender import EventDispatcher as SchedulerEventDispatcher
+from remeha_modbus.blend.scheduler.blender import SchedulerBlender
 
 from custom_components.remeha_modbus.const import (
     AUTO_SCHEDULE_SERVICE_NAME,
+    BOOTSTRAP_BLENDERS_SERVICE_NAME,
     CONFIG_AUTO_SCHEDULE,
     DOMAIN,
     READ_REGISTERS_REGISTER_COUNT,
@@ -23,6 +27,7 @@ from custom_components.remeha_modbus.const import (
 )
 from custom_components.remeha_modbus.coordinator import RemehaUpdateCoordinator
 from custom_components.remeha_modbus.errors import (
+    MissingExternalComponent,
     RemehaIncorrectServiceCall,
     RemehaServiceException,
 )
@@ -49,7 +54,7 @@ def register_services(
 
     async def dhw_auto_schedule(_: ServiceCall) -> None:
         _LOGGER.debug("Retrieving weather forecast...")
-        forecasts: dict = await hass.services.async_call(
+        forecasts = await hass.services.async_call(
             domain=WeatherDomain,
             service=SERVICE_GET_FORECASTS,
             target={"entity_id": config.data[WEATHER_ENTITY_ID], "type": "hourly"},
@@ -59,7 +64,7 @@ def register_services(
         _LOGGER.debug("Weather forecast retrieved.")
 
         weather_entity_id: str = config.data[WEATHER_ENTITY_ID]
-        temperature_unit: str = hass.states.get(weather_entity_id).attributes[
+        temperature_unit: str = cast(State, hass.states.get(weather_entity_id)).attributes[
             ATTR_WEATHER_TEMPERATURE_UNIT
         ]
 
@@ -74,7 +79,7 @@ def register_services(
             )
 
         await coordinator.async_dhw_auto_schedule(
-            hourly_forecasts=forecasts.get(weather_entity_id, {}).get("forecast", []),
+            hourly_forecasts=cast(dict, forecasts).get(weather_entity_id, {}).get("forecast", []),
             temperature_unit=UnitOfTemperature(temperature_unit),
         )
 
@@ -84,16 +89,37 @@ def register_services(
         struct_format: str = call.data[READ_REGISTERS_STRUCT_FORMAT]
 
         try:
-            return {
-                "value": await coordinator.async_read_registers(
-                    start_register=start_register,
-                    register_count=register_count,
-                    struct_format=struct_format,
-                )
-            }
+            return cast(
+                ServiceResponse,
+                {
+                    "value": await coordinator.async_read_registers(
+                        start_register=start_register,
+                        register_count=register_count,
+                        struct_format=struct_format,
+                    )
+                },
+            )
         except ModbusException as e:
             raise RemehaServiceException(
                 translation_domain=DOMAIN, translation_key="read_registers_modbus_error"
+            ) from e
+
+    async def async_bootstrap_blenders(_: ServiceCall) -> None:
+
+        try:
+            scheduler_blender = SchedulerBlender(
+                hass=hass,
+                coordinator=config.runtime_data["coordinator"],
+                dispatcher=SchedulerEventDispatcher(hass=hass),
+            )
+
+            scheduler_blender.bootstrap()
+
+            config.runtime_data["scheduler_blender"] = scheduler_blender
+
+        except MissingExternalComponent as e:
+            raise RemehaIncorrectServiceCall(
+                translation_domain=DOMAIN, translation_key="bootstrap_blenders_error"
             ) from e
 
     hass.services.async_register(
@@ -111,4 +137,10 @@ def register_services(
         service_func=async_read_registers,
         schema=READ_REGISTERS_SERVICE_SCHEMA,
         supports_response=SupportsResponse.ONLY,
+    )
+
+    hass.services.async_register(
+        domain=DOMAIN,
+        service=BOOTSTRAP_BLENDERS_SERVICE_NAME,
+        service_func=async_bootstrap_blenders,
     )

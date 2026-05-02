@@ -4,7 +4,7 @@ import logging
 import uuid
 from collections.abc import Generator
 from datetime import timedelta, tzinfo
-from typing import Any, Final
+from typing import Any, Final, cast
 from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import pytest
@@ -14,10 +14,10 @@ from homeassistant.components.weather import (
     SERVICE_GET_FORECASTS,
     Forecast,
     WeatherEntity,
-    WeatherEntityFeature,
     async_get_forecasts_service,
 )
 from homeassistant.components.weather.const import DOMAIN as WeatherDomain
+from homeassistant.components.weather.const import WeatherEntityFeature
 from homeassistant.const import CONF_HOST, CONF_NAME, CONF_PORT, CONF_TYPE
 from homeassistant.core import HomeAssistant, SupportsResponse
 from homeassistant.helpers.entity_component import EntityComponent
@@ -76,14 +76,14 @@ class MockWeatherEntity(MockEntity, WeatherEntity):
         """Return the hourly forecast in native units."""
 
         # TODO Update timestamps to now() + relative hours.
-        return load_json_value_fixture("weather_forecast.json")
+        return cast(list[Forecast], load_json_value_fixture("weather_forecast.json"))
 
 
 def get_api(
     mock_modbus_client: ModbusBaseClient,
     name: str = "test_api",
     device_address: int = 100,
-    time_zone: tzinfo = tz.gettz(TESTING_TIME_ZONE),
+    time_zone: tzinfo | None = tz.gettz(TESTING_TIME_ZONE),
 ) -> RemehaApi:
     """Create a new RemehaApi instance with a mocked modbus client."""
 
@@ -146,7 +146,7 @@ def mock_modbus_client(request) -> Generator[AsyncMock]:
 
         def get_registers(address: int, count: int) -> list[int]:
             return [
-                int(store["server"]["registers"][str(r)], 16)
+                int(store["server"]["registers"][str(r)], 16)  # type: ignore  # noqa: PGH003
                 for r in range(address, address + count)
             ]
 
@@ -163,7 +163,7 @@ def mock_modbus_client(request) -> Generator[AsyncMock]:
 
         async def write_to_store(address: int, values: list[int], **kwargs):
             for idx, r in enumerate(values):
-                store["server"]["registers"][str(address + idx)] = int(r).to_bytes(2).hex()
+                store["server"]["registers"][str(address + idx)] = int(r).to_bytes(2).hex()  # type: ignore  # noqa: PGH003
 
             write_pdu.side_effect = AsyncMock()
             write_pdu.isError = Mock(return_value=False)

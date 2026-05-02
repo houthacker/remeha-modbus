@@ -103,7 +103,7 @@ class UnmodifiableDict[K, V](Mapping):
 
         """
 
-        return UnmodifiableDict(data=dict(data))
+        return cls(data=dict(data))
 
     @classmethod
     def create(cls, data: dict[K, V]) -> Self:
@@ -120,7 +120,7 @@ class UnmodifiableDict[K, V](Mapping):
 
         """
 
-        return UnmodifiableDict(data=data)
+        return cls(data=data)
 
     def __getitem__(self, key: K) -> V:
         """Return the value of the mapping with key `key`.
@@ -133,7 +133,7 @@ class UnmodifiableDict[K, V](Mapping):
 
         """
 
-        return self._data[key]
+        return self._store[key]
 
     def __iter__(self):
         """Return an iterator over the keys of this dict."""

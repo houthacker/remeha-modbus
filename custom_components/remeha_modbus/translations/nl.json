@@ -124,6 +124,13 @@
           }
         }
       }
+    },
+    "switch": {
+      "remeha_modbus": {
+        "enable_schedule_sync": {
+          "name": "Schema synchronisatie."
+        }
+      }
     }
   },
   "services": {
@@ -189,6 +196,12 @@
     },
     "read_registers_unknown_error": {
       "message": "Onbekende fout tijdens het lezen van de registers. Zie log voor details."
+    },
+    "missing_external_component": {
+      "message": "Integratie '{component}' niet gevonden. Installeer de integratie en probeer het opnieuw. Installatie-instructies zijn te vinden op {url}."
+    },
+    "bootstrap_blenders_error": {
+      "message": "Fout tijdens het koppelen met andere integraties."
     }
   }
 }

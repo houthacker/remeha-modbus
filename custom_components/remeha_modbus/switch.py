@@ -1,15 +1,17 @@
 """Platform for switches in the Remeha Modbus integration."""
 
-from typing import Final
+from typing import Final, cast
 
 from homeassistant.components.switch import SwitchDeviceClass, SwitchEntity, SwitchEntityDescription
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.restore_state import RestoreEntity
+from remeha_modbus.blend.scheduler.helpers import scheduler_is_installed
+from remeha_modbus.const import SWITCH_SCHEDULE_SYNC
 
 DESCRIPTIONS: Final[list[SwitchEntityDescription]] = [
-    SwitchEntityDescription(key="execute_scheduling_actions", name="execute_scheduling_actions")
+    SwitchEntityDescription(key=SWITCH_SCHEDULE_SYNC, name=SWITCH_SCHEDULE_SYNC)
 ]
 
 
@@ -18,7 +20,9 @@ async def async_setup_entry(
 ) -> None:
     """Create the sensor entities based on the given config entry."""
 
-    async_add_entities([RemehaModbusSwitch(name=description.name) for description in DESCRIPTIONS])
+    async_add_entities(
+        [RemehaModbusSwitch(name=cast(str, description.name)) for description in DESCRIPTIONS]
+    )
 
 
 class RemehaModbusSwitch(RestoreEntity, SwitchEntity):
@@ -42,7 +46,16 @@ class RemehaModbusSwitch(RestoreEntity, SwitchEntity):
     def translation_key(self) -> str:
         """The translation key for this switch."""
 
-        return self.name
+        return cast(str, self.name)
+
+    @property
+    def available(self) -> bool:
+        """Return whether this switch is available."""
+
+        if self._attr_name == SWITCH_SCHEDULE_SYNC:
+            return super().available and scheduler_is_installed(self.hass)
+
+        return super().available
 
     async def async_added_to_hass(self):
         """Post process after this entity has been added to hass."""

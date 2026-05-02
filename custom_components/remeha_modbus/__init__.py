@@ -3,14 +3,13 @@
 import logging
 
 from dateutil import tz
-from homeassistant.config_entries import (
-    ConfigEntry,
-    ConfigEntryError,
-    ConfigEntryNotReady,
-)
-from homeassistant.const import CONF_NAME, CONF_TYPE, Platform
-from homeassistant.core import HomeAssistant
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import CONF_NAME, CONF_TYPE, EVENT_HOMEASSISTANT_STARTED, Platform
+from homeassistant.core import Event, HomeAssistant
+from homeassistant.exceptions import ConfigEntryError, ConfigEntryNotReady
+from homeassistant.helpers.typing import NoEventData
 from pymodbus import ModbusException
+from remeha_modbus.api.store import RemehaModbusStorage
 
 from custom_components.remeha_modbus.api import (
     ConnectionType,
@@ -18,7 +17,9 @@ from custom_components.remeha_modbus.api import (
 )
 from custom_components.remeha_modbus.const import (
     AUTO_SCHEDULE_SELECTED_SCHEDULE,
+    BOOTSTRAP_BLENDERS_SERVICE_NAME,
     CONFIG_AUTO_SCHEDULE,
+    DOMAIN,
     REMEHA_PRESET_SCHEDULE_1,
 )
 from custom_components.remeha_modbus.coordinator import RemehaUpdateCoordinator
@@ -59,7 +60,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     except ModbusException as ex:
         raise ConfigEntryNotReady(f"Error while executing modbus health check: {ex}") from ex
 
-    coordinator = RemehaUpdateCoordinator(hass=hass, config_entry=entry, api=api)
+    coordinator = RemehaUpdateCoordinator(
+        hass=hass, config_entry=entry, api=api, store=RemehaModbusStorage(hass=hass)
+    )
 
     await coordinator.async_config_entry_first_refresh()
 
@@ -67,8 +70,20 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
-    # Register services only if everything else has been set up ssuccessfully.
+    # Register services only after everything else has been set up successfully.
     register_services(hass=hass, config=entry, coordinator=coordinator)
+
+    # Bootstrap the blenders after HA has started.
+    async def _bootstrap_blenders(_: Event[NoEventData]) -> None:
+        """Call the bootstrap_blenders service to set up communication with other integrations."""
+        await hass.services.async_call(
+            domain=DOMAIN,
+            service=BOOTSTRAP_BLENDERS_SERVICE_NAME,
+            blocking=False,
+            return_response=False,
+        )
+
+    hass.bus.async_listen_once(event_type=EVENT_HOMEASSISTANT_STARTED, listener=_bootstrap_blenders)
 
     return True
 

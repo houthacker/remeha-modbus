@@ -3,7 +3,8 @@
 import logging
 from collections.abc import Callable
 from datetime import timedelta
-from typing import Any
+from typing import Any, cast
+from uuid import UUID
 
 from dateutil.parser import parse
 from homeassistant.config_entries import ConfigEntry
@@ -11,16 +12,17 @@ from homeassistant.const import UnitOfTemperature
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from pymodbus import ModbusException
+from remeha_modbus.api.store import RemehaModbusStorage
 
 from custom_components.remeha_modbus.api import (
-    Appliance,
-    ClimateZone,
     DeviceInstance,
-    HourlyForecast,
     RemehaApi,
-    WeatherForecast,
-    ZoneSchedule,
 )
+from custom_components.remeha_modbus.api.appliance import Appliance
+from custom_components.remeha_modbus.api.climate_zone import ClimateZone, ZoneSchedule
+from custom_components.remeha_modbus.api.schedule import HourlyForecast, WeatherForecast
+from custom_components.remeha_modbus.api.store import WaitingListEntry
+from custom_components.remeha_modbus.blend.scheduler.const import SchedulerLinkView, ZoneScheduleUID
 from custom_components.remeha_modbus.const import (
     AUTO_SCHEDULE_SELECTED_SCHEDULE,
     DHW_BOILER_CONFIG_SECTION,
@@ -39,6 +41,7 @@ from custom_components.remeha_modbus.const import (
     WEEKDAY_TO_MODBUS_VARIABLE,
     BoilerConfiguration,
     BoilerEnergyLabel,
+    ClimateZoneScheduleId,
     ModbusVariableDescription,
     PVSystem,
     PVSystemOrientation,
@@ -80,7 +83,13 @@ def _config_to_pv_config(config: ConfigEntry) -> PVSystem:
 class RemehaUpdateCoordinator(DataUpdateCoordinator):
     """Remeha Modbus coordinator."""
 
-    def __init__(self, hass: HomeAssistant, config_entry: ConfigEntry, api: RemehaApi):
+    def __init__(
+        self,
+        hass: HomeAssistant,
+        config_entry: ConfigEntry,
+        api: RemehaApi,
+        store: RemehaModbusStorage,
+    ):
         """Create a new instance the Remeha Modbus update coordinator."""
 
         # Update every 20 seconds. This is not user-configurable, since it depends on the amount of
@@ -93,8 +102,13 @@ class RemehaUpdateCoordinator(DataUpdateCoordinator):
             always_update=False,
             config_entry=config_entry,
         )
+
+        self._store: RemehaModbusStorage = store
         self._api: RemehaApi = api
         self._device_instances: dict[int, DeviceInstance] = {}
+
+        # This list is populated by the added_to_hass() callback of the climate entities.
+        self._climate_entity_ids: list[str] = []
 
     def _before_first_update(self) -> bool:
         return not self.data or "climates" not in self.data
@@ -107,12 +121,16 @@ class RemehaUpdateCoordinator(DataUpdateCoordinator):
         except ModbusException as ex:
             raise UpdateFailed("Error while communicating with modbus device.") from ex
 
-    async def _async_update_data(self) -> dict[str, dict[int, ClimateZone]]:
+    async def _async_update_data(
+        self,
+    ) -> dict[
+        str, Appliance | dict[int, ClimateZone] | bool | dict[ModbusVariableDescription, Any]
+    ]:
         try:
             zones: list[ClimateZone] = []
             is_cooling_forced: bool = await self._api.async_is_cooling_forced
             appliance: Appliance = await self._api.async_read_appliance()
-            sensors = await self._api.async_read_sensor_values(REMEHA_SENSORS)
+            sensors = await self._api.async_read_sensor_values(list(REMEHA_SENSORS.keys()))
             if self._before_first_update():
                 zones = await self._api.async_read_zones()
             else:
@@ -184,6 +202,60 @@ class RemehaUpdateCoordinator(DataUpdateCoordinator):
         """Get the current value of a sensor."""
 
         return self.data["sensors"][variable]
+
+    def enqueue_for_linking(self, uuid: UUID, zone_schedule_uid: ZoneScheduleUID):
+        """Store the given identifiers, preparing them for linking a `ZoneSchedule` to a `scheduler.schedule`.
+
+        If an equal entry already exists, this method has no effect.
+
+        Args:
+            uuid (UUID): The unique identifier added to the list of tags in the `scheduler.schedule`.
+            zone_schedule_uid (ZoneScheduleUID): The unique identification of the `ZoneSchedule`.
+
+        """
+
+        self._store.add_to_waiting_list(uuid=uuid, zone_schedule_uid=zone_schedule_uid)
+
+    def pop_from_linking_waiting_list(self, uuid: UUID) -> WaitingListEntry | None:
+        """Pop the waiting identifiers with uuid `uuid` from the waiting list.
+
+        Args:
+            uuid (UUID): The uuid listed in the tags of the `scheduler.schedule`
+
+        Returns:
+            A tuple containing the requested identifiers to be linked, or `None` if no such item exists.
+
+        """
+
+        return self._store.pop_from_waiting_list(uuid=uuid)
+
+    async def async_get_scheduler_links(self) -> list[SchedulerLinkView]:
+        """Return a list of all current scheduler links."""
+        return [
+            SchedulerLinkView(
+                zone_schedule_uid=ZoneScheduleUID(
+                    zone_id=entry.zone_id,
+                    schedule_id=ClimateZoneScheduleId(entry.schedule_id),
+                    weekday=entry.weekday,
+                ),
+                scheduler_entity_id=entry.schedule_entity_id,
+            )
+            for entry in await self._store.async_get_all()
+        ]
+
+    async def async_get_linked_scheduler_entity(self, uid: ZoneScheduleUID) -> str | None:
+        """Get the entity id of the `scheduler.schedule` that is linked to the `ZoneSchedule` having the given id values.
+
+        Args:
+            uid: The unique identity of the zone schedule.
+
+        Returns:
+            str | None: The entity id of the linked `scheduler.schedule`, or `None` if no such entity exists.
+
+        """
+
+        entry = await self._store.async_get_attributes_by_zone(uid=uid)
+        return entry.schedule_entity_id if entry else None
 
     async def async_read_registers(
         self, start_register: int, register_count: int, struct_format: str
@@ -266,12 +338,12 @@ class RemehaUpdateCoordinator(DataUpdateCoordinator):
 
         schedule: ZoneSchedule = ZoneSchedule.generate(
             weather_forecast=weather_forecast,
-            pv_system=_config_to_pv_config(self.config_entry),
-            boiler_config=_config_to_boiler_config(self.config_entry),
+            pv_system=_config_to_pv_config(cast(ConfigEntry[Any], self.config_entry)),
+            boiler_config=_config_to_boiler_config(cast(ConfigEntry[Any], self.config_entry)),
             boiler_zone=dhw_zone,
             appliance_seasonal_mode=self.get_appliance().season_mode,
             schedule_id=HA_SCHEDULE_TO_REMEHA_SCHEDULE[
-                self.config_entry.data[AUTO_SCHEDULE_SELECTED_SCHEDULE]
+                cast(ConfigEntry[Any], self.config_entry).data[AUTO_SCHEDULE_SELECTED_SCHEDULE]
             ],
         )
 

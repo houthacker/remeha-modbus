@@ -1,4 +1,6 @@
-# Keep service name in sync with const.AUTO_SCHEDULE_SERVICE_NAME
+# Keep service names in sync with their respective name definitions in the const.py file.
+bootstrap_blenders:
+
 dhw_auto_schedule:
 
 read_registers:

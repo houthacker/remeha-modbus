@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from datetime import datetime, tzinfo
 from enum import Enum, StrEnum, auto
 from types import MappingProxyType
-from typing import Any, Self
+from typing import Any, Self, cast
 
 from homeassistant.const import CONF_HOST, CONF_PORT, CONF_TYPE
 from pymodbus import FramerType, ModbusException
@@ -40,6 +40,7 @@ from custom_components.remeha_modbus.const import (
 )
 from custom_components.remeha_modbus.helpers.gtw08 import TimeOfDay
 from custom_components.remeha_modbus.helpers.modbus import (
+    ModbusPrimitive,
     bytes_from_registers,
     from_registers,
     to_registers,
@@ -84,7 +85,7 @@ class DeviceBoardType(Enum):
 
     EEC = int("1b", 16)
     """Motherboard for gas boilers like GAS 120 Ace"""
-    
+
     EHC_ALT = int("21", 16)
     """Unknown/alternate heatpump mainboard (seen on Confida)"""
 
@@ -116,7 +117,7 @@ class DeviceBoardCategory:
     def __str__(self):
         """Textual representation of this DeviceBoardCategory."""
 
-        name: str = None
+        name: str
         match self.type:
             case DeviceBoardType.CU_GH:
                 name = "CU-GH"
@@ -295,7 +296,7 @@ class RemehaApi:
                     timeout=120,
                 )
 
-        return RemehaApi(
+        return cls(
             name=name,
             connection_type=connection_type,
             client=client,
@@ -323,9 +324,12 @@ class RemehaApi:
     async def async_is_cooling_forced(self) -> bool:
         """Return whether the appliance is in forced cooling mode."""
 
-        return from_registers(
-            registers=await self._async_read_registers(variable=MetaRegisters.COOLING_FORCED),
-            destination_variable=MetaRegisters.COOLING_FORCED,
+        return cast(
+            bool,
+            from_registers(
+                registers=await self._async_read_registers(variable=MetaRegisters.COOLING_FORCED),
+                destination_variable=MetaRegisters.COOLING_FORCED,
+            ),
         )
 
     async def async_read_registers(
@@ -406,12 +410,12 @@ class RemehaApi:
                 raise ModbusException("Connection to modbus device lost.")
 
         retries: int = 0
-        response: ModbusPDU = None
+        response: ModbusPDU
         while retries < 3:
             await _async_ensure_connected()
             response = await self._client.read_holding_registers(
                 address=variable.start_address + offset,
-                count=variable.count,
+                count=cast(int, variable.count),
                 device_id=self._device_address,
             )
 
@@ -492,7 +496,7 @@ class RemehaApi:
         try:
             await self.async_read_number_of_device_instances()
         except ValueError as ex:
-            raise ModbusException from ex
+            raise ModbusException("Modbus health check failed") from ex
 
         _LOGGER.debug("Modbus health check successful")
 
@@ -529,9 +533,14 @@ class RemehaApi:
 
         """
 
-        return from_registers(
-            registers=await self._async_read_registers(variable=MetaRegisters.NUMBER_OF_DEVICES),
-            destination_variable=MetaRegisters.NUMBER_OF_DEVICES,
+        return cast(
+            int,
+            from_registers(
+                registers=await self._async_read_registers(
+                    variable=MetaRegisters.NUMBER_OF_DEVICES
+                ),
+                destination_variable=MetaRegisters.NUMBER_OF_DEVICES,
+            ),
         )
 
     async def async_read_device_instance(self, id: int) -> DeviceInstance:
@@ -560,33 +569,45 @@ class RemehaApi:
 
         """
         device_register_offset: int = self.get_device_register_offset(id)
-        board_category = from_registers(
-            registers=await self._async_read_registers(
-                variable=DeviceInstanceRegisters.TYPE_BOARD,
-                offset=device_register_offset,
+        board_category = cast(
+            tuple[int, int],
+            from_registers(
+                registers=await self._async_read_registers(
+                    variable=DeviceInstanceRegisters.TYPE_BOARD,
+                    offset=device_register_offset,
+                ),
+                destination_variable=DeviceInstanceRegisters.TYPE_BOARD,
             ),
-            destination_variable=DeviceInstanceRegisters.TYPE_BOARD,
         )
-        sw_version = from_registers(
-            registers=await self._async_read_registers(
-                variable=DeviceInstanceRegisters.SW_VERSION,
-                offset=device_register_offset,
+        sw_version = cast(
+            tuple[int, int],
+            from_registers(
+                registers=await self._async_read_registers(
+                    variable=DeviceInstanceRegisters.SW_VERSION,
+                    offset=device_register_offset,
+                ),
+                destination_variable=DeviceInstanceRegisters.SW_VERSION,
             ),
-            destination_variable=DeviceInstanceRegisters.SW_VERSION,
         )
-        hw_version = from_registers(
-            registers=await self._async_read_registers(
-                variable=DeviceInstanceRegisters.HW_VERSION,
-                offset=device_register_offset,
+        hw_version = cast(
+            tuple[int, int],
+            from_registers(
+                registers=await self._async_read_registers(
+                    variable=DeviceInstanceRegisters.HW_VERSION,
+                    offset=device_register_offset,
+                ),
+                destination_variable=DeviceInstanceRegisters.HW_VERSION,
             ),
-            destination_variable=DeviceInstanceRegisters.HW_VERSION,
         )
-        article_number = from_registers(
-            registers=await self._async_read_registers(
-                variable=DeviceInstanceRegisters.ARTICLE_NUMBER,
-                offset=device_register_offset,
+        article_number = cast(
+            int,
+            from_registers(
+                registers=await self._async_read_registers(
+                    variable=DeviceInstanceRegisters.ARTICLE_NUMBER,
+                    offset=device_register_offset,
+                ),
+                destination_variable=DeviceInstanceRegisters.ARTICLE_NUMBER,
             ),
-            destination_variable=DeviceInstanceRegisters.ARTICLE_NUMBER,
         )
 
         return DeviceInstance(
@@ -611,9 +632,12 @@ class RemehaApi:
 
         """
 
-        current_error: int = from_registers(
-            registers=await self._async_read_registers(variable=MetaRegisters.CURRENT_ERROR),
-            destination_variable=MetaRegisters.CURRENT_ERROR,
+        current_error = cast(
+            int,
+            from_registers(
+                registers=await self._async_read_registers(variable=MetaRegisters.CURRENT_ERROR),
+                destination_variable=MetaRegisters.CURRENT_ERROR,
+            ),
         )
 
         raw_error_priority = from_registers(
@@ -628,26 +652,35 @@ class RemehaApi:
         )
         appliance_status: ApplianceStatus = ApplianceStatus(
             bits=(
-                from_registers(
-                    registers=await self._async_read_registers(
-                        variable=MetaRegisters.APPLIANCE_STATUS_1
+                cast(
+                    int,
+                    from_registers(
+                        registers=await self._async_read_registers(
+                            variable=MetaRegisters.APPLIANCE_STATUS_1
+                        ),
+                        destination_variable=MetaRegisters.APPLIANCE_STATUS_1,
                     ),
-                    destination_variable=MetaRegisters.APPLIANCE_STATUS_1,
                 ),
-                from_registers(
-                    registers=await self._async_read_registers(
-                        variable=MetaRegisters.APPLIANCE_STATUS_2
+                cast(
+                    int,
+                    from_registers(
+                        registers=await self._async_read_registers(
+                            variable=MetaRegisters.APPLIANCE_STATUS_2
+                        ),
+                        destination_variable=MetaRegisters.APPLIANCE_STATUS_2,
                     ),
-                    destination_variable=MetaRegisters.APPLIANCE_STATUS_2,
                 ),
             )
         )
 
-        sm_value: int | None = from_registers(
-            registers=await self._async_read_registers(variable=MetaRegisters.SEASON_MODE),
-            destination_variable=MetaRegisters.SEASON_MODE,
+        sm_value: int | None = cast(
+            int | None,
+            from_registers(
+                registers=await self._async_read_registers(variable=MetaRegisters.SEASON_MODE),
+                destination_variable=MetaRegisters.SEASON_MODE,
+            ),
         )
-        season_mode: SeasonalMode = SeasonalMode(sm_value) if sm_value is not None else None
+        season_mode: SeasonalMode | None = SeasonalMode(sm_value) if sm_value is not None else None
 
         return Appliance(
             current_error=current_error,
@@ -718,9 +751,12 @@ class RemehaApi:
             `ValueError`: If the retrieved modbus data cannot be deserialized successfully.
 
         """
-        return from_registers(
-            registers=await self._async_read_registers(variable=MetaRegisters.NUMBER_OF_ZONES),
-            destination_variable=MetaRegisters.NUMBER_OF_ZONES,
+        return cast(
+            int,
+            from_registers(
+                registers=await self._async_read_registers(variable=MetaRegisters.NUMBER_OF_ZONES),
+                destination_variable=MetaRegisters.NUMBER_OF_ZONES,
+            ),
         )
 
     async def async_read_zone(self, id: int) -> ClimateZone | None:
@@ -779,17 +815,23 @@ class RemehaApi:
             ),
             destination_variable=ZoneRegisters.FUNCTION,
         )
-        zone_short_name = from_registers(
-            registers=await self._async_read_registers(
-                variable=ZoneRegisters.SHORT_NAME, offset=zone_register_offset
+        zone_short_name = cast(
+            str,
+            from_registers(
+                registers=await self._async_read_registers(
+                    variable=ZoneRegisters.SHORT_NAME, offset=zone_register_offset
+                ),
+                destination_variable=ZoneRegisters.SHORT_NAME,
             ),
-            destination_variable=ZoneRegisters.SHORT_NAME,
         )
-        owning_device = from_registers(
-            registers=await self._async_read_registers(
-                variable=ZoneRegisters.OWNING_DEVICE, offset=zone_register_offset
+        owning_device = cast(
+            int | None,
+            from_registers(
+                registers=await self._async_read_registers(
+                    variable=ZoneRegisters.OWNING_DEVICE, offset=zone_register_offset
+                ),
+                destination_variable=ZoneRegisters.OWNING_DEVICE,
             ),
-            destination_variable=ZoneRegisters.OWNING_DEVICE,
         )
         zone_mode = from_registers(
             registers=await self._async_read_registers(
@@ -797,42 +839,60 @@ class RemehaApi:
             ),
             destination_variable=ZoneRegisters.MODE,
         )
-        temporary_setpoint = from_registers(
-            registers=await self._async_read_registers(
-                variable=ZoneRegisters.TEMPORARY_SETPOINT, offset=zone_register_offset
+        temporary_setpoint = cast(
+            float | None,
+            from_registers(
+                registers=await self._async_read_registers(
+                    variable=ZoneRegisters.TEMPORARY_SETPOINT, offset=zone_register_offset
+                ),
+                destination_variable=ZoneRegisters.TEMPORARY_SETPOINT,
             ),
-            destination_variable=ZoneRegisters.TEMPORARY_SETPOINT,
         )
-        room_setpoint = from_registers(
-            registers=await self._async_read_registers(
-                variable=ZoneRegisters.ROOM_MANUAL_SETPOINT, offset=zone_register_offset
+        room_setpoint = cast(
+            float | None,
+            from_registers(
+                registers=await self._async_read_registers(
+                    variable=ZoneRegisters.ROOM_MANUAL_SETPOINT, offset=zone_register_offset
+                ),
+                destination_variable=ZoneRegisters.ROOM_MANUAL_SETPOINT,
             ),
-            destination_variable=ZoneRegisters.ROOM_MANUAL_SETPOINT,
         )
-        dhw_comfort_setpoint = from_registers(
-            registers=await self._async_read_registers(
-                variable=ZoneRegisters.DHW_COMFORT_SETPOINT, offset=zone_register_offset
+        dhw_comfort_setpoint = cast(
+            float | None,
+            from_registers(
+                registers=await self._async_read_registers(
+                    variable=ZoneRegisters.DHW_COMFORT_SETPOINT, offset=zone_register_offset
+                ),
+                destination_variable=ZoneRegisters.DHW_COMFORT_SETPOINT,
             ),
-            destination_variable=ZoneRegisters.DHW_COMFORT_SETPOINT,
         )
-        dhw_reduced_setpoint = from_registers(
-            registers=await self._async_read_registers(
-                variable=ZoneRegisters.DHW_REDUCED_SETPOINT, offset=zone_register_offset
+        dhw_reduced_setpoint = cast(
+            float | None,
+            from_registers(
+                registers=await self._async_read_registers(
+                    variable=ZoneRegisters.DHW_REDUCED_SETPOINT, offset=zone_register_offset
+                ),
+                destination_variable=ZoneRegisters.DHW_REDUCED_SETPOINT,
             ),
-            destination_variable=ZoneRegisters.DHW_REDUCED_SETPOINT,
         )
-        dhw_calorifier_hysteresis = from_registers(
-            registers=await self._async_read_registers(
-                variable=ZoneRegisters.DHW_CALORIFIER_HYSTERESIS,
-                offset=zone_register_offset,
+        dhw_calorifier_hysteresis = cast(
+            float | None,
+            from_registers(
+                registers=await self._async_read_registers(
+                    variable=ZoneRegisters.DHW_CALORIFIER_HYSTERESIS,
+                    offset=zone_register_offset,
+                ),
+                destination_variable=ZoneRegisters.DHW_CALORIFIER_HYSTERESIS,
             ),
-            destination_variable=ZoneRegisters.DHW_CALORIFIER_HYSTERESIS,
         )
-        end_time_temporary_override = from_registers(
-            registers=await self._async_read_registers(
-                variable=ZoneRegisters.END_TIME_MODE_CHANGE, offset=zone_register_offset
+        end_time_temporary_override = cast(
+            bytes,
+            from_registers(
+                registers=await self._async_read_registers(
+                    variable=ZoneRegisters.END_TIME_MODE_CHANGE, offset=zone_register_offset
+                ),
+                destination_variable=ZoneRegisters.END_TIME_MODE_CHANGE,
             ),
-            destination_variable=ZoneRegisters.END_TIME_MODE_CHANGE,
         )
         selected_schedule = from_registers(
             registers=await self._async_read_registers(
@@ -841,12 +901,15 @@ class RemehaApi:
             ),
             destination_variable=ZoneRegisters.SELECTED_TIME_PROGRAM,
         )
-        room_temperature = from_registers(
-            registers=await self._async_read_registers(
-                variable=ZoneRegisters.CURRENT_ROOM_TEMPERATURE,
-                offset=zone_register_offset,
+        room_temperature = cast(
+            float | None,
+            from_registers(
+                registers=await self._async_read_registers(
+                    variable=ZoneRegisters.CURRENT_ROOM_TEMPERATURE,
+                    offset=zone_register_offset,
+                ),
+                destination_variable=ZoneRegisters.CURRENT_ROOM_TEMPERATURE,
             ),
-            destination_variable=ZoneRegisters.CURRENT_ROOM_TEMPERATURE,
         )
         heating_mode = from_registers(
             registers=await self._async_read_registers(
@@ -860,15 +923,18 @@ class RemehaApi:
             ),
             destination_variable=ZoneRegisters.PUMP_RUNNING,
         )
-        dhw_tank_temperature = from_registers(
-            registers=await self._async_read_registers(
-                variable=ZoneRegisters.DHW_TANK_TEMPERATURE, offset=zone_register_offset
+        dhw_tank_temperature = cast(
+            float | None,
+            from_registers(
+                registers=await self._async_read_registers(
+                    variable=ZoneRegisters.DHW_TANK_TEMPERATURE, offset=zone_register_offset
+                ),
+                destination_variable=ZoneRegisters.DHW_TANK_TEMPERATURE,
             ),
-            destination_variable=ZoneRegisters.DHW_TANK_TEMPERATURE,
         )
 
         # Read zone schedules
-        current_schedule: dict[Weekday, ZoneSchedule] = (
+        current_schedule: dict[Weekday, ZoneSchedule | None] = (
             {
                 day: await self.async_read_zone_schedule(
                     zone=id, schedule_id=ClimateZoneScheduleId(selected_schedule), day=day
@@ -884,13 +950,13 @@ class RemehaApi:
             type=ClimateZoneType(zone_type),
             function=ClimateZoneFunction(zone_function),
             short_name=zone_short_name,
-            owning_device=None if owning_device is None else int(owning_device),
+            owning_device=owning_device,
             mode=ClimateZoneMode(zone_mode),
             temporary_setpoint=temporary_setpoint,
             selected_schedule=(
                 None if selected_schedule is None else ClimateZoneScheduleId(selected_schedule)
             ),
-            heating_mode=(None if heating_mode is None else ClimateZoneHeatingMode(heating_mode)),
+            heating_mode=None if heating_mode is None else ClimateZoneHeatingMode(heating_mode),
             room_setpoint=room_setpoint,
             dhw_comfort_setpoint=dhw_comfort_setpoint,
             dhw_reduced_setpoint=dhw_reduced_setpoint,
@@ -949,42 +1015,60 @@ class RemehaApi:
             ),
             destination_variable=ZoneRegisters.MODE,
         )
-        temporary_setpoint = from_registers(
-            registers=await self._async_read_registers(
-                variable=ZoneRegisters.TEMPORARY_SETPOINT, offset=zone_register_offset
+        temporary_setpoint = cast(
+            float | None,
+            from_registers(
+                registers=await self._async_read_registers(
+                    variable=ZoneRegisters.TEMPORARY_SETPOINT, offset=zone_register_offset
+                ),
+                destination_variable=ZoneRegisters.TEMPORARY_SETPOINT,
             ),
-            destination_variable=ZoneRegisters.TEMPORARY_SETPOINT,
         )
-        room_setpoint = from_registers(
-            registers=await self._async_read_registers(
-                variable=ZoneRegisters.ROOM_MANUAL_SETPOINT, offset=zone_register_offset
+        room_setpoint = cast(
+            float | None,
+            from_registers(
+                registers=await self._async_read_registers(
+                    variable=ZoneRegisters.ROOM_MANUAL_SETPOINT, offset=zone_register_offset
+                ),
+                destination_variable=ZoneRegisters.ROOM_MANUAL_SETPOINT,
             ),
-            destination_variable=ZoneRegisters.ROOM_MANUAL_SETPOINT,
         )
-        dhw_comfort_setpoint = from_registers(
-            registers=await self._async_read_registers(
-                variable=ZoneRegisters.DHW_COMFORT_SETPOINT, offset=zone_register_offset
+        dhw_comfort_setpoint = cast(
+            float | None,
+            from_registers(
+                registers=await self._async_read_registers(
+                    variable=ZoneRegisters.DHW_COMFORT_SETPOINT, offset=zone_register_offset
+                ),
+                destination_variable=ZoneRegisters.DHW_COMFORT_SETPOINT,
             ),
-            destination_variable=ZoneRegisters.DHW_COMFORT_SETPOINT,
         )
-        dhw_reduced_setpoint = from_registers(
-            registers=await self._async_read_registers(
-                variable=ZoneRegisters.DHW_REDUCED_SETPOINT, offset=zone_register_offset
+        dhw_reduced_setpoint = cast(
+            float | None,
+            from_registers(
+                registers=await self._async_read_registers(
+                    variable=ZoneRegisters.DHW_REDUCED_SETPOINT, offset=zone_register_offset
+                ),
+                destination_variable=ZoneRegisters.DHW_REDUCED_SETPOINT,
             ),
-            destination_variable=ZoneRegisters.DHW_REDUCED_SETPOINT,
         )
-        dhw_calorifier_hysteresis = from_registers(
-            registers=await self._async_read_registers(
-                variable=ZoneRegisters.DHW_CALORIFIER_HYSTERESIS,
-                offset=zone_register_offset,
+        dhw_calorifier_hysteresis = cast(
+            float | None,
+            from_registers(
+                registers=await self._async_read_registers(
+                    variable=ZoneRegisters.DHW_CALORIFIER_HYSTERESIS,
+                    offset=zone_register_offset,
+                ),
+                destination_variable=ZoneRegisters.DHW_CALORIFIER_HYSTERESIS,
             ),
-            destination_variable=ZoneRegisters.DHW_CALORIFIER_HYSTERESIS,
         )
-        end_time_temporary_override = from_registers(
-            registers=await self._async_read_registers(
-                variable=ZoneRegisters.END_TIME_MODE_CHANGE, offset=zone_register_offset
+        end_time_temporary_override = cast(
+            bytes,
+            from_registers(
+                registers=await self._async_read_registers(
+                    variable=ZoneRegisters.END_TIME_MODE_CHANGE, offset=zone_register_offset
+                ),
+                destination_variable=ZoneRegisters.END_TIME_MODE_CHANGE,
             ),
-            destination_variable=ZoneRegisters.END_TIME_MODE_CHANGE,
         )
         selected_schedule = from_registers(
             registers=await self._async_read_registers(
@@ -993,12 +1077,15 @@ class RemehaApi:
             ),
             destination_variable=ZoneRegisters.SELECTED_TIME_PROGRAM,
         )
-        room_temperature = from_registers(
-            registers=await self._async_read_registers(
-                variable=ZoneRegisters.CURRENT_ROOM_TEMPERATURE,
-                offset=zone_register_offset,
+        room_temperature = cast(
+            float | None,
+            from_registers(
+                registers=await self._async_read_registers(
+                    variable=ZoneRegisters.CURRENT_ROOM_TEMPERATURE,
+                    offset=zone_register_offset,
+                ),
+                destination_variable=ZoneRegisters.CURRENT_ROOM_TEMPERATURE,
             ),
-            destination_variable=ZoneRegisters.CURRENT_ROOM_TEMPERATURE,
         )
         heating_mode = from_registers(
             registers=await self._async_read_registers(
@@ -1012,18 +1099,21 @@ class RemehaApi:
             ),
             destination_variable=ZoneRegisters.PUMP_RUNNING,
         )
-        dhw_tank_temperature = from_registers(
-            registers=await self._async_read_registers(
-                variable=ZoneRegisters.DHW_TANK_TEMPERATURE, offset=zone_register_offset
+        dhw_tank_temperature = cast(
+            float | None,
+            from_registers(
+                registers=await self._async_read_registers(
+                    variable=ZoneRegisters.DHW_TANK_TEMPERATURE, offset=zone_register_offset
+                ),
+                destination_variable=ZoneRegisters.DHW_TANK_TEMPERATURE,
             ),
-            destination_variable=ZoneRegisters.DHW_TANK_TEMPERATURE,
         )
 
         # Read zone schedules
-        current_schedule: dict[Weekday, ZoneSchedule] = (
+        current_schedule: dict[Weekday, ZoneSchedule | None] = (
             {
                 day: await self.async_read_zone_schedule(
-                    zone=zone, schedule_id=selected_schedule, day=day
+                    zone=zone, schedule_id=ClimateZoneScheduleId(selected_schedule), day=day
                 )
                 for day in Weekday
             }
@@ -1062,7 +1152,7 @@ class RemehaApi:
 
     async def async_read_zone_schedule(
         self, zone: ClimateZone | int, schedule_id: ClimateZoneScheduleId, day: Weekday
-    ) -> ZoneSchedule:
+    ) -> ZoneSchedule | None:
         """Read a single climate zone schedule from the modbus interface.
 
         Args:
@@ -1084,11 +1174,14 @@ class RemehaApi:
         zone_register_offset = self.get_zone_register_offset(zone_id)
         schedule_register_offset = self.get_schedule_register_offset(schedule=schedule_id)
 
-        schedule_bytes: bytes = from_registers(
-            registers=await self._async_read_registers(
-                variable=variable, offset=zone_register_offset + schedule_register_offset
+        schedule_bytes = cast(
+            bytes | None,
+            from_registers(
+                registers=await self._async_read_registers(
+                    variable=variable, offset=zone_register_offset + schedule_register_offset
+                ),
+                destination_variable=variable,
             ),
-            destination_variable=variable,
         )
 
         return (
@@ -1126,6 +1219,9 @@ class RemehaApi:
                 * If `value` is a `datetime` but `variable.data_type is not DataType.CIA_301_TIME_OF_DAY`.
 
         """
+        temp: ModbusPrimitive | bytes | Enum | ZoneSchedule | datetime | tuple[int, int] | None = (
+            value
+        )
 
         if isinstance(value, datetime):
             if variable.data_type is not DataType.CIA_301_TIME_OF_DAY:
@@ -1133,16 +1229,16 @@ class RemehaApi:
                     f"No conversion path from {type(value).__qualname__} to modbus data type {variable.data_type.name}."
                 )
 
-            value = TimeOfDay.to_bytes(value)
+            temp = TimeOfDay.to_bytes(value)
 
-        if isinstance(value, Enum):
-            value = value.value
+        if isinstance(temp, Enum):
+            temp = temp.value
 
-        if isinstance(value, ZoneSchedule):
-            value = value.encode()
+        if isinstance(temp, ZoneSchedule):
+            temp = temp.encode()
 
         await self._async_write_registers(
             variable=variable,
-            registers=to_registers(source_variable=variable, value=value),
+            registers=to_registers(source_variable=variable, value=cast(Any, temp)),
             offset=offset,
         )

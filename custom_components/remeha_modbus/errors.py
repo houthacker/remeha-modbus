@@ -21,3 +21,7 @@ class RemehaIncorrectServiceCall(ServiceValidationError):
 
 class RemehaServiceException(RemehaModbusError):
     """Exception to indicate that a service call failed, although it was used correctly."""
+
+
+class MissingExternalComponent(RemehaModbusError):
+    """Exception to indicate that a component is missing which is required for some action."""

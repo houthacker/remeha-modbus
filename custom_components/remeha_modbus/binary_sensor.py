@@ -2,6 +2,7 @@
 
 import logging
 from collections.abc import Callable
+from typing import cast
 
 from homeassistant.components.binary_sensor import BinarySensorDeviceClass, BinarySensorEntity
 from homeassistant.config_entries import ConfigEntry
@@ -26,7 +27,7 @@ async def async_setup_entry(
     mainboards: list[DeviceInstance] = coordinator.get_devices(
         predicate=lambda device: device.is_mainboard()
     )
-    parent_device_id: int = mainboards[0].id if mainboards else None
+    parent_device_id: int | None = mainboards[0].id if mainboards else None
 
     async_add_entities(
         [
@@ -139,7 +140,7 @@ async def async_setup_entry(
     )
 
 
-class RemehaBinarySensorEntity(CoordinatorEntity, BinarySensorEntity):
+class RemehaBinarySensorEntity(CoordinatorEntity[RemehaUpdateCoordinator], BinarySensorEntity):
     """Binary sensor entity to describe the different appliance status fields in the Remeha Modbus integration."""
 
     _attr_has_entity_name = True
@@ -150,7 +151,7 @@ class RemehaBinarySensorEntity(CoordinatorEntity, BinarySensorEntity):
         coordinator: RemehaUpdateCoordinator,
         parent_device_id: int | None,
         name: str,
-        device_class: BinarySensorDeviceClass,
+        device_class: BinarySensorDeviceClass | None,
         state_func: Callable[[], bool | None],
     ):
         """Create a new binary sensor entity."""
@@ -171,7 +172,7 @@ class RemehaBinarySensorEntity(CoordinatorEntity, BinarySensorEntity):
     def translation_key(self) -> str:
         """The translation key."""
 
-        return self.name
+        return cast(str, self.name)
 
     @property
     def is_on(self) -> bool | None:
@@ -196,10 +197,12 @@ class RemehaBinarySensorEntity(CoordinatorEntity, BinarySensorEntity):
         if self._parent_device_id is None:
             return None
 
-        device_instance: DeviceInstance = self.coordinator.get_device(id=self._parent_device_id)
+        device_instance: DeviceInstance | None = self.coordinator.get_device(
+            id=self._parent_device_id
+        )
         return (
             DeviceInfo(
-                identifiers={(DOMAIN, device_instance.article_number)},
+                identifiers={(DOMAIN, str(device_instance.article_number))},
                 hw_version=f"HW{device_instance.hw_version[0]:02d}.{device_instance.hw_version[1]:02d}",
                 manufacturer="Remeha",
                 model=str(device_instance.board_category),

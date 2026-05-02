@@ -3,6 +3,7 @@
 import logging
 from dataclasses import dataclass
 from datetime import datetime, tzinfo
+from typing import cast
 
 from custom_components.remeha_modbus.const import (
     ClimateZoneFunction,
@@ -53,10 +54,10 @@ class ClimateZone:
     Although this property is optional, it needn't be `None` if `mode != ClimateZoneMode.SCHEDULING`.
     """
 
-    current_schedule: dict[Weekday, ZoneSchedule]
+    current_schedule: dict[Weekday, ZoneSchedule | None]
     """If `selected_schedule` has a value, `current_schedule` contains the schedule for all week days."""
 
-    heating_mode: ClimateZoneHeatingMode
+    heating_mode: ClimateZoneHeatingMode | None
     """The current heating mode of the climate zone"""
 
     temporary_setpoint: float | None
@@ -96,17 +97,17 @@ class ClimateZone:
                 and self.temporary_setpoint_end_time >= datetime.now(tz=self.time_zone)
             ):
                 # A setpoint override is currently active.
-                return self.temporary_setpoint
+                return cast(float, self.temporary_setpoint)
 
         current_timeslot: Timeslot | None = get_current_timeslot(
             schedule=self.current_schedule, time_zone=self.time_zone
         )
-        if current_timeslot:
+        if current_timeslot is not None:
             match current_timeslot.setpoint_type:
                 case TimeslotSetpointType.ECO:
-                    return self.dhw_reduced_setpoint
+                    return cast(float, self.dhw_reduced_setpoint)
                 case TimeslotSetpointType.COMFORT:
-                    return self.dhw_comfort_setpoint
+                    return cast(float, self.dhw_comfort_setpoint)
 
         return -1
 
@@ -195,10 +196,10 @@ class ClimateZone:
         """
 
         if self.is_central_heating():
-            return self.room_temperature
+            return cast(float, self.room_temperature)
 
         if self.is_domestic_hot_water():
-            return self.dhw_tank_temperature
+            return cast(float, self.dhw_tank_temperature)
 
         _LOGGER.warning("Current temperature not supported for climate zones of type %s", self.type)
         return -1
@@ -283,3 +284,8 @@ class ClimateZone:
             )
 
         return False
+
+    def __hash__(self) -> int:
+        """Return a hash of this zone."""
+
+        return hash(vars(self))

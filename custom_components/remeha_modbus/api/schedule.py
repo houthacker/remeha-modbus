@@ -32,11 +32,7 @@ from custom_components.remeha_modbus.errors import AutoSchedulingError
 from custom_components.remeha_modbus.helpers.iterators import consecutive_groups
 
 from .appliance import SeasonalMode
-
-
-class ClimateZone:
-    """Forward declaration."""
-
+from .climate_zone import ClimateZone
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -85,7 +81,7 @@ class HourlyForecast:
     def from_dict(cls, data: dict[str, Any]) -> Self:
         """Create a new `HourlyForecast` based on a dict containing weather forecast attributes."""
 
-        return HourlyForecast(
+        return cls(
             start_time=parser.parse(data[ForecastField.DATETIME]),
             temperature=float(data[ForecastField.TEMPERATURE]),
             solar_irradiance=int(data[ForecastField.SOLAR_IRRADIANCE])
@@ -194,7 +190,7 @@ class Timeslot:
         setpoint_type = TimeslotSetpointType(int.from_bytes(encoded_time_slot[1:2]))
         activity = TimeslotActivity(int.from_bytes(encoded_time_slot[:1]))
 
-        return Timeslot(
+        return cls(
             activity=activity,
             setpoint_type=setpoint_type,
             switch_time=_minutes_to_time(time_steps * REMEHA_TIME_PROGRAM_TIME_STEP_MINUTES),
@@ -225,7 +221,7 @@ class ZoneSchedule:
 
     #### Temperature encoding
     The switch temperature is encoded into activities (heat/cool, dhw, dhw primary).
-    The setpoints of these activities are defined elswhere. The activities are defined as follows:
+    The setpoints of these activities are defined elsewhere. The activities are defined as follows:
 
     | Name      | MSB     | LSB                     |
     |:----------|:-------:|------------------------:|
@@ -305,7 +301,7 @@ class ZoneSchedule:
 
                 yield Timeslot.decode(encoded_time_slot=slot_bytes)
 
-        return ZoneSchedule(id=id, zone_id=zone_id, day=day, time_slots=list(_generate_timeslots()))
+        return cls(id=id, zone_id=zone_id, day=day, time_slots=list(_generate_timeslots()))
 
     @classmethod
     def generate(
@@ -314,7 +310,7 @@ class ZoneSchedule:
         pv_system: PVSystem,
         boiler_config: BoilerConfiguration,
         boiler_zone: ClimateZone,
-        appliance_seasonal_mode: SeasonalMode,
+        appliance_seasonal_mode: SeasonalMode | None,
         schedule_id: ClimateZoneScheduleId,
     ) -> Self:
         """Generate a `ZoneSchedule` for the next day, based on the weather forecast.
@@ -358,9 +354,9 @@ class ZoneSchedule:
             math.ceil(
                 (
                     (
-                        boiler_config.volume
+                        cast(float, boiler_config.volume)
                         * WATER_SPECIFIC_HEAT_CAPACITY_KJ
-                        * boiler_zone.dhw_calorifier_hysteresis
+                        * cast(float, boiler_zone.dhw_calorifier_hysteresis)
                     )
                     / 3600
                 )
@@ -388,7 +384,8 @@ class ZoneSchedule:
             boiler_config.heat_loss_rate
             if boiler_config.heat_loss_rate is not None
             else _energy_label_to_heat_loss_rate(
-                label=boiler_config.energy_label, volume=boiler_config.volume
+                label=cast(BoilerEnergyLabel, boiler_config.energy_label),
+                volume=cast(float, boiler_config.volume),
             )
         )
 
@@ -401,30 +398,43 @@ class ZoneSchedule:
 
         # In the summer, only allow DHW heating in the morning and the afternoon.
         # In the winter, only allow DHW heating when it's (possibly) warmest outside.
+        # If seasonal mode is unknown, allow heating all day.
         #
         # This prevents heating at night when there's no solar power, and also when
         # central heating or cooling should have priority.
         # TODO make configurable?
+        if appliance_seasonal_mode is None:
+            _LOGGER.warning(
+                "Your Remeha appliance does not specify a seasonal mode, allowing DHW boiler heating at all hours."
+            )
+
         usable_hours = (
-            [range(10, 23)]
-            if appliance_seasonal_mode in [SeasonalMode.SUMMER_NEUTRAL_BAND, SeasonalMode.SUMMER]
-            else [range(10, 17)]
+            [range(24)]
+            if appliance_seasonal_mode is None
+            else (
+                [range(10, 23)]
+                if appliance_seasonal_mode
+                in [SeasonalMode.SUMMER_NEUTRAL_BAND, SeasonalMode.SUMMER]
+                else [range(10, 17)]
+            )
         )
 
         # Calculate static PV system efficiency, based on orientation and tilt.
         # The tilt is rounded up to the next smallest multiple of ten.
         static_pv_efficiency: float = PV_EFFICIENCY_TABLE[pv_system.orientation][
-            min(math.ceil(pv_system.tilt / 10) * 10, PV_MAX_TILT_DEGREES)
+            min(math.ceil(cast(float, pv_system.tilt) / 10) * 10, PV_MAX_TILT_DEGREES)
         ]
         _LOGGER.debug("Static PV efficiency is %.2f", static_pv_efficiency)
 
         # Calculate dynamic PV system efficiency, using efficiency decrease of its age.
         pv_efficiency: float = static_pv_efficiency
         if pv_system.annual_efficiency_decrease != 0.0:
-            system_runtime: datetime.timedelta = datetime.date.today() - pv_system.installation_date
-            decreased_percent: float = (
-                system_runtime.days / 365
-            ) * pv_system.annual_efficiency_decrease
+            system_runtime: datetime.timedelta = datetime.date.today() - cast(
+                datetime.date, pv_system.installation_date
+            )
+            decreased_percent: float = (system_runtime.days / 365) * cast(
+                float, pv_system.annual_efficiency_decrease
+            )
             pv_efficiency *= (100 - decreased_percent) / 100
             _LOGGER.debug(
                 "PV efficiency is %.2f after applying annual efficiency decrease", pv_efficiency
@@ -434,7 +444,7 @@ class ZoneSchedule:
         forecasted_kwh_yield: dict[int, int] = {
             fc.start_time.hour: int(
                 (
-                    (fc.solar_irradiance / MAXIMUM_NORMAL_SURFACE_IRRADIANCE_NL)
+                    (cast(int, fc.solar_irradiance) / MAXIMUM_NORMAL_SURFACE_IRRADIANCE_NL)
                     * pv_system.nominal_power
                     * pv_efficiency
                 )
@@ -516,7 +526,7 @@ class ZoneSchedule:
 
             yield from all_timeslots
 
-        return ZoneSchedule(
+        return cls(
             id=schedule_id,
             zone_id=boiler_zone.id,
             # When presented with old data (like in testing), the week day returned here is
@@ -531,7 +541,7 @@ class ZoneSchedule:
 
 
 def get_current_timeslot(
-    schedule: dict[Weekday, ZoneSchedule] | None, time_zone: datetime.tzinfo | None
+    schedule: dict[Weekday, ZoneSchedule | None] | None, time_zone: datetime.tzinfo | None
 ) -> Timeslot | None:
     """Retrieve the current schedule time slot.
 

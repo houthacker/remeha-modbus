@@ -125,6 +125,13 @@
           }
         }
       }
+    },
+    "switch": {
+      "remeha_modbus": {
+        "enable_schedule_sync": {
+          "name": "Schedule synchronization"
+        }
+      }
     }
   },
   "services": {
@@ -190,6 +197,12 @@
     },
     "read_registers_unknown_error": {
       "message": "An unknown error occurred while reading modbus registers. See log for details."
+    },
+    "missing_external_component": {
+      "message": "Missing external component '{component}'. Please install it and retry; installation instructions are at {url}."
+    },
+    "bootstrap_blenders_error": {
+      "message": "Error while setting up links with other integrations."
     }
   }
 }

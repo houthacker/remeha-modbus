@@ -4,7 +4,9 @@ from homeassistant.core import HomeAssistant, State
 from homeassistant.helpers.template import integration_entities
 from pydantic import TypeAdapter
 
-from custom_components.remeha_modbus.const import DOMAIN, SchedulerState
+from custom_components.remeha_modbus.const import DOMAIN
+
+from .const import SchedulerDomain, SchedulerState
 
 
 def to_scheduler_state(state: State) -> SchedulerState:
@@ -44,3 +46,14 @@ def links_exclusively_to_remeha_climate(
         return linked_entities[0] in integration_entities(hass=hass, entry_name=DOMAIN)
 
     return False
+
+
+def scheduler_is_installed(hass: HomeAssistant) -> bool:
+    """Return whether the `scheduler` integration has been installed.
+
+    Args:
+        hass (HomeAssistant): The current Home Assistant instance.
+
+    """
+
+    return SchedulerDomain in hass.config.components

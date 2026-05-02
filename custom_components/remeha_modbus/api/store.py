@@ -8,11 +8,13 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.storage import Store
 from pydantic.dataclasses import dataclass
 
+from custom_components.remeha_modbus.blend.scheduler.const import ZoneScheduleUID
 from custom_components.remeha_modbus.const import (
     STORAGE_FILE_KEY,
     STORAGE_MAJOR_VERSION,
     STORAGE_MINOR_VERSION,
     ClimateZoneScheduleId,
+    Weekday,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -25,11 +27,8 @@ class WaitingListEntry:
     uuid: UUID
     """The uuid that is listed in the tags of the `scheduler.schedule`."""
 
-    zone_id: int
-    """The id of the `ClimateZone`."""
-
-    schedule_id: ClimateZoneScheduleId
-    """The id of the `ZoneSchedule`."""
+    zone_schedule_uid: ZoneScheduleUID
+    """The unique identification of the `ZoneSchedule`."""
 
 
 @dataclass(slots=True, frozen=True)
@@ -41,6 +40,9 @@ class ScheduleAttributesEntry:
 
     schedule_id: int
     """The id of the `ZoneSchedule`."""
+
+    weekday: Weekday
+    """The Weekday of the `ZoneSchedule`"""
 
     schedule_entity_id: str
     """The entity id of the `scheduler.schedule`."""
@@ -76,24 +78,20 @@ class RemehaModbusStorage:
             key=STORAGE_FILE_KEY,
         )
 
-    def _climate_key(self, zone_id: int, schedule_id: ClimateZoneScheduleId) -> str:
-        return f"{zone_id}.{schedule_id.value}"
-
-    def add_to_waiting_list(self, uuid: UUID, zone_id: int, schedule_id: ClimateZoneScheduleId):
+    def add_to_waiting_list(self, uuid: UUID, zone_schedule_uid: ZoneScheduleUID):
         """Add a new entry to the list of zone schedules waiting to be linked.
 
         If an equal entry exists on the waiting list, this method has no effect.
 
         Args:
             uuid (UUID): The unique identifier added to the list of tags in the `scheduler.schedule`.
-            zone_id (int): The id of the related `ClimateZone`.
-            schedule_id (ClimateZoneScheduleId): The id of the related `ZoneSchedule`.
+            zone_schedule_uid (ZoneScheduleUID): The unique identifier of the `ZoneSchedule`.
 
         """
 
         if uuid not in self._waiting_list:
             self._waiting_list[uuid] = WaitingListEntry(
-                uuid=uuid, zone_id=zone_id, schedule_id=schedule_id
+                uuid=uuid, zone_schedule_uid=zone_schedule_uid
             )
 
     def pop_from_waiting_list(self, uuid: UUID) -> WaitingListEntry | None:
@@ -111,7 +109,7 @@ class RemehaModbusStorage:
     async def async_load(self):
         """Load the data from the backing file."""
 
-        data: dict = await self._store.async_load()
+        data: dict | None = await self._store.async_load()
         attrs_by_climate_key: MutableMapping[str, ScheduleAttributesEntry] = {}
         attrs_by_entity_id: MutableMapping[str, ScheduleAttributesEntry] = {}
 
@@ -120,11 +118,15 @@ class RemehaModbusStorage:
                 attrs_entry = ScheduleAttributesEntry(
                     zone_id=int(entry["zone_id"]),
                     schedule_id=int(entry["schedule_id"]),
+                    weekday=Weekday[entry["weekday"]],
                     schedule_entity_id=entry["schedule_entity_id"],
                 )
-                climate_key = self._climate_key(
-                    zone_id=attrs_entry.zone_id,
-                    schedule_id=ClimateZoneScheduleId(attrs_entry.schedule_id),
+                climate_key = str(
+                    ZoneScheduleUID(
+                        zone_id=attrs_entry.zone_id,
+                        schedule_id=ClimateZoneScheduleId(attrs_entry.schedule_id),
+                        weekday=attrs_entry.weekday,
+                    )
                 )
 
                 attrs_by_climate_key[climate_key] = attrs_entry
@@ -154,22 +156,19 @@ class RemehaModbusStorage:
         self._cache_by_entity_id = {}
 
     async def async_get_attributes_by_zone(
-        self, zone_id: int, schedule_id: ClimateZoneScheduleId
+        self, uid: ZoneScheduleUID
     ) -> ScheduleAttributesEntry | None:
-        """Get the schedule attributes for the given `schedule_id` of `ClimateZone` with `zone_id`.
+        """Get the schedule attributes for the given `uid`.
 
         Args:
-            zone_id (int): The id of the zone the schedule belongs to.
-            schedule_id (ClimateZoneScheduleId): The id of the schedule within the zone.
+            uid: The unique identity of the related climate schedule.
 
         Returns:
             (ScheduleAttributesEntry | None) The requested schedule attributes, or `None` if no such attributes exist.
 
         """
 
-        return self._cache_by_climate_key.get(
-            self._climate_key(zone_id=zone_id, schedule_id=schedule_id)
-        )
+        return self._cache_by_climate_key.get(str(uid))
 
     async def async_get_attributes_by_entity_id(
         self, entity_id: str
@@ -187,7 +186,7 @@ class RemehaModbusStorage:
         return self._cache_by_entity_id.get(entity_id)
 
     async def async_upsert_schedule_attributes(
-        self, zone_id: int, schedule_id: ClimateZoneScheduleId, schedule_entity_id: str
+        self, uid: ZoneScheduleUID
     ) -> ScheduleAttributesEntry:
         """Create a new, or update an existing `ScheduleAttributesEntry`.
 
@@ -195,39 +194,39 @@ class RemehaModbusStorage:
         if `schedule_entity_id` is different.
 
         Args:
-            zone_id (int): The id of the zone the schedule belongs to.
-            schedule_id (ClimateZoneScheduleId): The id of the schedule within the zone.
-            schedule_entity_id (str): The entity id of the related `scheduler.schedule`.
+            uid (ZoneScheduleUID): The unique identification of the zone schedule.
 
         """
 
         entry = ScheduleAttributesEntry(
-            zone_id=zone_id, schedule_id=schedule_id.value, schedule_entity_id=schedule_entity_id
+            zone_id=uid.zone_id,
+            schedule_id=uid.schedule_id.value,
+            weekday=Weekday(uid.weekday.name),
+            schedule_entity_id="",  # TODO uid.schedule_entity_id,
         )
 
-        self._cache_by_climate_key[self._climate_key(zone_id=zone_id, schedule_id=schedule_id)] = (
-            entry
-        )
-        self._cache_by_entity_id[schedule_entity_id] = entry
+        self._cache_by_climate_key[str(uid)] = entry
+        self._cache_by_entity_id[""] = entry  # TODO uid.schedule_entity_id
         await self.async_save()
 
         return entry
 
-    async def async_remove_schedule_attributes(
-        self, zone_id: int, schedule_id: ClimateZoneScheduleId
-    ) -> bool:
+    async def async_remove_schedule_attributes(self, uid: ZoneScheduleUID) -> bool:
         """Remove the attributes of the schedule in the given zone.
+
+        Args:
+            uid (ZoneScheduleUID): The unique identification of the zone schedule.
 
         Returns:
             bool: `True` if the store contents changed due to this removal, `False` otherwise.
 
         """
 
-        entry = await self.async_get_attributes_by_zone(zone_id=zone_id, schedule_id=schedule_id)
+        entry = await self.async_get_attributes_by_zone(uid=uid)
         if entry is None:
             return False
 
-        del self._cache_by_climate_key[self._climate_key(zone_id=zone_id, schedule_id=schedule_id)]
+        del self._cache_by_climate_key[str(uid)]
         del self._cache_by_entity_id[entry.schedule_entity_id]
 
         await self.async_save()

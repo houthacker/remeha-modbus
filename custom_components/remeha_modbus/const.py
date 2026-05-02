@@ -2,7 +2,7 @@
 
 from datetime import date
 from enum import Enum, StrEnum
-from typing import Any, Final, Literal, NamedTuple, Self, TypedDict
+from typing import Final, NamedTuple, Self
 
 import voluptuous as vol
 from homeassistant.components.climate.const import (
@@ -15,7 +15,6 @@ from homeassistant.components.sensor import (
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.const import STATE_OFF, STATE_ON, STATE_UNAVAILABLE, STATE_UNKNOWN
 from homeassistant.helpers import config_validation as cv
 from pydantic import Field, model_validator
 from pydantic.dataclasses import dataclass
@@ -33,6 +32,13 @@ STORAGE_MAJOR_VERSION = 1
 STORAGE_MINOR_VERSION = 0
 STORAGE_FILE_KEY = f"{DOMAIN}.storage"
 STORAGE_RUNTIME_KEY = f"{DOMAIN}_storage"
+
+SWITCH_SCHEDULE_SYNC: Final[str] = "enable_schedule_sync"
+"""Entity name of the switch that determines whether schedules are synchronized.
+
+Enabling this requires the user to have installed the `scheduler-card` and `scheduler-component`
+integrations.
+"""
 
 MAXIMUM_NORMAL_SURFACE_IRRADIANCE_NL: Final[int] = 1000
 """The maximum normal surface irradiance in The Netherlands, in W/m²"""
@@ -62,6 +68,8 @@ PV_MIN_TILT_DEGREES: Final[int] = 10
 
 PV_MAX_TILT_DEGREES: Final[int] = 90
 """The maximum supported PV system tilt"""
+
+ATTR_ZONE_ID: Final[str] = "zone_id"
 
 
 # DHW auto scheduling
@@ -406,7 +414,7 @@ class ClimateZoneHeatingMode(Enum):
     COOLING = 2
 
 
-class ClimateScheduleIdentity(NamedTuple):
+class ZoneScheduleUID(NamedTuple):
     """A key class to uniquely identify a climate zone schedule."""
 
     zone_id: int
@@ -415,56 +423,14 @@ class ClimateScheduleIdentity(NamedTuple):
 
     weekday: Weekday
 
-
-class SchedulerStateAction(TypedDict):
-    """An action as defined in the attributes of a scheduler.schedule `State`."""
-
-    service: str
-    """The full name of the service to call, for example `climate.set_preset_mode`."""
-
-    data: dict[str, Any]
-    """The service data to go with the service call, for example `{'preset_mode': 'comfort'}`."""
-
-
-class SchedulerStateAttributes(TypedDict):
-    """The attributes field in a scheduler `State` instance."""
-
-    weekdays: list[Literal["mon", "tue", "wed", "thu", "fri", "sat", "sun"]]
-    """Weekdays at which the scheduler.schedule is active."""
-
-    timeslots: list[str]
-    """The timeslot ranges in the scheduler.schedule, in a format like `%H:%M:S - %H:%M:%S`.
-    For every timeslot there is a corresponding action.
-    """
-
-    entities: list[str]
-    """A list of entity ids to apply the scheduler.schedule to."""
-
-    actions: list[SchedulerStateAction]
-    """The actions for each timeslot."""
-
-    tags: list[str]
-    """An optional list of tags for the scheduler.schedule."""
-
-
-class SchedulerState(TypedDict):
-    """Represents the state attributes of a scheduler.schedule.
-
-    These attributes are not necessarily a 1:1 copy, but only refer to
-    those that are relevant for `remeha-modbus`.
-    """
-
-    entity_id: str
-    """The entity id of the scheduler.schedule."""
-
-    state: Literal[f"{STATE_ON}", f"{STATE_OFF}", f"{STATE_UNKNOWN}", f"{STATE_UNAVAILABLE}"]
-    """The state of the scheduler.schedule."""
-
-    attributes: SchedulerStateAttributes
-    """The attributes of the scheduler state."""
+    def __str__(self):
+        """Return a string representation of this object."""
+        return f"{self.zone_id}.{self.schedule_id}.{self.weekday.name}"
 
 
 CONFIG_AUTO_SCHEDULE: Final[str] = "auto_schedule"
+
+BOOTSTRAP_BLENDERS_SERVICE_NAME: Final[str] = "bootstrap_blenders"
 
 READ_REGISTERS_SERVICE_NAME: Final[str] = "read_registers"
 READ_REGISTERS_START_REGISTER: Final[str] = "start_register"
@@ -694,6 +660,8 @@ class ModbusVariableDescription:
             )
 
         self.count = ensure_register_count() if self.count is None else self.count
+
+        return self
 
 
 class MetaRegisters:
@@ -977,7 +945,7 @@ class ZoneRegisters:
 
 
 class HybridRegisters:
-    """Registers for hybrid applianceds."""
+    """Registers for hybrid appliances."""
 
     COP_CALCULATED: Final[ModbusVariableDescription] = ModbusVariableDescription(
         start_address=9230, name="varHpCOPCalculated", data_type=DataType.UINT16, scale=0.001

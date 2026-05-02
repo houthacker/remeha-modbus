@@ -1,7 +1,5 @@
 """Config flow for the Remeha Modbus integration."""
 
-from __future__ import annotations
-
 import logging
 from typing import Any
 
@@ -154,7 +152,7 @@ def _auto_scheduling_schema(current: ConfigEntry | None = None) -> vol.Schema:
                         ): cv.positive_float,
                         vol.Optional(
                             DHW_BOILER_ENERGY_LABEL,
-                            current.data[DHW_BOILER_CONFIG_SECTION].get(
+                            default=current.data[DHW_BOILER_CONFIG_SECTION].get(
                                 DHW_BOILER_ENERGY_LABEL, vol.UNDEFINED
                             )
                             if current
@@ -394,7 +392,7 @@ class RemehaConfigFlow(ConfigFlow, domain=DOMAIN):
             errors=errors,
         )
 
-    async def async_step_reconfigure(self: ConfigFlow, user_input: dict[str, Any] | None = None):
+    async def async_step_reconfigure(self, user_input: dict[str, Any] | None = None):
         """Reconfigure the modbus connection."""
 
         errors: dict[str, str] = {}
