@@ -28,12 +28,12 @@ async def test_subscribe_to_entity_updates(
         def listener1(_):
             pass
 
-        unsub1 = dispatcher.subscribe_to_entity_updates(entity_id=entity_id, listener=listener1)
+        unsub1 = dispatcher.subscribe_to_updated_entities(entity_id=entity_id, listener=listener1)
 
         def listener2(_):
             pass
 
-        unsub2 = dispatcher.subscribe_to_entity_updates(entity_id=entity_id, listener=listener2)
+        unsub2 = dispatcher.subscribe_to_updated_entities(entity_id=entity_id, listener=listener2)
 
         assert callable(unsub1) and callable(unsub2)
         assert unsub1 is not unsub2
@@ -60,10 +60,14 @@ async def test_entity_update_listener_gets_called(
         def _dhw_listener(_):
             parameters["dhw_listener_calls"] = parameters["dhw_listener_calls"] + 1
 
-        unsub = dispatcher.subscribe_to_entity_updates(entity_id=entity_id, listener=_dhw_listener)
+        unsub = dispatcher.subscribe_to_updated_entities(
+            entity_id=entity_id, listener=_dhw_listener
+        )
 
         coordinator: RemehaUpdateCoordinator = mock_config_entry.runtime_data["coordinator"]
         dhw_zone = coordinator.get_climate(id=2)
+        assert dhw_zone is not None
+        assert dhw_zone.current_setpoint is not None
 
         # Update the DHW climate by setting a new setpoint.
         await hass.services.async_call(

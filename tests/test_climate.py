@@ -5,21 +5,19 @@ from unittest.mock import patch
 
 import pytest
 from dateutil import tz
-from homeassistant.components.climate import (
-    HVACAction,
-    HVACMode,
-)
 from homeassistant.components.climate.const import DOMAIN as ClimateDomain
 from homeassistant.components.climate.const import (
     PRESET_COMFORT,
     PRESET_ECO,
     PRESET_NONE,
+    HVACAction,
+    HVACMode,
 )
 from homeassistant.const import STATE_OFF
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ServiceNotSupported, ServiceValidationError
 
-from custom_components.remeha_modbus.climate import ClimateZone, InvalidClimateContext
+from custom_components.remeha_modbus.climate import InvalidClimateContext
 from custom_components.remeha_modbus.const import (
     REMEHA_PRESET_SCHEDULE_1,
     REMEHA_PRESET_SCHEDULE_2,
@@ -94,6 +92,7 @@ async def test_dhw_climate(hass: HomeAssistant, mock_modbus_client, mock_config_
         )
 
         dhw = hass.states.get(entity_id=dhw.entity_id)
+        assert dhw is not None
         assert dhw.attributes["temperature"] == 60.0
 
         # Cannot turn a DHW climate on or off
@@ -128,6 +127,7 @@ async def test_dhw_climate(hass: HomeAssistant, mock_modbus_client, mock_config_
                 blocking=True,
             )
             dhw = hass.states.get(entity_id=dhw.entity_id)
+            assert dhw is not None
             assert dhw.attributes["preset_mode"] == preset
 
         # Unsupported preset
@@ -192,6 +192,7 @@ async def test_ch_climate(hass: HomeAssistant, mock_modbus_client, mock_config_e
         )
 
         circa1 = hass.states.get(entity_id="climate.remeha_modbus_test_hub_circa1")
+        assert circa1 is not None
         assert circa1.attributes["temperature"] == circa1.attributes["max_temp"]
 
         # Setting mode to the same value raises no exception
@@ -205,6 +206,7 @@ async def test_ch_climate(hass: HomeAssistant, mock_modbus_client, mock_config_e
             blocking=True,
         )
         circa1 = hass.states.get(entity_id="climate.remeha_modbus_test_hub_circa1")
+        assert circa1 is not None
         assert circa1.attributes["preset_mode"] == ClimateZoneMode.MANUAL.name.lower()
 
         # Turn it off.
@@ -216,6 +218,7 @@ async def test_ch_climate(hass: HomeAssistant, mock_modbus_client, mock_config_e
         )
 
         circa1 = hass.states.get(entity_id="climate.remeha_modbus_test_hub_circa1")
+        assert circa1 is not None
         assert circa1.state == STATE_OFF
 
         # Setting HVAC mode influences preset mode
@@ -231,6 +234,7 @@ async def test_ch_climate(hass: HomeAssistant, mock_modbus_client, mock_config_e
 
         # Preset mode must have changed to previously selected schedule.
         circa1 = hass.states.get(entity_id="climate.remeha_modbus_test_hub_circa1")
+        assert circa1 is not None
         assert circa1.state == "auto"
         assert circa1.attributes["preset_mode"] == REMEHA_PRESET_SCHEDULE_1
 
@@ -247,6 +251,7 @@ async def test_ch_climate(hass: HomeAssistant, mock_modbus_client, mock_config_e
 
         # Preset mode must have changed to manual
         circa1 = hass.states.get(entity_id="climate.remeha_modbus_test_hub_circa1")
+        assert circa1 is not None
         assert circa1.attributes["preset_mode"] == ClimateZoneMode.MANUAL.name.lower()
 
         # Change preset to schedule
@@ -260,6 +265,7 @@ async def test_ch_climate(hass: HomeAssistant, mock_modbus_client, mock_config_e
             blocking=True,
         )
         circa1 = hass.states.get(entity_id="climate.remeha_modbus_test_hub_circa1")
+        assert circa1 is not None
         assert circa1.attributes["preset_mode"] == REMEHA_PRESET_SCHEDULE_1
 
 
@@ -296,6 +302,7 @@ async def test_ch_temporary_setpoint_override(
 
         # When in scheduling mode, reading the current setpoint is not yet supported.
         circa1 = hass.states.get(entity_id="climate.remeha_modbus_test_hub_circa1")
+        assert circa1 is not None
         assert circa1.attributes["preset_mode"] == REMEHA_PRESET_SCHEDULE_1
         assert circa1.attributes["temperature"] == -1
 
@@ -331,6 +338,7 @@ async def test_dhw_temporary_setpoint_override(
         )
 
         dhw = hass.states.get(entity_id="climate.remeha_modbus_test_hub_dhw")
+        assert dhw is not None
         assert dhw.attributes["preset_mode"] == REMEHA_PRESET_SCHEDULE_1
 
         # Current setpoint must be resolved when in scheduling mode.
@@ -350,13 +358,16 @@ async def test_dhw_temporary_setpoint_override(
         )
 
         dhw = hass.states.get(entity_id="climate.remeha_modbus_test_hub_dhw")
+        assert dhw is not None
         assert dhw.attributes["preset_mode"] == REMEHA_PRESET_SCHEDULE_1
 
         # Current setpoint must have been updated
         assert dhw.attributes["temperature"] == new_setpoint
 
         # And temporary override end time must be set.
-        zone: ClimateZone = await api.async_read_zone(id=2)
+        zone = await api.async_read_zone(id=2)
+        assert zone is not None
+        assert zone.temporary_setpoint_end_time is not None
         assert zone.is_domestic_hot_water()
         assert zone.temporary_setpoint_end_time > datetime.now(
             tz=tz.gettz(name=hass.config.time_zone)
@@ -392,6 +403,7 @@ async def test_dhw_climate_hvac_mode_off(
         )
 
         dhw = hass.states.get(entity_id="climate.remeha_modbus_test_hub_dhw")
+        assert dhw is not None
         assert dhw.state == STATE_OFF
         assert dhw.attributes["preset_mode"] == PRESET_ECO
         assert dhw.attributes["temperature"] == 25
@@ -433,6 +445,7 @@ async def test_dhw_climate_hvac_mode_heat(
         )
 
         dhw = hass.states.get(entity_id="climate.remeha_modbus_test_hub_dhw")
+        assert dhw is not None
         assert dhw.state == "heat"
         assert dhw.attributes["preset_mode"] == PRESET_COMFORT
         assert dhw.attributes["temperature"] == 55
@@ -485,6 +498,7 @@ async def test_dhw_climate_hvac_mode_auto(
         )
 
         dhw = hass.states.get(entity_id="climate.remeha_modbus_test_hub_dhw")
+        assert dhw is not None
         assert dhw.state == "auto"
         assert dhw.attributes["preset_mode"] == REMEHA_PRESET_SCHEDULE_2
         assert dhw.attributes["hvac_action"] == HVACAction.HEATING
@@ -529,6 +543,7 @@ async def test_dhw_climate_preset_mode_schedule(
         )
 
         dhw = hass.states.get(entity_id="climate.remeha_modbus_test_hub_dhw")
+        assert dhw is not None
         assert dhw.state == "auto"
         assert dhw.attributes["preset_mode"] == REMEHA_PRESET_SCHEDULE_1
         assert dhw.attributes["hvac_action"] == HVACAction.HEATING
@@ -570,6 +585,7 @@ async def test_dhw_climate_preset_mode_eco(
         )
 
         dhw = hass.states.get(entity_id="climate.remeha_modbus_test_hub_dhw")
+        assert dhw is not None
         assert dhw.state == "off"
         assert dhw.attributes["preset_mode"] == PRESET_ECO
         assert dhw.attributes["hvac_action"] == HVACAction.IDLE
@@ -612,6 +628,7 @@ async def test_dhw_climate_preset_mode_comfort(
         )
 
         dhw = hass.states.get(entity_id="climate.remeha_modbus_test_hub_dhw")
+        assert dhw is not None
         assert dhw.state == "heat"
         assert dhw.attributes["preset_mode"] == PRESET_COMFORT
         assert dhw.attributes["hvac_action"] == HVACAction.HEATING
