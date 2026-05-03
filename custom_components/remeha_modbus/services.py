@@ -12,6 +12,7 @@ from homeassistant.core import HomeAssistant, ServiceCall, ServiceResponse, Stat
 from pymodbus import ModbusException
 from remeha_modbus.blend.scheduler.blender import EventDispatcher as SchedulerEventDispatcher
 from remeha_modbus.blend.scheduler.blender import SchedulerBlender
+from remeha_modbus.helpers.entities import is_schedule_sync_enabled
 
 from custom_components.remeha_modbus.const import (
     AUTO_SCHEDULE_SERVICE_NAME,
@@ -118,9 +119,12 @@ def register_services(
             config.runtime_data["scheduler_blender"] = scheduler_blender
 
         except MissingExternalComponent as e:
-            raise RemehaIncorrectServiceCall(
-                translation_domain=DOMAIN, translation_key="bootstrap_blenders_error"
-            ) from e
+            # If the scheduler integration is not installed but schedule sync
+            # has been enabled by the user, throw an exception.
+            if is_schedule_sync_enabled(hass):
+                raise RemehaIncorrectServiceCall(
+                    translation_domain=DOMAIN, translation_key="bootstrap_blenders_error"
+                ) from e
 
     hass.services.async_register(
         domain=DOMAIN,

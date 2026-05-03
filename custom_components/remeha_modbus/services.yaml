@@ -4,7 +4,6 @@ bootstrap_blenders:
 dhw_auto_schedule:
 
 read_registers:
-  target:
   fields:
     start_register:
       required: true
