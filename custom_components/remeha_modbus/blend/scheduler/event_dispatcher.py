@@ -193,7 +193,7 @@ class EventDispatcher:
 
         return lambda: self._remove_entity_listeners[domain].remove(listener)
 
-    def subscribe_to_entity_updates(
+    def subscribe_to_updated_entities(
         self, entity_id: str, listener: EntityEventCallback
     ) -> UnsubscribeCallback:
         """Register the listener to receive updates if the entity with `entity_id` changed.
