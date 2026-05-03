@@ -82,9 +82,19 @@ def _config_to_pv_config(config: ConfigEntry) -> PVSystem:
 
 
 def _get_updated_schedules(
-    old: dict[str, ClimateZone], new: dict[str, ClimateZone]
+    old: dict[int, ClimateZone] | None, new: dict[int, ClimateZone]
 ) -> list[ZoneSchedule]:
     """Return the updated zone schedules from `new`."""
+
+    # When the coordinator first retrieves all data from modbus,
+    # 'old' hasn't been set and therefore is None.
+    if old is None:
+        return [
+            schedule
+            for zone in new.values()
+            for schedule in zone.current_schedule.values()
+            if schedule is not None
+        ]
 
     updated_new_schedules: list[ZoneSchedule] = []
     for key, old_zone in old.items():
@@ -153,11 +163,12 @@ class RemehaUpdateCoordinator(DataUpdateCoordinator):
         str, Appliance | dict[int, ClimateZone] | bool | dict[ModbusVariableDescription, Any]
     ]:
         try:
+            before_first_update = self._before_first_update()
             zones: list[ClimateZone] = []
             is_cooling_forced: bool = await self._api.async_is_cooling_forced
             appliance: Appliance = await self._api.async_read_appliance()
             sensors = await self._api.async_read_sensor_values(list(REMEHA_SENSORS.keys()))
-            if self._before_first_update():
+            if before_first_update:
                 zones = await self._api.async_read_zones()
             else:
                 zones = [
@@ -167,7 +178,8 @@ class RemehaUpdateCoordinator(DataUpdateCoordinator):
 
             # Fire an event for each updated ZoneSchedule.
             self._fire_schedule_update_events(
-                old_zones=self.data["climates"], new_zones={str(zone.id): zone for zone in zones}
+                old_zones=None if before_first_update else self.data["climates"],
+                new_zones={zone.id: zone for zone in zones},
             )
 
         except ModbusException as ex:
@@ -181,9 +193,9 @@ class RemehaUpdateCoordinator(DataUpdateCoordinator):
         }
 
     def _fire_schedule_update_events(
-        self, old_zones: dict[str, ClimateZone], new_zones: dict[str, ClimateZone]
+        self, old_zones: dict[int, ClimateZone] | None, new_zones: dict[int, ClimateZone]
     ) -> None:
-        # Both dics must have exactly the same keys. If this is not the case,
+        # Both dicts must have exactly the same keys. If this is not the case,
         # that would indicate a zone had been added in the Remeha appliance.
         # This scenario is explicitly not supported.
 
