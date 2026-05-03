@@ -5,7 +5,7 @@ import logging
 import math
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Self, cast
+from typing import TYPE_CHECKING, Any, Self, cast
 
 from dateutil import parser, relativedelta
 from homeassistant.const import UnitOfTemperature
@@ -32,7 +32,9 @@ from custom_components.remeha_modbus.errors import AutoSchedulingError
 from custom_components.remeha_modbus.helpers.iterators import consecutive_groups
 
 from .appliance import SeasonalMode
-from .climate_zone import ClimateZone
+
+if TYPE_CHECKING:
+    from .climate_zone import ClimateZone  # noqa: TC004
 
 _LOGGER = logging.getLogger(__name__)
 
