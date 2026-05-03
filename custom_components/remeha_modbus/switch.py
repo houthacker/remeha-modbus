@@ -4,6 +4,7 @@ from typing import Final, cast
 
 from homeassistant.components.switch import SwitchDeviceClass, SwitchEntity, SwitchEntityDescription
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import STATE_ON
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.restore_state import RestoreEntity
@@ -62,7 +63,7 @@ class RemehaModbusSwitch(RestoreEntity, SwitchEntity):
         await super().async_added_to_hass()
 
         prev_state = await self.async_get_last_state()
-        self._attr_is_on = prev_state.state == "on" if prev_state is not None else False
+        self._attr_is_on = prev_state.state == STATE_ON if prev_state is not None else False
 
         self.async_schedule_update_ha_state(True)
 
