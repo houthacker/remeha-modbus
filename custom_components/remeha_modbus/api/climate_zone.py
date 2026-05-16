@@ -88,7 +88,7 @@ class ClimateZone:
     """Whether the zone pump is currently running"""
 
     time_zone: tzinfo | None
-    """The time zone of the repated appliance"""
+    """The time zone of the related appliance"""
 
     def _current_dhw_scheduling_setpoint(self) -> float:
         if self.temporary_setpoint_end_time is not None:

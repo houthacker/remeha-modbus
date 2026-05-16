@@ -20,6 +20,20 @@ from pymodbus.client import (
 )
 from pymodbus.pdu import ModbusPDU
 
+from custom_components.remeha_modbus.api.appliance import (
+    Appliance,
+    ApplianceErrorPriority,
+    ApplianceStatus,
+    SeasonalMode,
+)
+from custom_components.remeha_modbus.api.climate_zone import (
+    ClimateZone,
+    ClimateZoneFunction,
+    ClimateZoneHeatingMode,
+    ClimateZoneMode,
+    ClimateZoneScheduleId,
+    ClimateZoneType,
+)
 from custom_components.remeha_modbus.const import (
     MODBUS_DEVICE_ADDRESS,
     MODBUS_SERIAL_BAUDRATE,
@@ -46,15 +60,6 @@ from custom_components.remeha_modbus.helpers.modbus import (
     to_registers,
 )
 
-from .appliance import Appliance, ApplianceErrorPriority, ApplianceStatus, SeasonalMode
-from .climate_zone import (
-    ClimateZone,
-    ClimateZoneFunction,
-    ClimateZoneHeatingMode,
-    ClimateZoneMode,
-    ClimateZoneScheduleId,
-    ClimateZoneType,
-)
 from .schedule import ZoneSchedule
 
 _LOGGER = logging.getLogger(__name__)
@@ -961,11 +966,11 @@ class RemehaApi:
             dhw_comfort_setpoint=dhw_comfort_setpoint,
             dhw_reduced_setpoint=dhw_reduced_setpoint,
             dhw_calorifier_hysteresis=dhw_calorifier_hysteresis,
-            temporary_setpoint_end_time=TimeOfDay.from_bytes(
-                data=end_time_temporary_override, time_zone=self._time_zone
-            )
-            if end_time_temporary_override is not None
-            else None,
+            temporary_setpoint_end_time=(
+                TimeOfDay.from_bytes(data=end_time_temporary_override, time_zone=self._time_zone)
+                if end_time_temporary_override is not None
+                else None
+            ),
             room_temperature=room_temperature,
             pump_running=bool(pump_running),
             dhw_tank_temperature=dhw_tank_temperature,
@@ -1138,11 +1143,11 @@ class RemehaApi:
             dhw_comfort_setpoint=dhw_comfort_setpoint,
             dhw_reduced_setpoint=dhw_reduced_setpoint,
             dhw_calorifier_hysteresis=dhw_calorifier_hysteresis,
-            temporary_setpoint_end_time=TimeOfDay.from_bytes(
-                data=end_time_temporary_override, time_zone=self._time_zone
-            )
-            if end_time_temporary_override is not None
-            else None,
+            temporary_setpoint_end_time=(
+                TimeOfDay.from_bytes(data=end_time_temporary_override, time_zone=self._time_zone)
+                if end_time_temporary_override is not None
+                else None
+            ),
             room_temperature=room_temperature,
             pump_running=bool(pump_running),
             dhw_tank_temperature=dhw_tank_temperature,

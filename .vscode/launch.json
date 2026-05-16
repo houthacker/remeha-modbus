@@ -10,7 +10,10 @@
       "request": "launch",
       "module": "homeassistant",
       "justMyCode": false,
-      "args": ["--debug", "-c", "config"]
+      "args": ["--debug", "-c", "config"],
+      "env": {
+        "PYTEST_ADDOPTS": "--no-cov"
+      }
     },
     {
       "name": "Home Assistant (skip pip)",

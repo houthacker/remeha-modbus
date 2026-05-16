@@ -1,8 +1,7 @@
 """Module for event listening and -dispatching."""
 
 import logging
-from collections.abc import Callable
-from typing import Final, Literal, TypedDict, cast
+from typing import Final, Literal
 
 from homeassistant.components.climate.const import DOMAIN as ClimateEntityPlatform
 from homeassistant.components.switch.const import DOMAIN as SchedulerEntityPlatform
@@ -14,11 +13,10 @@ from homeassistant.helpers.event import (
     async_track_state_removed_domain,
 )
 from homeassistant.helpers.template import integration_entities
-from remeha_modbus.api.schedule import ZoneSchedule
 
-from custom_components.remeha_modbus.const import DOMAIN
+from custom_components.remeha_modbus.blend.scheduler.const import SchedulerDomain
+from custom_components.remeha_modbus.const import DOMAIN, EntityEventCallback, UnsubscribeCallback
 from custom_components.remeha_modbus.helpers.iterators import UnmodifiableDict
-from custom_components.scheduler.const import DOMAIN as SchedulerDomain
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -26,15 +24,6 @@ ATTR_SCHEDULER_ENTITY_ADDED: Final[str] = "scheduler_entity_added"
 ATTR_SCHEDULER_ENTITY_REMOVED: Final[str] = "scheduler_entity_removed"
 ATTR_CLIMATE_ENTITY_ADDED: Final[str] = "climate_entity_added"
 ATTR_CLIMATE_ENTITY_REMOVED: Final[str] = "climate_entity_removed"
-
-type EntityEventCallback = Callable[[Event[EventStateChangedData]], None]
-type UnsubscribeCallback = Callable[[], None]
-
-
-class ZoneScheduleUpdatedData(TypedDict):
-    """Event data for an `EVENT_ZONE_SCHEDULE_UPDATED`."""
-
-    schedule: ZoneSchedule
 
 
 ACCEPTED_DOMAINS: Final[tuple[str, str]] = (ClimateEntityPlatform, SchedulerEntityPlatform)
@@ -105,13 +94,33 @@ class EventDispatcher:
         ] = {}
         """Tuples of an unsubscribe callback and a list of event listeners, indexed by entity id."""
 
-    def _is_acceptable(self, entity_id: str) -> bool:
+    def _is_acceptable_entity(
+        self, entity_id: str, old_state: State | None = None, new_state: State | None = None
+    ) -> bool:
         """Return whether the given entity_id is allowed to be listened to for updates.
 
-        For an entity to be acceptable, it must be a `climate` in `remeha_modbus` or a
+        If `new_state` is `None`, it's assumed that the request is coming from a removed entity
+        and `old_state` is used. If that's `None` too, it's assumed the request is for future
+        updated states of `entity_id` and the latest state is retrieved from Home Assistant.
+
+        When that also fails, the `entity_id` is not acceptable.
+
+        For an entity to otherwise be acceptable, it must be a `climate` in `remeha_modbus` or a
         `switch` in either the `remeha_modbus` or `scheduler` integration.
         """
-        state = cast(State, self._hass.states.get(entity_id=entity_id))
+        state = (
+            new_state
+            if new_state is not None
+            else old_state
+            if old_state is not None
+            else self._hass.states.get(entity_id)
+        )
+        if state is None:
+            _LOGGER.warning(
+                "Cannot determine whether entity %s is acceptable because it has no stored state. Assuming it's not acceptable.",
+                entity_id,
+            )
+            return False
 
         # Only these two domains are accepted.
         if state.domain not in [SchedulerEntityPlatform, ClimateEntityPlatform]:
@@ -135,7 +144,9 @@ class EventDispatcher:
         Only events from the `scheduler` and `remeha_modbus` integrations are dispatched.
         """
 
-        if self._is_acceptable(event.data["entity_id"]):
+        if self._is_acceptable_entity(
+            event.data["entity_id"], event.data["old_state"], event.data["new_state"]
+        ):
             for cb in self._add_entity_listeners[domain]:
                 cb(event)
 
@@ -147,17 +158,20 @@ class EventDispatcher:
 
         Only events from the `scheduler` and `remeha_modbus` integrations are dispatched.
         """
-        if self._is_acceptable(event.data["entity_id"]):
+        if self._is_acceptable_entity(
+            event.data["entity_id"], event.data["old_state"], event.data["new_state"]
+        ):
             for cb in self._remove_entity_listeners[domain]:
                 cb(event)
 
-    def subscribe_to_added_entities(
+    def track_added_entities(
         self, domain: Literal["switch", "climate"], listener: EntityEventCallback
     ) -> UnsubscribeCallback:
         """Register a listener for entities that are added to the given entity domain.
 
-        For the given callback to be executed, added entities must belong to either the
-        `scheduler` or the `remeha_modbus` integration.
+        For the given callback to be executed, added entities must be a `climate` in
+        the `remeha_modbus` integration, or a `switch` in either the `remeha_modbus` or
+        `scheduler` integration.
 
         Args:
             domain (Literal['switch', 'climate']): The entity domain to subscribe to.
@@ -168,32 +182,49 @@ class EventDispatcher:
 
         """
 
-        self._add_entity_listeners[domain].append(listener)
+        def _acceptable_listener(event: Event[EventStateChangedData]):
+            if self._is_acceptable_entity(event.data["entity_id"]):
+                listener(event)
 
-        return lambda: self._add_entity_listeners[domain].remove(listener)
+        self._add_entity_listeners[domain].append(_acceptable_listener)
 
-    def subscribe_to_removed_entities(
+        def unsubscribe():
+            if _acceptable_listener in self._add_entity_listeners[domain]:
+                self._add_entity_listeners[domain].remove(_acceptable_listener)
+
+        return unsubscribe
+
+    def track_removed_entities(
         self, domain: Literal["switch", "climate"], listener: EntityEventCallback
     ) -> UnsubscribeCallback:
         """Register the listener for entities that are removed from the given domain.
 
-        For the given callback to be executed, removed entities must belong to either the
-        `scheduler` or the `remeha_modbus` integration.
+        For the given callback to be executed, added entities must be a `climate` in
+        the `remeha_modbus` integration, or a `switch` in either the `remeha_modbus` or
+        `scheduler` integration.
 
         Args:
             domain (Literal['switch', 'climate']): The entity domain to subscribe to.
             listener (EntityEventCallback): The callback to call when an entity was removed.
 
         Returns:
-            A callback which unsibscribes the listener from receiving updates about removed entities.
+            A callback which unsubscribes the listener from receiving updates about removed entities.
 
         """
 
-        self._remove_entity_listeners[domain].append(listener)
+        def _acceptable_listener(event: Event[EventStateChangedData]):
+            if self._is_acceptable_entity(event.data["entity_id"]):
+                listener(event)
 
-        return lambda: self._remove_entity_listeners[domain].remove(listener)
+        self._remove_entity_listeners[domain].append(_acceptable_listener)
 
-    def subscribe_to_updated_entities(
+        def unsubscribe():
+            if _acceptable_listener in self._remove_entity_listeners[domain]:
+                self._remove_entity_listeners[domain].remove(_acceptable_listener)
+
+        return unsubscribe
+
+    def track_updated_entities(
         self, entity_id: str, listener: EntityEventCallback
     ) -> UnsubscribeCallback:
         """Register the listener to receive updates if the entity with `entity_id` changed.
@@ -211,7 +242,7 @@ class EventDispatcher:
 
         """
 
-        if not self._is_acceptable(entity_id=entity_id):
+        if not self._is_acceptable_entity(entity_id=entity_id):
             raise ValueError(
                 f"Not registering listener for updates of {entity_id}: entity domain or originating platform not accepted."
             )
@@ -236,7 +267,9 @@ class EventDispatcher:
         def _unsubscribe_and_remove():
             """Unsubscribe the listener and if no listeners exist after that, stop listening to updates of the related entity."""
             unsubscribe_all, all_listeners = self._entity_update_subscriptions[entity_id]
-            all_listeners.remove(listener)
+
+            if listener in all_listeners:
+                all_listeners.remove(listener)
 
             # If the callback-list is empty, unsubscribe from the entity updates and remove its entry.
             if not all_listeners:
@@ -244,3 +277,16 @@ class EventDispatcher:
                 del self._entity_update_subscriptions[entity_id]
 
         return _unsubscribe_and_remove
+
+    def untrack_all(self) -> None:
+        """Unsubscribes from all entity updates."""
+
+        for domain in self._add_entity_listeners:
+            self._add_entity_listeners[domain] = []
+
+        for domain in self._remove_entity_listeners:
+            self._remove_entity_listeners[domain] = []
+
+        for entity_id, (unsubscribe, _) in self._entity_update_subscriptions.items():
+            del self._entity_update_subscriptions[entity_id]
+            unsubscribe()

@@ -1,86 +1,25 @@
-"""Implementation of scenario 5 where an updated modbus schedule is synced with a scheduler.schedule, if linked."""
+"""Implementation of scenario 1 where an updated modbus schedule is received through modbus."""
 
-from datetime import time, timedelta
-from enum import StrEnum
-from typing import Any, Final, Literal, cast, override
+from typing import TYPE_CHECKING, Any, cast, override
 from uuid import UUID, uuid4
 
 from homeassistant.core import HomeAssistant
 
-from custom_components.remeha_modbus.api.climate_zone import ClimateZone
 from custom_components.remeha_modbus.api.schedule import (
-    Timeslot,
-    TimeslotSetpointType,
     ZoneSchedule,
 )
 from custom_components.remeha_modbus.blend import Scenario
 from custom_components.remeha_modbus.blend.scheduler.const import (
-    SCHEDULER_TAG_PREFIX,
-    SchedulerAction,
-    SchedulerCondition,
     SchedulerDomain,
-    SchedulerSchedule,
-    SchedulerTimeslot,
+    ServiceOperation,
 )
+from custom_components.remeha_modbus.blend.scheduler.helpers import to_scheduler_schedule
 from custom_components.remeha_modbus.const import (
-    PRESET_COMFORT,
-    PRESET_ECO,
-    PRESET_NONE,
-    SWITCH_SCHEDULE_SYNC,
-    Weekday,
     ZoneScheduleUID,
 )
-from custom_components.remeha_modbus.coordinator import RemehaUpdateCoordinator
 
-
-class ServiceOperation(StrEnum):
-    """Enumerate the required service operation to store a schedule."""
-
-    ADD = "add"
-    """The schedule does not exist in the service, so it must be added."""
-    EDIT = "edit"
-    """The schedule already exists in the service, so it must be edited."""
-
-
-WEEKDAY_TO_SHORT_DESC: Final[
-    dict[Weekday, Literal["mon", "tue", "wed", "thu", "fri", "sat", "sun"]]
-] = {
-    Weekday.MONDAY: "mon",
-    Weekday.TUESDAY: "tue",
-    Weekday.WEDNESDAY: "wed",
-    Weekday.THURSDAY: "thu",
-    Weekday.FRIDAY: "fri",
-    Weekday.SATURDAY: "sat",
-    Weekday.SUNDAY: "sun",
-}
-
-SHORT_DESC_TO_WEEKDAY: Final[
-    dict[Literal["mon", "tue", "wed", "thu", "fri", "sat", "sun"], Weekday]
-] = {WEEKDAY_TO_SHORT_DESC[day]: day for day in Weekday}
-
-
-def _get_durations(schedule: ZoneSchedule):
-    time_slots = schedule.time_slots
-    for idx, ts in enumerate(time_slots):
-        if idx == len(time_slots) - 1:
-            # Calculate the time delta until tomorrow.
-            yield ts, timedelta(hours=24 - ts.switch_time.hour)
-        else:
-            next_ts: Timeslot = time_slots[idx + 1]
-            yield ts, timedelta(hours=next_ts.switch_time.hour - ts.switch_time.hour)
-
-
-def _to_preset_mode(setpoint_type: TimeslotSetpointType) -> str:
-    if setpoint_type is TimeslotSetpointType.ECO:
-        return PRESET_ECO
-    if setpoint_type is TimeslotSetpointType.COMFORT:
-        return PRESET_COMFORT
-
-    return PRESET_NONE
-
-
-def _to_schedule_name(schedule: ZoneSchedule) -> str:
-    return f"zone_{schedule.zone_id}_{schedule.id.name.lower()}_{schedule.day.name.lower()}"
+if TYPE_CHECKING:
+    from custom_components.remeha_modbus.coordinator import RemehaUpdateCoordinator  # noqa: TC004
 
 
 class ModbusScheduleUpdated(Scenario):
@@ -94,86 +33,6 @@ class ModbusScheduleUpdated(Scenario):
         self._hass: HomeAssistant = hass
         self._coordinator: RemehaUpdateCoordinator = coordinator
         self._schedule: ZoneSchedule = schedule
-
-    def _to_new_scheduler_schedule(
-        self, schedule: ZoneSchedule, linking_tag: UUID, data: SchedulerSchedule
-    ) -> dict[str, Any]:
-        data["name"] = _to_schedule_name(schedule=schedule)
-
-        # When creating a new schedule, a unique tag is added so it can be identified
-        # when the new-schedule-event is received. It can then be linked to the correct modbus schedule.
-        # This tag can be removed afterward.
-        data["tags"] = [f"{SCHEDULER_TAG_PREFIX}{linking_tag}"]
-
-        return cast(dict[str, Any], data)
-
-    def _to_edited_scheduler_schedule(
-        self, linked_scheduler_entity: str, data: SchedulerSchedule
-    ) -> dict[str, Any]:
-        data["entity_id"] = linked_scheduler_entity
-
-        return cast(dict[str, Any], data)
-
-    async def _to_scheduler_schedule(
-        self,
-        schedule: ZoneSchedule,
-        operation: ServiceOperation,
-        linked_scheduler_entity: str | None = None,
-        linking_tag: UUID | None = None,
-    ) -> dict[str, Any]:
-        durations: dict[Timeslot, timedelta] = dict(_get_durations(schedule=schedule))
-        zone: ClimateZone = cast(ClimateZone, self._coordinator.get_climate(id=schedule.zone_id))
-        climate_entity = next(
-            iter(
-                [
-                    state
-                    for state in self._hass.states.async_all(domain_filter="climate")
-                    if state.attributes.get("zone_id") == zone.id
-                ]
-            )
-        )
-
-        data = SchedulerSchedule(
-            weekdays=[WEEKDAY_TO_SHORT_DESC[schedule.day]],
-            repeat_type="repeat",
-            timeslots=[
-                SchedulerTimeslot(
-                    start=ts.switch_time.strftime("%H:%M:%S"),
-                    stop=time(
-                        hour=int((ts.switch_time.hour + (durations[ts].seconds / 3600)) % 24)
-                    ).strftime("%H:%M:%S"),
-                    conditions=[
-                        SchedulerCondition(
-                            entity_id=f"switch.{SWITCH_SCHEDULE_SYNC}",
-                            value="on",
-                            match_type="is",
-                            attribute="state",
-                        )
-                    ],
-                    condition_type="and",
-                    actions=[
-                        SchedulerAction(
-                            entity_id=climate_entity.entity_id,
-                            service="climate.set_preset_mode",
-                            service_data={
-                                "preset_mode": _to_preset_mode(setpoint_type=ts.setpoint_type)
-                            },
-                        )
-                    ],
-                )
-                for ts in schedule.time_slots
-            ],
-        )
-
-        match operation:
-            case ServiceOperation.EDIT:
-                return self._to_edited_scheduler_schedule(
-                    linked_scheduler_entity=cast(str, linked_scheduler_entity), data=data
-                )
-            case ServiceOperation.ADD:
-                return self._to_new_scheduler_schedule(
-                    schedule=schedule, linking_tag=cast(UUID, linking_tag), data=data
-                )
 
     @override
     async def async_execute(self) -> None:
@@ -190,14 +49,15 @@ class ModbusScheduleUpdated(Scenario):
             ),
         )
 
+        operation: ServiceOperation
         is_new_schedule: bool = scheduler_entity is None
         if is_new_schedule:
-            operation: ServiceOperation = ServiceOperation.ADD
+            operation = ServiceOperation.ADD
             uuid: UUID = uuid4()
 
             # Put a scheduler<->remeha_modbus schedule link on the waiting list.
             # That way, when the schedule is created and the corresponding
-            # scenario (`schedule_created`) is executed, we can break the cycle
+            # scenario (schedule_created) is executed, we can break the cycle
             # by just removing the link from the waiting list and storing it then
             # and not sending the update to modbus.
             self._coordinator.enqueue_for_linking(
@@ -214,21 +74,39 @@ class ModbusScheduleUpdated(Scenario):
                 service=str(operation),
                 blocking=False,
                 return_response=False,
-                service_data=await self._to_scheduler_schedule(
-                    schedule=self._schedule, operation=operation, linking_tag=uuid
+                service_data=cast(
+                    dict[str, Any],
+                    await to_scheduler_schedule(
+                        hass=self._hass,
+                        schedule=self._schedule,
+                        operation=operation,
+                        linking_tag=uuid,
+                    ),
                 ),
             )
         else:
-            operation: ServiceOperation = ServiceOperation.EDIT
+            operation = ServiceOperation.EDIT
+
+            # Put a scheduler<->remeha_modbus schedule link on the waiting list for updates.
+            # That way, when the schedule is updated and the corresponding
+            # scenario (scenario_updated) is executed, it breaks the update cycle by just
+            # removing the link from the waiting list. If it's not on the waiting list, the
+            # update originated from the scheduler component itself and the update is pushed
+            # to modbus.
+            self._coordinator.enqueue_for_update(entity_id=scheduler_entity)
 
             await self._hass.services.async_call(
                 domain=SchedulerDomain,
                 service=str(operation),
                 blocking=False,
                 return_response=False,
-                service_data=await self._to_scheduler_schedule(
-                    schedule=self._schedule,
-                    operation=operation,
-                    linked_scheduler_entity=scheduler_entity,
+                service_data=cast(
+                    dict[str, Any],
+                    await to_scheduler_schedule(
+                        hass=self._hass,
+                        schedule=self._schedule,
+                        operation=operation,
+                        linked_scheduler_entity=scheduler_entity,
+                    ),
                 ),
             )

@@ -1,6 +1,7 @@
 """The Remeha Modbus integration."""
 
 import logging
+from typing import TYPE_CHECKING
 
 from dateutil import tz
 from homeassistant.config_entries import ConfigEntry
@@ -9,12 +10,15 @@ from homeassistant.core import Event, HomeAssistant
 from homeassistant.exceptions import ConfigEntryError, ConfigEntryNotReady
 from homeassistant.helpers.typing import NoEventData
 from pymodbus import ModbusException
-from remeha_modbus.api.store import RemehaModbusStorage
 
 from custom_components.remeha_modbus.api import (
     ConnectionType,
     RemehaApi,
 )
+from custom_components.remeha_modbus.api.store import RemehaModbusStorage
+
+if TYPE_CHECKING:
+    from custom_components.remeha_modbus.blend.blender import Blender
 from custom_components.remeha_modbus.const import (
     AUTO_SCHEDULE_SELECTED_SCHEDULE,
     BOOTSTRAP_BLENDERS_SERVICE_NAME,
@@ -60,20 +64,20 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     except ModbusException as ex:
         raise ConfigEntryNotReady(f"Error while executing modbus health check: {ex}") from ex
 
+    # Setup the coordinator
     coordinator = RemehaUpdateCoordinator(
         hass=hass, config_entry=entry, api=api, store=RemehaModbusStorage(hass=hass)
     )
-
     await coordinator.async_config_entry_first_refresh()
+    entry.runtime_data = {"api": api, "coordinator": coordinator, "blenders": {}}
 
-    entry.runtime_data = {"api": api, "coordinator": coordinator}
-
+    # And setup all platforms after the coordinator is available.
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     # Register services only after everything else has been set up successfully.
     register_services(hass=hass, config=entry, coordinator=coordinator)
 
-    # Bootstrap the blenders after HA has started.
+    # After HA has started, bootstrap the blenders.
     async def _bootstrap_blenders(_: Event[NoEventData]) -> None:
         """Call the bootstrap_blenders service to set up communication with other integrations."""
         await hass.services.async_call(
@@ -94,6 +98,11 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # Close the connection to the modbus server.
     coordinator: RemehaUpdateCoordinator = entry.runtime_data["coordinator"]
     await coordinator.async_shutdown()
+
+    # Unsubscribe from all subscriptions any blender might have.
+    blenders: dict[str, Blender] = entry.runtime_data["blenders"]
+    for blender in blenders.values():
+        blender.unblend()
 
     return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
 

@@ -1,5 +1,6 @@
 """Constants for the Remeha Modbus integration."""
 
+from collections.abc import Callable
 from datetime import date
 from enum import Enum, StrEnum
 from typing import Final, NamedTuple, Self
@@ -15,6 +16,7 @@ from homeassistant.components.sensor import (
     SensorEntityDescription,
     SensorStateClass,
 )
+from homeassistant.core import Event, EventStateChangedData
 from homeassistant.helpers import config_validation as cv
 from pydantic import Field, model_validator
 from pydantic.dataclasses import dataclass
@@ -33,12 +35,24 @@ STORAGE_MINOR_VERSION = 0
 STORAGE_FILE_KEY = f"{DOMAIN}.storage"
 STORAGE_RUNTIME_KEY = f"{DOMAIN}_storage"
 
+type EntityEventCallback = Callable[[Event[EventStateChangedData]], None]
+
 SWITCH_SCHEDULE_SYNC: Final[str] = "enable_schedule_sync"
 """Entity name of the switch that determines whether schedules are synchronized.
 
 Enabling this requires the user to have installed the `scheduler-card` and `scheduler-component`
 integrations.
 """
+
+HEATPUMP_MANAGED_SCHEDULES: Final[str] = "heatpump_managed_schedules"
+"""Entity name of the switch that determines whether time schedule execution is managed by the heat pump (True) or HA (False).
+
+The recommended setting is 'on', as to have the heat pump manage time schedule execution.
+"""
+
+UNEXPECTED_ACTION_ISSUE_URL: Final[str] = (
+    "https://github.com/houthacker/remeha-modbus#heatpump-managed-schedules"
+)
 
 MAXIMUM_NORMAL_SURFACE_IRRADIANCE_NL: Final[int] = 1000
 """The maximum normal surface irradiance in The Netherlands, in W/m²"""
@@ -70,6 +84,16 @@ PV_MAX_TILT_DEGREES: Final[int] = 90
 """The maximum supported PV system tilt"""
 
 ATTR_ZONE_ID: Final[str] = "zone_id"
+"""Attribute in `climate` entities containing the related `ClimateZone` id."""
+
+ATTR_SCHEDULER_NAME: Final[str] = "name"
+"""Attribute in `switch` entities in the `scheduler` component where their name is stored."""
+
+ATTR_SCHEDULER_TAGS: Final[str] = "tags"
+"""Attribute in `switch` entities in the `scheduler` component where tags are stored."""
+
+type UnsubscribeCallback = Callable[[], None]
+"""A type shorthand for a no-arg callable returning None."""
 
 
 # DHW auto scheduling
@@ -430,8 +454,6 @@ class ZoneScheduleUID(NamedTuple):
 
 CONFIG_AUTO_SCHEDULE: Final[str] = "auto_schedule"
 
-EVENT_ZONE_SCHEDULE_UPDATED: Final[str] = f"{DOMAIN}_schedule_updated"
-
 BOOTSTRAP_BLENDERS_SERVICE_NAME: Final[str] = "bootstrap_blenders"
 
 READ_REGISTERS_SERVICE_NAME: Final[str] = "read_registers"
@@ -527,6 +549,13 @@ HA_SCHEDULE_TO_REMEHA_SCHEDULE: Final[dict[str, ClimateZoneScheduleId]] = {
     REMEHA_PRESET_SCHEDULE_1: ClimateZoneScheduleId.SCHEDULE_1,
     REMEHA_PRESET_SCHEDULE_2: ClimateZoneScheduleId.SCHEDULE_2,
     REMEHA_PRESET_SCHEDULE_3: ClimateZoneScheduleId.SCHEDULE_3,
+}
+
+HA_CLIMATE_PRESET_TO_REMEHA_ZONE_MODE: Final[dict[str, ClimateZoneMode]] = {
+    HA_PRESET_ANTI_FROST: ClimateZoneMode.ANTI_FROST,
+    HA_PRESET_MANUAL: ClimateZoneMode.MANUAL,
+    PRESET_COMFORT: ClimateZoneMode.MANUAL,
+    PRESET_ECO: ClimateZoneMode.ANTI_FROST,
 }
 
 

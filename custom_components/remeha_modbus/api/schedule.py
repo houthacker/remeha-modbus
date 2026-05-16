@@ -86,9 +86,11 @@ class HourlyForecast:
         return cls(
             start_time=parser.parse(data[ForecastField.DATETIME]),
             temperature=float(data[ForecastField.TEMPERATURE]),
-            solar_irradiance=int(data[ForecastField.SOLAR_IRRADIANCE])
-            if ForecastField.SOLAR_IRRADIANCE in data
-            else None,
+            solar_irradiance=(
+                int(data[ForecastField.SOLAR_IRRADIANCE])
+                if ForecastField.SOLAR_IRRADIANCE in data
+                else None
+            ),
         )
 
 
@@ -133,7 +135,7 @@ class TimeslotSetpointType(Enum):
     """Setpoint in 'evening' mode."""
 
 
-@dataclass
+@dataclass(frozen=True)
 class Timeslot:
     """A zone schedule time slot."""
 

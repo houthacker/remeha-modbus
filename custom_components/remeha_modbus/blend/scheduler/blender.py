@@ -1,25 +1,47 @@
 """Module for synchronization between a `scheduler.schedule` and a `remeha_modbus.ZoneSchedule`."""
 
+import asyncio
 import logging
-from typing import Any, cast, override
+from typing import Final, override
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import Event, HomeAssistant
-from remeha_modbus.blend.blender import BlenderState
-from remeha_modbus.blend.scheduler.const import SCHEDULER_INSTALLATION_URL, SchedulerDomain
-from remeha_modbus.blend.scheduler.helpers import scheduler_is_installed
-from remeha_modbus.const import DOMAIN
-from remeha_modbus.errors import MissingExternalComponent
+from homeassistant.components.switch.const import DOMAIN as SwitchDomain
+from homeassistant.const import STATE_ON
+from homeassistant.core import Event, HomeAssistant, callback
+from homeassistant.helpers.event import EventStateChangedData, async_track_state_change_event
 
+from custom_components.remeha_modbus.api.schedule import ZoneSchedule
 from custom_components.remeha_modbus.blend import Blender
-from custom_components.remeha_modbus.blend.scheduler.scenarios import (
+from custom_components.remeha_modbus.blend.blender import BlenderState
+from custom_components.remeha_modbus.blend.scheduler.const import (
+    SCHEDULER_INSTALLATION_URL,
+    SchedulerDomain,
+)
+from custom_components.remeha_modbus.blend.scheduler.helpers import scheduler_is_installed
+from custom_components.remeha_modbus.blend.scheduler.scenarios.modbus_schedule_updated import (
     ModbusScheduleUpdated,
 )
+from custom_components.remeha_modbus.blend.scheduler.scenarios.scheduler_schedule_added import (
+    SchedulerScheduleAdded,
+)
+from custom_components.remeha_modbus.blend.scheduler.scenarios.scheduler_schedule_updated import (
+    SchedulerScheduleUpdated,
+)
+from custom_components.remeha_modbus.const import DOMAIN, SWITCH_SCHEDULE_SYNC
 from custom_components.remeha_modbus.coordinator import RemehaUpdateCoordinator
+from custom_components.remeha_modbus.errors import MissingExternalComponent
+from custom_components.remeha_modbus.helpers.entities import is_scheduler_switch
 
-from .event_dispatcher import EventDispatcher, UnsubscribeCallback, ZoneScheduleUpdatedData
+from .event_dispatcher import EventDispatcher, UnsubscribeCallback
 
 _LOGGER = logging.getLogger(__name__)
+
+
+_SCHEDULE_SYNC_SWITCH_ENTITY_ID = f"{SwitchDomain}.{SWITCH_SCHEDULE_SYNC}"
+"""The entity_id of the switch that controls whether zone schedules are synchronized with the scheduler component."""
+
+_SWITCH_ADDED_SUBSCRIPTION_KEY: Final[str] = "__switch_added__"
+
+_ZONE_SCHEDULE_UPDATED_SUBSCRIPTION_KEY: Final[str] = "__zone_schedule_updated__"
 
 
 class SchedulerBlender(Blender):
@@ -28,20 +50,24 @@ class SchedulerBlender(Blender):
     In general, the schedule entities from the `scheduler` integration live in the `switch` domain, whereas schedules
     from _this_ integration are `ZoneSchedule` objects in a `ClimateZone`.
 
+    Scenarios are only run if schedule synchronization is enabled. This is done through the switch entity
+    `switch.enable_schedule_sync`.
+
     The following scenario's exist:
-    1. The `push_zone_schedules` service is called. This causes all schedules from modbus to be
-        pushed to the scheduler component, ignoring any pre-existing non-linked schedules.
-        This scenario will only push schedules if the related climates are in `auto` mode.
+    1. An updated `ZoneSchedule` is received from modbus. These updates are pushed to the
+       scheduler component. Schedules that are new to the scheduler component are put on the
+       waiting list for linking (see schenario 3). Schedules that have been linked are added to
+       the waiting list for updating (see schenario 4).
     2. The `remove_synced_schedules` service is called. All synchronized schedules are removed from
         the `scheduler` component.
-    3. A linked `scheduler.schedule` is updated. This pushes the updated schedule to modbus.
-    4. A linked `scheduler.schedule` is removed. This unlinks the schedule and leaves the modbus schedule
-        unmodified.
-    5. A `remeha_modbus` schedule is updated through an external source (e.g. from the Remeha Home app).
-        This pushes the updated schedule to the `scheduler` integration.
-
-    Scenario 1 and 2 are exclusively called from HA services, while scenario 3 through 5 are automatically executed
-    using event listeners in this blender.
+    3. A `scheduler.schedule` is added. If it's on the waiting list, it is linked to the corresponding
+        `ZoneSchedule` and listened to for updates. Otherwise, this schedule is ignored.
+    4. A linked `scheduler.schedule` is updated. If on the waiting list for updating, the updated schedule
+        is removed from the waiting list and further ignored because the update was caused by an updated
+        `ZoneSchedule` from modbus.
+        If it's not on the waiting list, the update is pushed to modbus.
+    5. A linked `scheduler.schedule` is removed. This unlinks the schedule and leaves the modbus schedule
+        unmodified. Update listeners are unsubscribed from.
     """
 
     def __init__(
@@ -61,31 +87,86 @@ class SchedulerBlender(Blender):
         self._dispatcher: EventDispatcher = dispatcher
         self._state: BlenderState = BlenderState.INITIAL
 
-        self._subscriptions: list[UnsubscribeCallback] = []
+        self._subscriptions: dict[str, UnsubscribeCallback] = {}
 
     def _ready_for_scenario_execution(self) -> bool:
         """Return whether a scenario can be executed according to the current blender state."""
 
         return self._state is BlenderState.STARTED
 
-    def _zone_schedule_updated(self, event: Event[ZoneScheduleUpdatedData]) -> None:
+    @callback
+    def _switch_entity_added(self, event: Event[EventStateChangedData]) -> None:
+        """Handle a newly added `switch` entity."""
+
+        if self._ready_for_scenario_execution():
+            if is_scheduler_switch(self._hass, event.data["entity_id"]):
+
+                @callback
+                def async_track_schedule_updated():
+                    _LOGGER.debug(
+                        "Tracking updates for schedule entity %s", event.data["entity_id"]
+                    )
+
+                    # Listen to updates of this schedule
+                    self._subscriptions[event.data["entity_id"]] = (
+                        self._dispatcher.track_updated_entities(
+                            event.data["entity_id"], self._switch_entity_updated
+                        )
+                    )
+
+                scenario = SchedulerScheduleAdded(
+                    self._hass,
+                    self._coordinator,
+                    event.data["new_state"],
+                    async_track_schedule_updated,
+                )
+
+                # Execute the scenario in a separate task since it requires I/O.
+                asyncio.run_coroutine_threadsafe(scenario.async_execute(), self._hass.loop)
+        else:
+            _LOGGER.debug(
+                "Ignoring schedule_added event (entity_id = %s) because current blender state %s\
+                prevents us from handling it.",
+                event.data["entity_id"],
+                self._state.name,
+            )
+
+    @callback
+    def _switch_entity_updated(self, event: Event[EventStateChangedData]) -> None:
+        """Handle an updated scheduler.schedule."""
+
+        if self._ready_for_scenario_execution():
+            if is_scheduler_switch(self._hass, event.data["entity_id"]):
+                scenario = SchedulerScheduleUpdated(
+                    self._hass, self._coordinator, event.data["new_state"]
+                )
+
+                # Execute the scenario in a separate task since it requires I/O.
+                asyncio.run_coroutine_threadsafe(scenario.async_execute(), self._hass.loop)
+        else:
+            _LOGGER.debug(
+                "Ignoring schedule_updated event (entity_id = %s) because current blender state %s\
+                prevents us from handling it.",
+                event.data["entity_id"],
+                self._state.name,
+            )
+
+    @callback
+    def _zone_schedule_updated(self, schedule: ZoneSchedule) -> None:
         """Handle a modbus `ZoneSchedule` update.
 
         Args:
-            event (Event[ZoneScheduleUpdatedData]): The event containing the updated zone schedule.
+            schedule (ZoneSchedule): The updated zone schedule.
 
         """
 
-        schedule = event.data["schedule"]
         if self._ready_for_scenario_execution():
             scenario = ModbusScheduleUpdated(
                 hass=self._hass, coordinator=self._coordinator, schedule=schedule
             )
 
             # Execute the scenario in a separate task since it requires I/O.
-            cast(ConfigEntry[Any], self._coordinator.config_entry).async_create_task(
-                self._hass, scenario.async_execute()
-            )
+            asyncio.run_coroutine_threadsafe(scenario.async_execute(), self._hass.loop)
         else:
             _LOGGER.debug(
                 "Ignoring ZoneSchedule-update event (zone_id=%d, schedule_id=%d, day=%s) because current blender state %s\
@@ -96,13 +177,71 @@ class SchedulerBlender(Blender):
                 self._state.name,
             )
 
+    async def _enable_zone_synchronization(self) -> None:
+        """Enable synchronizing zone schedules with `scheduler.schedule` entities."""
+
+        _LOGGER.debug("Enabling zone update synchronization.")
+
+        # Subscribe to newly added scheduler.schedule entities
+        self._subscriptions[_SWITCH_ADDED_SUBSCRIPTION_KEY] = self._dispatcher.track_added_entities(
+            SwitchDomain, self._switch_entity_added
+        )
+
+        # Subscribe to ZoneSchedule updates if switch entity is enabled.
+        self._subscriptions[_ZONE_SCHEDULE_UPDATED_SUBSCRIPTION_KEY] = (
+            self._coordinator.track_zone_schedule_updates(self._zone_schedule_updated)
+        )
+
+        # Subscribe to updates of linked scheduler.schedule entities.
+        for link in await self._coordinator.async_get_scheduler_links():
+            self._subscriptions[link.scheduler_entity_id] = self._dispatcher.track_updated_entities(
+                link.scheduler_entity_id, self._switch_entity_updated
+            )
+
+    async def _disable_zone_synchronization(self) -> None:
+        """Disable synchronizing zone schedules with `scheduler.schedule` entities."""
+
+        # Collect all subscription keys we must unsubscribe from.
+        subscriptions = [_SWITCH_ADDED_SUBSCRIPTION_KEY, _ZONE_SCHEDULE_UPDATED_SUBSCRIPTION_KEY]
+        subscriptions += [
+            link.scheduler_entity_id for link in await self._coordinator.async_get_scheduler_links()
+        ]
+
+        # Unsubscribe from all
+        for key in subscriptions:
+            unsubscribe = self._subscriptions.get(key)
+            if unsubscribe is not None:
+                del self._subscriptions[key]
+                unsubscribe()
+
+    @callback
+    async def _sync_settings_updated(self, event: Event[EventStateChangedData]) -> None:
+        """Handle updates of the sync-required settings."""
+
+        entity_id = event.data["entity_id"]
+        if event.data["new_state"] is None:
+            _LOGGER.debug(
+                "Received state change for entity %s without new_state; ignoring", entity_id
+            )
+            return
+
+        if event.data["new_state"].state == STATE_ON:
+            await self._enable_zone_synchronization()
+        elif entity_id in self._subscriptions:
+            # state = OFF, so unsubscribe from events.
+            await self._disable_zone_synchronization()
+        else:
+            _LOGGER.warning(
+                "Received state change for entity %s we're not subscribed to.", entity_id
+            )
+
     @property
     def state(self) -> BlenderState:
         """Return the current state of the Blender."""
         return self._state
 
     @override
-    def bootstrap(self):
+    async def async_blend(self):
         """Start listening for relevant events to enable executing the defined scenarios.
 
         If already started, this method has no effect. If stopped, this method will re-subscribe
@@ -127,19 +266,27 @@ class SchedulerBlender(Blender):
             _LOGGER.debug("Starting SchedulerBlender.")
             self._state = BlenderState.STARTING
 
-            # TODO subscribe to events required to run the scenarios.
-            # Subscribe to state changes required to blend in.
-            # self._subscriptions = [
-            #     self._dispatcher.subscribe_to_added_entities(
-            #         domain=SwitchDomain, listener=self._scheduler_entity_added
-            #     ),
-            #     self._dispatcher.subscribe_to_zone_schedule_updates(
-            #         listener=self._zone_schedule_updated
-            #     ),
-            # ]
+            # Enable/disable schedule synchronization based on switch state.
+            self._subscriptions[_SCHEDULE_SYNC_SWITCH_ENTITY_ID] = async_track_state_change_event(
+                self._hass,
+                [_SCHEDULE_SYNC_SWITCH_ENTITY_ID],
+                self._sync_settings_updated,
+            )
+
+            # If the switch is currently ON, enable schedule synchronization. Otherwise,
+            # this is done later when the switch is toggled.
+            schedule_sync_state = self._hass.states.get(_SCHEDULE_SYNC_SWITCH_ENTITY_ID)
+            if schedule_sync_state is not None and schedule_sync_state.state == STATE_ON:
+                await self._enable_zone_synchronization()
+
+            else:
+                _LOGGER.info(
+                    "Not subscribing to zone schedule updates now, since %s is switched off.",
+                    _SCHEDULE_SYNC_SWITCH_ENTITY_ID,
+                )
 
             self._state = BlenderState.STARTED
-            _LOGGER.debug("Starting SchedulerBlender successful.")
+            _LOGGER.debug("SchedulerBlender started.")
         else:
             _LOGGER.debug(
                 "Not going start SchedulerBlender since its current state (%s) doesn't allow me to do so.",
@@ -155,10 +302,10 @@ class SchedulerBlender(Blender):
             self._state = BlenderState.STOPPING
 
             # Unsubscribe from all subscriptions, then clear the list.
-            for unsub in self._subscriptions:
+            for unsub in self._subscriptions.values():
                 unsub()
 
-            self._subscriptions = []
+            self._subscriptions = {}
             self._state = BlenderState.STOPPED
             _LOGGER.debug("Successfully stopped listening for events.")
         else:

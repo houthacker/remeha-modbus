@@ -129,6 +129,9 @@
     "switch": {
       "enable_schedule_sync": {
         "name": "Schedule synchronization"
+      },
+      "heatpump_managed_schedules": {
+        "name": "Heatpump manages time schedule execution."
       }
     }
   },
@@ -157,15 +160,6 @@
     }
   },
   "exceptions": {
-    "climate_invalid_operation_ctx": {
-      "message": "Requested operation {operation} is invalid in preset mode {preset_mode}."
-    },
-    "climate_invalid_operation_ctx_hvac": {
-      "message": "Setting HVAC mode to {hvac_mode} is unsupported for zone {zone_name}."
-    },
-    "climate_unsupported_preset_mode": {
-      "message": "Requested preset mode {preset_mode} is unsupported."
-    },
     "auto_schedule_unsupported_temperature_unit": {
       "message": "Entity {entity_id} uses an unsupported temperature unit {unit_of_temperature}."
     },
@@ -187,6 +181,21 @@
     "auto_schedule_value_error": {
       "message": "Cannot auto schedule: error while deserializing modbus response, see logs for details."
     },
+    "bootstrap_blenders_error": {
+      "message": "Error while setting up links with other integrations."
+    },
+    "climate_invalid_operation_ctx": {
+      "message": "Requested operation {operation} is invalid in preset mode {preset_mode}."
+    },
+    "climate_invalid_operation_ctx_hvac": {
+      "message": "Setting HVAC mode to {hvac_mode} is unsupported for zone {zone_name}."
+    },
+    "climate_unsupported_preset_mode": {
+      "message": "Requested preset mode {preset_mode} is unsupported."
+    },
+    "missing_external_component": {
+      "message": "Missing external component {component}. Please install it and retry; installation instructions are at {url}."
+    },
     "read_registers_modbus_error": {
       "message": "Modbus error while reading registers."
     },
@@ -196,11 +205,38 @@
     "read_registers_unknown_error": {
       "message": "An unknown error occurred while reading modbus registers. See log for details."
     },
-    "missing_external_component": {
-      "message": "Missing external component {component}. Please install it and retry; installation instructions are at {url}."
+    "schedule_update_non_equal_climates": {
+      "message": "Cannot determine zone schedule updates: a climate zone has been added or removed."
     },
-    "bootstrap_blenders_error": {
-      "message": "Error while setting up links with other integrations."
+    "scenario_execution_error_missing_required_state": {
+      "message": "Cannot execute scenario {scenario}: missing required entity state from {component} integration."
+    },
+    "scenario_execution_error_no_tag_in_attrs": {
+      "message": "Cannot excecute scenario {scenario}: scheduler entity {entity} is missing the tag required to link it to a ZoneSchedule."
+    },
+    "scenario_execution_error_missing_climate": {
+      "message": "Cannot execute scenario {scenario}: climate linked to scheduler.schedule {scheduler_entity} is missing."
+    },
+    "parse_error_entity_not_found": {
+      "message": "Cannot parse ZoneSchedule into scheduler schedule: The required climate entity cannot be found."
+    },
+    "parse_error_time_slot": {
+      "message": "Cannot parse state {schedule_entity_id} into ZoneSchedule: timeslot string {time_slot} must have exactly two parts, but got {part_count}."
+    },
+    "parse_error_scheduler_state_action": {
+      "message": "Cannot parse state {schedule_entity_id} into ZoneSchedule: missing required service call to set preset mode."
+    },
+    "parse_error_multiple_weekdays": {
+      "message": "Cannot parse state {schedule_entity_id} into ZoneSchedule: schedule is for multiple weekdays but require exactly one."
+    },
+    "incorrect_entity_platform": {
+      "message": "Entity {entity_id} doesn't belong to the expected platform {expected_platform} and/or the integration {expected_component}."
+    }
+  },
+  "issues": {
+    "heatpump_managed_schedules_turned_off": {
+      "title": "Time schedules not managed by appliance",
+      "description": "You turned off a switch which causes Home Assistant to manage time schedules directly instead of letting the Remeha appliance manage that. If this really is what you want, ignore this message."
     }
   }
 }

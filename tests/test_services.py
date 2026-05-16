@@ -6,7 +6,7 @@ import pytest
 from homeassistant.core import HomeAssistant
 from pymodbus import ModbusException
 
-from custom_components.remeha_modbus.api import ClimateZone, Weekday, ZoneSchedule
+from custom_components.remeha_modbus.api.climate_zone import ClimateZone, Weekday, ZoneSchedule
 from custom_components.remeha_modbus.const import (
     AUTO_SCHEDULE_DEFAULT_ID,
     AUTO_SCHEDULE_SERVICE_NAME,
@@ -19,7 +19,7 @@ from custom_components.remeha_modbus.const import (
     ClimateZoneScheduleId,
 )
 from custom_components.remeha_modbus.errors import (
-    RemehaServiceException,
+    RemehaServiceError,
 )
 
 from .conftest import get_api, setup_platform
@@ -50,12 +50,13 @@ async def test_scheduling_service(hass: HomeAssistant, mock_modbus_client, mock_
         # Check that the schedule has been created but not activated.
         # For auto scheduling, we use SCHEDULE_1.
         # Using the test data, a schedule will be created for Weekday.FRIDAY.
-        zone: ClimateZone = await api.async_read_zone(id=2)
+        zone: ClimateZone | None = await api.async_read_zone(id=2)
+        assert zone is not None
         assert zone.selected_schedule == ClimateZoneScheduleId.SCHEDULE_1
         assert zone.mode == ClimateZoneMode.MANUAL
 
         day: Weekday = Weekday.FRIDAY
-        schedule: ZoneSchedule = await api.async_read_zone_schedule(
+        schedule: ZoneSchedule | None = await api.async_read_zone_schedule(
             zone=zone, schedule_id=AUTO_SCHEDULE_DEFAULT_ID, day=day
         )
         assert schedule is not None
@@ -107,7 +108,7 @@ async def test_read_registers_service_exceptions(
         await hass.async_block_till_done()
 
         # Call the service
-        with pytest.raises(expected_exception=RemehaServiceException):
+        with pytest.raises(expected_exception=RemehaServiceError):
             await hass.services.async_call(
                 domain=DOMAIN,
                 service=READ_REGISTERS_SERVICE_NAME,

@@ -2,7 +2,7 @@
 
 import logging
 import uuid
-from collections.abc import Generator
+from collections.abc import Callable, Generator
 from datetime import timedelta, tzinfo
 from typing import Any, Final, cast
 from unittest.mock import AsyncMock, MagicMock, Mock, patch
@@ -32,6 +32,7 @@ from pytest_homeassistant_custom_component.common import (
 )
 
 from custom_components.remeha_modbus.api import ConnectionType, RemehaApi
+from custom_components.remeha_modbus.blend.scheduler.const import SchedulerSchedule
 from custom_components.remeha_modbus.const import (
     AUTO_SCHEDULE_SELECTED_SCHEDULE,
     CONFIG_AUTO_SCHEDULE,
@@ -56,6 +57,8 @@ from custom_components.remeha_modbus.const import (
     BoilerEnergyLabel,
     ZoneRegisters,
 )
+from custom_components.scheduler.store import ScheduleEntry
+from tests.util import SchedulerPlatformStub
 
 TESTING_TIME_ZONE: Final[str] = "Europe/Amsterdam"
 
@@ -100,6 +103,16 @@ def get_api(
         device_address=device_address,
         time_zone=time_zone,
     )
+
+
+@pytest.fixture
+def finalizer():
+    """Return a list of callables that are executed after the test method finishes."""
+    callables = []
+    yield callables
+
+    for fn in callables:
+        fn()
 
 
 @pytest.fixture
@@ -224,11 +237,34 @@ def mock_config_entry(request) -> Generator[MockConfigEntry]:
         )
 
 
-async def setup_platform(hass: HomeAssistant, config_entry: MockConfigEntry):
-    """Set up the platform."""
+async def setup_platform(
+    hass: HomeAssistant,
+    config_entry: MockConfigEntry,
+    add_schedule_callback: Callable[[ScheduleEntry], None] | None = None,
+    edit_schedule_callback: Callable[[ScheduleEntry], None] | None = None,
+):
+    """Set up the platform based on the given `config_entry`, using a `RemehaUpdateCoordinator` that does not update.
+
+    Additionally, the following entities and services are configured:
+     * A `weather.fake_weather` entity;
+     * A mocked `weather.get_forecasts` entity service;
+     * A mocked `scheduler.add` service;
+     * A mocked `scheduler.edit` service;
+     * `hass.data['remeha_modbus']['add_scheduler_calls']` contains a list of service calls to the `scheduler.add` service.
+     * `hass.data['remeha_modbus']['edit_schedule_calls']` contains a list of service calls to the `scheduler.edit` service.
+
+    If the scheduler services require a side effect, provide the respective callback.
+
+    Args:
+        hass (HomeAssistant): Home Assistant instance.
+        config_entry (MockConfigEntry): The config entry to use for setting up the platform.
+        add_schedule_callback (Callable[[ServiceCall], None] | None): A callback function for the `scheduler.add` service.
+        edit_schedule_callback (Callable[[ServiceCall], None] | None): A callback function for the `scheduler.edit` service.
+
+    """
 
     # Prepare hass by adding a weather entity.
-    component = EntityComponent[WeatherEntity](
+    weather_component = EntityComponent[WeatherEntity](
         logger=logging.getLogger("weather"),
         domain=WeatherDomain,
         hass=hass,
@@ -236,13 +272,13 @@ async def setup_platform(hass: HomeAssistant, config_entry: MockConfigEntry):
     )
 
     # Stop timers when HA stops.
-    component.register_shutdown()
+    weather_component.register_shutdown()
 
     # Add fake weather entity.
     entity: WeatherEntity = MockWeatherEntity(entity_id="weather.fake_weather")
-    await component.async_add_entities([entity])
+    await weather_component.async_add_entities([entity])
 
-    component.async_register_entity_service(
+    weather_component.async_register_entity_service(
         name=SERVICE_GET_FORECASTS,
         schema={vol.Required("type"): vol.In(("daily", "hourly", "twice_daily"))},
         func=async_get_forecasts_service,
@@ -253,6 +289,17 @@ async def setup_platform(hass: HomeAssistant, config_entry: MockConfigEntry):
         ],
         supports_response=SupportsResponse.ONLY,
     )
+
+    hass.data.setdefault(DOMAIN, {})
+
+    # Add the scheduler component
+    scheduler_component = SchedulerPlatformStub(
+        hass=hass,
+        add_schedule_callback=add_schedule_callback,
+        edit_schedule_callback=edit_schedule_callback,
+    )
+
+    await scheduler_component.async_add_to_hass()
 
     config_entry.add_to_hass(hass=hass)
 
@@ -266,6 +313,20 @@ async def setup_platform(hass: HomeAssistant, config_entry: MockConfigEntry):
 
     # Ensure hass and RemehaApi are using the same time zone.
     await hass.config.async_update(time_zone=TESTING_TIME_ZONE)
+
+
+def replace_tag_template(fixture: SchedulerSchedule, uuid: uuid.UUID) -> SchedulerSchedule:
+    """Replace the `__UUID__` template in the given fixture with the actual `UUID`."""
+
+    template = "__UUID__"
+    if "tags" in fixture:
+        templated_tag = next(iter([tag for tag in fixture["tags"] if template in tag]))
+
+        fixture["tags"] = [
+            templated_tag.replace(template, str(uuid)),
+            *[tag for tag in fixture["tags"] if template not in tag],
+        ]
+    return fixture
 
 
 def _create_config_entry(

@@ -3,11 +3,11 @@
 import pytest
 
 from custom_components.remeha_modbus.api import (
-    ClimateZone,
     DeviceBoardCategory,
     DeviceBoardType,
     DeviceInstance,
 )
+from custom_components.remeha_modbus.api.climate_zone import ClimateZone
 from custom_components.remeha_modbus.const import (
     ClimateZoneFunction,
     ClimateZoneMode,
@@ -89,7 +89,8 @@ async def test_climate_zone_get_current_setpoint(mock_modbus_client):
     """Test retrieval of the current setpoint of a climate zone."""
 
     api = get_api(mock_modbus_client=mock_modbus_client)
-    zone: ClimateZone = await api.async_read_zone(id=2)
+    zone: ClimateZone | None = await api.async_read_zone(id=2)
+    assert zone is not None
 
     assert zone.is_domestic_hot_water()
 
@@ -119,7 +120,8 @@ async def test_climate_zone_set_current_setpoint(mock_modbus_client):
     """Test setting the current setpoint of a DHW zone."""
 
     api = get_api(mock_modbus_client=mock_modbus_client)
-    zone: ClimateZone = await api.async_read_zone(id=2)
+    zone: ClimateZone | None = await api.async_read_zone(id=2)
+    assert zone is not None
 
     # Prepare setpoint values
     zone.room_setpoint = -1
@@ -200,7 +202,8 @@ async def test_climate_zone_get_current_temperature(mock_modbus_client):
     """Test the retrieval of the current temperature of a climate zone."""
 
     api = get_api(mock_modbus_client=mock_modbus_client)
-    zone: ClimateZone = await api.async_read_zone(id=2)
+    zone: ClimateZone | None = await api.async_read_zone(id=2)
+    assert zone is not None
 
     assert zone.is_domestic_hot_water()
     assert zone.current_temparature == 53.2
@@ -228,10 +231,12 @@ async def test_scheduling_temporary_setpoint(mock_modbus_client):
 
     # Retrieve a single zone.
     api = get_api(mock_modbus_client=mock_modbus_client)
-    zone: ClimateZone = await api.async_read_zone(1)
+    zone: ClimateZone | None = await api.async_read_zone(1)
+    assert zone is not None
     assert zone.selected_schedule == ClimateZoneScheduleId.SCHEDULE_1
 
     # Override the setpoint
+    assert zone.current_setpoint is not None
     current_setpoint: float = zone.current_setpoint
     temporary_setpoint = current_setpoint + 1
 

@@ -71,9 +71,11 @@ def _auto_scheduling_schema(current: ConfigEntry | None = None) -> vol.Schema:
             ): selector({"entity": {"filter": {"domain": WeatherDomain}}}),
             vol.Required(
                 AUTO_SCHEDULE_SELECTED_SCHEDULE,
-                default=current.data[AUTO_SCHEDULE_SELECTED_SCHEDULE]
-                if current
-                else REMEHA_PRESET_SCHEDULE_1,
+                default=(
+                    current.data[AUTO_SCHEDULE_SELECTED_SCHEDULE]
+                    if current
+                    else REMEHA_PRESET_SCHEDULE_1
+                ),
             ): selector(
                 {
                     "select": {
@@ -92,42 +94,50 @@ def _auto_scheduling_schema(current: ConfigEntry | None = None) -> vol.Schema:
                     {
                         vol.Required(
                             PV_NOMINAL_POWER_WP,
-                            default=current.data[PV_CONFIG_SECTION][PV_NOMINAL_POWER_WP]
-                            if current
-                            else vol.UNDEFINED,
+                            default=(
+                                current.data[PV_CONFIG_SECTION][PV_NOMINAL_POWER_WP]
+                                if current
+                                else vol.UNDEFINED
+                            ),
                         ): cv.positive_int,
                         vol.Optional(
                             PV_ORIENTATION,
-                            default=current.data[PV_CONFIG_SECTION].get(
-                                PV_ORIENTATION, vol.UNDEFINED
-                            )
-                            if current
-                            else PVSystemOrientation.SOUTH,
+                            default=(
+                                current.data[PV_CONFIG_SECTION].get(PV_ORIENTATION, vol.UNDEFINED)
+                                if current
+                                else PVSystemOrientation.SOUTH
+                            ),
                         ): remeha_cv.str_enum(PVSystemOrientation),
                         vol.Optional(
                             PV_TILT,
-                            default=current.data[PV_CONFIG_SECTION].get(PV_TILT, vol.UNDEFINED)
-                            if current
-                            else 30.0,
+                            default=(
+                                current.data[PV_CONFIG_SECTION].get(PV_TILT, vol.UNDEFINED)
+                                if current
+                                else 30.0
+                            ),
                         ): vol.All(
                             vol.Coerce(float),
                             vol.Range(min=PV_MIN_TILT_DEGREES, max=PV_MAX_TILT_DEGREES),
                         ),
                         vol.Optional(
                             PV_ANNUAL_EFFICIENCY_DECREASE,
-                            default=current.data[PV_CONFIG_SECTION].get(
-                                PV_ANNUAL_EFFICIENCY_DECREASE, vol.UNDEFINED
-                            )
-                            if current
-                            else 0.0,
+                            default=(
+                                current.data[PV_CONFIG_SECTION].get(
+                                    PV_ANNUAL_EFFICIENCY_DECREASE, vol.UNDEFINED
+                                )
+                                if current
+                                else 0.0
+                            ),
                         ): cv.positive_float,
                         vol.Optional(
                             PV_INSTALLATION_DATE,
-                            default=current.data[PV_CONFIG_SECTION].get(
-                                PV_INSTALLATION_DATE, vol.UNDEFINED
-                            )
-                            if current
-                            else vol.UNDEFINED,
+                            default=(
+                                current.data[PV_CONFIG_SECTION].get(
+                                    PV_INSTALLATION_DATE, vol.UNDEFINED
+                                )
+                                if current
+                                else vol.UNDEFINED
+                            ),
                         ): selector({"date": {}}),
                     }
                 ),
@@ -138,25 +148,31 @@ def _auto_scheduling_schema(current: ConfigEntry | None = None) -> vol.Schema:
                     {
                         vol.Required(
                             DHW_BOILER_VOLUME,
-                            default=current.data[DHW_BOILER_CONFIG_SECTION][DHW_BOILER_VOLUME]
-                            if current
-                            else vol.UNDEFINED,
+                            default=(
+                                current.data[DHW_BOILER_CONFIG_SECTION][DHW_BOILER_VOLUME]
+                                if current
+                                else vol.UNDEFINED
+                            ),
                         ): cv.positive_int,
                         vol.Optional(
                             DHW_BOILER_HEAT_LOSS_RATE,
-                            default=current.data[DHW_BOILER_CONFIG_SECTION].get(
-                                DHW_BOILER_HEAT_LOSS_RATE, vol.UNDEFINED
-                            )
-                            if current
-                            else 0.0,
+                            default=(
+                                current.data[DHW_BOILER_CONFIG_SECTION].get(
+                                    DHW_BOILER_HEAT_LOSS_RATE, vol.UNDEFINED
+                                )
+                                if current
+                                else 0.0
+                            ),
                         ): cv.positive_float,
                         vol.Optional(
                             DHW_BOILER_ENERGY_LABEL,
-                            default=current.data[DHW_BOILER_CONFIG_SECTION].get(
-                                DHW_BOILER_ENERGY_LABEL, vol.UNDEFINED
-                            )
-                            if current
-                            else vol.UNDEFINED,
+                            default=(
+                                current.data[DHW_BOILER_CONFIG_SECTION].get(
+                                    DHW_BOILER_ENERGY_LABEL, vol.UNDEFINED
+                                )
+                                if current
+                                else vol.UNDEFINED
+                            ),
                         ): remeha_cv.str_enum(BoilerEnergyLabel),
                     }
                 ),
@@ -183,9 +199,9 @@ def _modbus_serial_schema(current: ConfigEntry | None = None) -> vol.Schema:
             ): vol.In([MODBUS_SERIAL_METHOD_RTU, MODBUS_SERIAL_METHOD_ASCII]),
             vol.Required(
                 MODBUS_SERIAL_PARITY,
-                default=current.data[MODBUS_SERIAL_PARITY]
-                if current
-                else MODBUS_SERIAL_PARITY_NONE,
+                default=(
+                    current.data[MODBUS_SERIAL_PARITY] if current else MODBUS_SERIAL_PARITY_NONE
+                ),
             ): vol.In(
                 [
                     MODBUS_SERIAL_PARITY_EVEN,
@@ -331,9 +347,11 @@ class RemehaConfigFlow(ConfigFlow, domain=DOMAIN):
                 return self.async_show_form(
                     step_id="modbus_serial",
                     data_schema=_modbus_serial_schema(
-                        current=self._get_reconfigure_entry()
-                        if self.source == SOURCE_RECONFIGURE
-                        else None
+                        current=(
+                            self._get_reconfigure_entry()
+                            if self.source == SOURCE_RECONFIGURE
+                            else None
+                        )
                     ),
                     errors=errors,
                 )
@@ -341,9 +359,9 @@ class RemehaConfigFlow(ConfigFlow, domain=DOMAIN):
             return self.async_show_form(
                 step_id="modbus_socket",
                 data_schema=_modbus_socket_schema(
-                    current=self._get_reconfigure_entry()
-                    if self.source == SOURCE_RECONFIGURE
-                    else None
+                    current=(
+                        self._get_reconfigure_entry() if self.source == SOURCE_RECONFIGURE else None
+                    )
                 ),
                 errors=errors,
             )

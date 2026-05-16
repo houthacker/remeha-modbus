@@ -2,7 +2,7 @@
 
 import logging
 from datetime import datetime
-from typing import Final, Self, cast
+from typing import Self, cast
 
 from dateutil import relativedelta
 from homeassistant.components.climate import (
@@ -30,6 +30,7 @@ from custom_components.remeha_modbus.const import (
     CLIMATE_DEFAULT_PRESETS,
     CLIMATE_DHW_EXTRA_PRESETS,
     DOMAIN,
+    HA_CLIMATE_PRESET_TO_REMEHA_ZONE_MODE,
     HA_PRESET_ANTI_FROST,
     HA_PRESET_MANUAL,
     HA_SCHEDULE_TO_REMEHA_SCHEDULE,
@@ -43,13 +44,7 @@ from custom_components.remeha_modbus.const import (
 )
 from custom_components.remeha_modbus.coordinator import RemehaUpdateCoordinator
 from custom_components.remeha_modbus.errors import InvalidClimateContext
-
-HA_CLIMATE_PRESET_TO_REMEHA_ZONE_MODE: Final[dict[str, ClimateZoneMode]] = {
-    HA_PRESET_ANTI_FROST: ClimateZoneMode.ANTI_FROST,
-    HA_PRESET_MANUAL: ClimateZoneMode.MANUAL,
-    PRESET_COMFORT: ClimateZoneMode.MANUAL,
-    PRESET_ECO: ClimateZoneMode.ANTI_FROST,
-}
+from custom_components.remeha_modbus.helpers.entities import generate_unique_id
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -86,7 +81,7 @@ class RemehaClimateEntity(CoordinatorEntity, ClimateEntity):
         self.coordinator: RemehaUpdateCoordinator = coordinator
         self.climate_zone_id: int = climate_zone_id
 
-        self._attr_unique_id = f"zone_{climate_zone_id}"
+        self._attr_unique_id = generate_unique_id(climate_zone_id)
         self._attr_extra_state_attributes = {"zone_id": climate_zone_id}
 
         _LOGGER.debug("Creating new RemehaModbusClimate entity [%s]", self._attr_unique_id)
@@ -474,14 +469,7 @@ class RemehaChEntity(RemehaClimateEntity):
 
     @property
     def preset_mode(self) -> str | None:
-        """Return the current active preset.
-
-        Notes
-        -----
-        * The last two preset modes are always called `manual` and `anti_frost`, following the naming
-            of the GTW-08 parameters. However, in a DHW zone these actually correspond to `COMFORT` and `ECO`.
-
-        """
+        """Return the current active preset."""
 
         zone: ClimateZone = self._zone
         if zone.mode == ClimateZoneMode.SCHEDULING:

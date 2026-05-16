@@ -118,7 +118,7 @@ class Appliance:
     the other available api types, like appliance error status or burning hours counters.
     """
 
-    current_error: int
+    current_error: int | None
     """The current error, encoded in two unsigned bytes. `None` means no error.
 
     The joined bytes show the error that can be looked up in the manual
@@ -151,6 +151,7 @@ class Appliance:
             case _:
                 prefix = "?"
 
+        assert self.current_error is not None
         return (
             f"{prefix}{(self.current_error >> 8):02d}.{(self.current_error & int('00ff', 16)):02d}"
         )

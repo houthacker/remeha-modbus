@@ -128,6 +128,9 @@
     "switch": {
       "enable_schedule_sync": {
         "name": "Schema synchronisatie."
+      },
+      "heatpump_managed_schedules": {
+        "name": "Warmtepomp beheert uitvoer van klokprogramma's."
       }
     }
   },
@@ -156,15 +159,6 @@
     }
   },
   "exceptions": {
-    "climate_invalid_operation_ctx": {
-      "message": "Aangevraagde actie '{operation}' is ongeldig in voorkeuzemodus {preset_mode}."
-    },
-    "climate_invalid_operation_ctx_hvac": {
-      "message": "Zone modus {hvac_mode} is ongeldig in zone {zone_name}."
-    },
-    "climate_unsupported_preset_mode": {
-      "message": "Aanvraagde voorkeuzemodus {preset_mode} wordt niet ondersteund."
-    },
     "auto_schedule_unsupported_temperature_unit": {
       "message": "Entiteit {entity_id} gebruikt een niet-ondersteunde temperatuureenheid {unit_of_temperature}."
     },
@@ -186,6 +180,21 @@
     "auto_schedule_value_error": {
       "message": "Kan geen automatische planning maken: fout tijdens het deserializeren van het modbus bericht, zie logs voor details."
     },
+    "bootstrap_blenders_error": {
+      "message": "Fout tijdens het koppelen met andere integraties."
+    },
+    "climate_invalid_operation_ctx": {
+      "message": "Aangevraagde actie '{operation}' is ongeldig in voorkeuzemodus {preset_mode}."
+    },
+    "climate_invalid_operation_ctx_hvac": {
+      "message": "Zone modus {hvac_mode} is ongeldig in zone {zone_name}."
+    },
+    "climate_unsupported_preset_mode": {
+      "message": "Aanvraagde voorkeuzemodus {preset_mode} wordt niet ondersteund."
+    },
+    "missing_external_component": {
+      "message": "Integratie '{component}' niet gevonden. Installeer de integratie en probeer het opnieuw. Installatie-instructies zijn te vinden op {url}."
+    },
     "read_registers_modbus_error": {
       "message": "Modbus fout tijdens het lezen van de registers."
     },
@@ -195,11 +204,38 @@
     "read_registers_unknown_error": {
       "message": "Onbekende fout tijdens het lezen van de registers. Zie log voor details."
     },
-    "missing_external_component": {
-      "message": "Integratie '{component}' niet gevonden. Installeer de integratie en probeer het opnieuw. Installatie-instructies zijn te vinden op {url}."
+    "schedule_update_non_equal_climates": {
+      "message": "Kan zone schema updates niet bepalen: er is een zone toegevoegd of verwijderd."
     },
-    "bootstrap_blenders_error": {
-      "message": "Fout tijdens het koppelen met andere integraties."
+    "scenario_execution_error_missing_required_state": {
+      "message": "Kan scenario {scenario} niet uitvoeren: vereiste entitystate uit integratie {component} mist."
+    },
+    "scenario_execution_error_no_tag_in_attrs": {
+      "message": "Kan scenario {scenario} niet uitvoeren: scheduler entity {entity} mist de benodigde tag om het aan een ZoneSchedule te koppelen."
+    },
+    "scenario_execution_error_missing_climate": {
+      "message": "Kan scenario {scenario} niet uitvoeren: climate dat gekoppeld is aan scheduler.schedule {scheduler_entity} niet gevonden."
+    },
+    "parse_error_entity_not_found": {
+      "message": "Kan ZoneSchedule niet vertalen naar scheduler schema: kan vereiste climate entity_id niet vinden."
+    },
+    "parse_error_time_slot": {
+      "message": "Kan state {schedule_entity_id} niet vertalen naar ZoneSchedule: timeslot {time_slot} moet uit precies 2 delen bestaan, maar heeft er {part_count}."
+    },
+    "parse_error_scheduler_state_action": {
+      "message": "Kan state {schedule_entity_id} niet vertalen naar ZoneSchedule: vereiste service call om climate mode in te stellen niet gevonden."
+    },
+    "parse_error_multiple_weekdays": {
+      "message": "Kan state {schedule_entity_id} niet vertalen naar ZoneSchedule: schema moet precies 1 weekdag hebben, maar het geldt voor meerdere."
+    },
+    "incorrect_entity_platform": {
+      "message": "Entity {entity_id} hoort niet bij platform {expected_platform} en/of integratie {expected_component}."
+    }
+  },
+  "issues": {
+    "heatpump_managed_schedules_turned_off": {
+      "title": "Klokprogramma's niet beheerd door warmtepomp.",
+      "description": "Je hebt een switch uitgeschakeld waardoor Home Assistant de klokprogramma's uitvoert i.p.v je warmtepomp. Negeer dit bericht als dit echt is wat je wilt."
     }
   }
 }

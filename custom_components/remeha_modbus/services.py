@@ -1,7 +1,7 @@
 """Remeha Modbus service calls."""
 
 import logging
-from typing import cast
+from typing import TYPE_CHECKING, cast
 
 from homeassistant.components.weather import SERVICE_GET_FORECASTS
 from homeassistant.components.weather.const import ATTR_WEATHER_TEMPERATURE_UNIT
@@ -10,10 +10,11 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import UnitOfTemperature
 from homeassistant.core import HomeAssistant, ServiceCall, ServiceResponse, State, SupportsResponse
 from pymodbus import ModbusException
-from remeha_modbus.blend.scheduler.blender import EventDispatcher as SchedulerEventDispatcher
-from remeha_modbus.blend.scheduler.blender import SchedulerBlender
-from remeha_modbus.helpers.entities import is_schedule_sync_enabled
 
+from custom_components.remeha_modbus.blend.scheduler.blender import (
+    EventDispatcher as SchedulerEventDispatcher,
+)
+from custom_components.remeha_modbus.blend.scheduler.blender import SchedulerBlender
 from custom_components.remeha_modbus.const import (
     AUTO_SCHEDULE_SERVICE_NAME,
     BOOTSTRAP_BLENDERS_SERVICE_NAME,
@@ -26,17 +27,20 @@ from custom_components.remeha_modbus.const import (
     READ_REGISTERS_STRUCT_FORMAT,
     WEATHER_ENTITY_ID,
 )
-from custom_components.remeha_modbus.coordinator import RemehaUpdateCoordinator
 from custom_components.remeha_modbus.errors import (
     MissingExternalComponent,
     RemehaIncorrectServiceCall,
-    RemehaServiceException,
+    RemehaServiceError,
 )
+from custom_components.remeha_modbus.helpers.entities import is_schedule_sync_enabled
+
+if TYPE_CHECKING:
+    from custom_components.remeha_modbus.coordinator import RemehaUpdateCoordinator  # noqa: TC004
 
 _LOGGER = logging.getLogger(__name__)
 
 
-def register_services(
+def register_services(  # noqa: C901
     hass: HomeAssistant, config: ConfigEntry, coordinator: RemehaUpdateCoordinator
 ) -> None:
     """Register all services of this integration."""
@@ -90,7 +94,7 @@ def register_services(
         struct_format: str = call.data[READ_REGISTERS_STRUCT_FORMAT]
 
         try:
-            return cast(
+            response = cast(
                 ServiceResponse,
                 {
                     "value": await coordinator.async_read_registers(
@@ -100,23 +104,24 @@ def register_services(
                     )
                 },
             )
+
         except ModbusException as e:
-            raise RemehaServiceException(
+            raise RemehaServiceError(
                 translation_domain=DOMAIN, translation_key="read_registers_modbus_error"
             ) from e
+        else:
+            return response if call.return_response else None
 
     async def async_bootstrap_blenders(_: ServiceCall) -> None:
-
         try:
             scheduler_blender = SchedulerBlender(
                 hass=hass,
                 coordinator=config.runtime_data["coordinator"],
                 dispatcher=SchedulerEventDispatcher(hass=hass),
             )
+            await scheduler_blender.async_blend()
 
-            scheduler_blender.bootstrap()
-
-            config.runtime_data["scheduler_blender"] = scheduler_blender
+            config.runtime_data["blenders"]["scheduler"] = scheduler_blender
 
         except MissingExternalComponent as e:
             # If the scheduler integration is not installed but schedule sync
@@ -130,6 +135,7 @@ def register_services(
         domain=DOMAIN,
         service=AUTO_SCHEDULE_SERVICE_NAME,
         service_func=dhw_auto_schedule,
+        supports_response=SupportsResponse.NONE,
     )
 
     hass.services.async_register(
@@ -140,11 +146,12 @@ def register_services(
         service=READ_REGISTERS_SERVICE_NAME,
         service_func=async_read_registers,
         schema=READ_REGISTERS_SERVICE_SCHEMA,
-        supports_response=SupportsResponse.ONLY,
+        supports_response=SupportsResponse.OPTIONAL,
     )
 
     hass.services.async_register(
         domain=DOMAIN,
         service=BOOTSTRAP_BLENDERS_SERVICE_NAME,
         service_func=async_bootstrap_blenders,
+        supports_response=SupportsResponse.NONE,
     )

@@ -1,14 +1,14 @@
 """Constants for integration with scheduler-component."""
 
+from enum import StrEnum
 from typing import Any, Final, Literal, NotRequired, Required, TypedDict
 
 from homeassistant.const import STATE_OFF, STATE_ON, STATE_UNAVAILABLE, STATE_UNKNOWN
 from pydantic.dataclasses import dataclass
 
-from custom_components.remeha_modbus.const import DOMAIN, ZoneScheduleUID
-from custom_components.scheduler.const import DOMAIN as _SchedulerDomain
+from custom_components.remeha_modbus.const import DOMAIN, Weekday, ZoneScheduleUID
 
-SchedulerDomain = _SchedulerDomain
+SchedulerDomain: Final[str] = "scheduler"
 """The name of the scheduler integration."""
 
 SCHEDULER_INSTALLATION_URL: Final[str] = "https://github.com/nielsfaber/scheduler-card#installation"
@@ -19,6 +19,32 @@ SCHEDULER_TAG_PREFIX: Final[str] = f"{DOMAIN}_"
 
 This tag is used to link a `scheduler.schedule` to a `ZoneSchedule`.
 """
+
+
+class ServiceOperation(StrEnum):
+    """Enumerate the required service operation to store a schedule."""
+
+    ADD = "add"
+    """The schedule does not exist in the service, so it must be added."""
+    EDIT = "edit"
+    """The schedule already exists in the service, so it must be edited."""
+
+
+WEEKDAY_TO_SHORT_DESC: Final[
+    dict[Weekday, Literal["mon", "tue", "wed", "thu", "fri", "sat", "sun"]]
+] = {
+    Weekday.MONDAY: "mon",
+    Weekday.TUESDAY: "tue",
+    Weekday.WEDNESDAY: "wed",
+    Weekday.THURSDAY: "thu",
+    Weekday.FRIDAY: "fri",
+    Weekday.SATURDAY: "sat",
+    Weekday.SUNDAY: "sun",
+}
+
+SHORT_DESC_TO_WEEKDAY: Final[
+    dict[Literal["mon", "tue", "wed", "thu", "fri", "sat", "sun"], Weekday]
+] = {WEEKDAY_TO_SHORT_DESC[day]: day for day in Weekday}
 
 
 @dataclass(frozen=True, slots=True)
@@ -81,7 +107,7 @@ class SchedulerTimeslot(TypedDict):
     """Conditions that should be validated before the action(s) may be executed."""
 
     condition_type: NotRequired[Literal["and", "or"]]
-    """Logicto apply when validating multiple conditions.
+    """Logic to apply when validating multiple conditions.
 
     Values:
     * `and`: All conditions must be met.

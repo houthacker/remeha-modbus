@@ -11,9 +11,10 @@ ha-ffmpeg
 hassil
 home-assistant-frontend
 home-assistant-intents
-homeassistant>=2026.3.2
+homeassistant>=2026.5.0
 mutagen
 pre-commit
+propcache
 PyTurboJPEG
 pycares
 pyclean

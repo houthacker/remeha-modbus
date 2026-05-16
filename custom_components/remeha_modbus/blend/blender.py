@@ -31,15 +31,15 @@ class Blender(metaclass=abc.ABCMeta):
     def __subclasshook__(cls, subclass):
         """Return whether `subclass` is a duck-typed subclass of a `Blender`."""
         return (
-            hasattr(subclass, "bootstrap")
-            and inspect.ismethod(subclass.blend)
+            hasattr(subclass, "async_bootstrap")
+            and inspect.iscoroutinefunction(subclass.async_bootstrap)
             and hasattr(subclass, "unblend")
             and inspect.ismethod(subclass.unblend)
         )
 
     @abc.abstractmethod
-    def bootstrap(self) -> None:
-        """async-friendly method to setup the blend between the two integrations.
+    async def async_blend(self) -> None:
+        """Ssetup the blend between the two integrations.
 
         To blend two integrations, implementations can for example subscribe to certain
         events.
