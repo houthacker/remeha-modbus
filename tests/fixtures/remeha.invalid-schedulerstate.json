@@ -1,0 +1,18 @@
+{
+  "entity_id": "switch.scheduler_test_schedule",
+  "state": "on",
+  "attributes": {
+    "weekdays": ["mon"],
+    "timeslots": ["08:00:00 - 16:00:00"],
+    "entities": ["climate.remeha_modbus_dhw"],
+    "actions": [
+      {
+        "service": "climate.set_temperature",
+        "data": {
+          "temperature": 20.5
+        }
+      }
+    ],
+    "tags": ["test_remeha"]
+  }
+}

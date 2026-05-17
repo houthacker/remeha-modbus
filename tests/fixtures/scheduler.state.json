@@ -1,0 +1,23 @@
+{
+  "entity_id": "switch.scheduler_test_schedule",
+  "state": "on",
+  "attributes": {
+    "weekdays": ["mon"],
+    "timeslots": ["08:00:00 - 16:00:00"],
+    "entities": ["climate.remeha_modbus_dhw"],
+    "actions": [
+      {
+        "service": "climate.set_preset_mode",
+        "data": {
+          "preset_mode": "schedule_1"
+        }
+      }
+    ],
+    "current_slot": 0,
+    "next_slot": 0,
+    "next_trigger": "2026-05-18:T08:00:00+02:00",
+    "tags": ["test_remeha"],
+    "icon": "mdi:calendar-clock",
+    "friendly_name": "Scheduler remeha_test_schedule"
+  }
+}

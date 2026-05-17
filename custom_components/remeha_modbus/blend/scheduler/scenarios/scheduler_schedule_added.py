@@ -8,7 +8,7 @@ from homeassistant.core import HomeAssistant, State
 
 from custom_components.remeha_modbus.blend.blender import Scenario
 from custom_components.remeha_modbus.blend.scheduler.const import SCHEDULER_TAG_PREFIX
-from custom_components.remeha_modbus.blend.scheduler.helpers import scheduler_tag_to_uuid
+from custom_components.remeha_modbus.blend.scheduler.helpers import decompose_scheduler_tag
 from custom_components.remeha_modbus.const import ATTR_SCHEDULER_TAGS, DOMAIN
 
 if TYPE_CHECKING:
@@ -75,7 +75,7 @@ class SchedulerScheduleAdded(Scenario):
             )
 
         try:
-            uuid = scheduler_tag_to_uuid(tag)
+            uuid = decompose_scheduler_tag(tag)
 
             # Can assert here because if tag is not None, it *must* be suffixed by a valid UUID.
             assert uuid is not None
@@ -90,5 +90,7 @@ class SchedulerScheduleAdded(Scenario):
 
         except ValueError as e:
             _LOGGER.exception(
-                "Invalid UUID when executing scenario schedule_added", exc_info=e, stack_info=True
+                "Invalid schedule tag when executing scenario schedule_added",
+                exc_info=e,
+                stack_info=True,
             )

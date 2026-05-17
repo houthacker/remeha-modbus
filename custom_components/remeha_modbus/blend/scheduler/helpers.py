@@ -72,25 +72,24 @@ def compose_scheduler_tag(uuid: UUID) -> str:
     return f"{SCHEDULER_TAG_PREFIX}{uuid}"
 
 
-def scheduler_tag_to_uuid(scheduler_tag: str) -> UUID | None:
-    """Transform a scheduler tag into a `UUID`.
+def decompose_scheduler_tag(scheduler_tag: str) -> UUID:
+    """Decompose a scheduler tag into a `UUID`.
 
     Args:
-        scheduler_tag (str): The scheduler tag to transform
+        scheduler_tag (str): The scheduler tag to decompose
 
     Returns:
-        The scheduler tag transformed to a v4 `UUID`, or `None` if the scheduler
-        tag is not prefxed with `SCHEDULER_TAG_PREFIX`.
+        The `UUID` from the the scheduler tag if it is prefxed with `SCHEDULER_TAG_PREFIX`.
 
     Raises:
-        `ValueError` if the `UUID` string is invalid.
+        `ValueError` if the `UUID` is invalid or the tag is not a scheduler tag
 
     """
 
     if scheduler_tag.startswith(SCHEDULER_TAG_PREFIX):
         return UUID(hex=scheduler_tag.replace(SCHEDULER_TAG_PREFIX, ""), version=4)
 
-    return None
+    raise ValueError("Invalid scheduler tag.")
 
 
 def to_scheduler_state(state: State) -> SchedulerState:
