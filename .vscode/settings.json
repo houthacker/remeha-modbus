@@ -1,6 +1,6 @@
 {
   "python.languageServer": "Pylance",
-  "python.testing.pytestArgs": [],
+  "python.testing.pytestArgs": ["--cov=custom_components/remeha_modbus"],
   "python.testing.unittestEnabled": false,
   "python.testing.pytestEnabled": true,
   "debugpy.debugJustMyCode": false
