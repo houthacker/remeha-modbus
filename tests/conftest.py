@@ -20,6 +20,7 @@ from homeassistant.components.weather.const import DOMAIN as WeatherDomain
 from homeassistant.components.weather.const import WeatherEntityFeature
 from homeassistant.const import CONF_HOST, CONF_NAME, CONF_PORT, CONF_TYPE
 from homeassistant.core import HomeAssistant, SupportsResponse
+from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.entity_component import EntityComponent
 from homeassistant.util import dt
 from homeassistant.util.json import JsonObjectType, JsonValueType
@@ -125,6 +126,12 @@ def json_fixture(request) -> JsonValueType:
 def auto_enable_custom_integrations(enable_custom_integrations):
     """Enable custom integrations."""
     return
+
+
+@pytest.fixture
+def entity_registry(hass: HomeAssistant) -> er.EntityRegistry:
+    """Return the entity registry for the current hass instance."""
+    return er.async_get(hass)
 
 
 @pytest.fixture

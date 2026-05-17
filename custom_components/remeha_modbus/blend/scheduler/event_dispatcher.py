@@ -12,10 +12,10 @@ from homeassistant.helpers.event import (
     async_track_state_change_event,
     async_track_state_removed_domain,
 )
-from homeassistant.helpers.template import integration_entities
 
 from custom_components.remeha_modbus.blend.scheduler.const import SchedulerDomain
 from custom_components.remeha_modbus.const import DOMAIN, EntityEventCallback, UnsubscribeCallback
+from custom_components.remeha_modbus.helpers.entities import integration_entities
 from custom_components.remeha_modbus.helpers.iterators import UnmodifiableDict
 
 _LOGGER = logging.getLogger(__name__)

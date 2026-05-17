@@ -9,7 +9,6 @@ from homeassistant.components.climate.const import PRESET_COMFORT, PRESET_ECO, P
 from homeassistant.components.switch.const import DOMAIN as SwitchDomain
 from homeassistant.const import STATE_OFF
 from homeassistant.core import HomeAssistant, State
-from homeassistant.helpers.template import integration_entities
 from pydantic import TypeAdapter
 
 from custom_components.remeha_modbus.api.climate_zone import ClimateZone
@@ -47,6 +46,7 @@ from custom_components.remeha_modbus.errors import (
 from custom_components.remeha_modbus.helpers.entities import (
     generate_unique_id,
     get_own_entity_by_unique_id,
+    integration_entities,
 )
 
 
