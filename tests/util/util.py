@@ -9,7 +9,7 @@ from typing import Any
 
 import attr
 import voluptuous as vol
-from homeassistant.components.switch.const import DOMAIN as ScheduleEntityPlatform
+from homeassistant.components.switch.const import DOMAIN as SchedulerEntityPlatform
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import ATTR_ENTITY_ID
 from homeassistant.core import (
@@ -21,9 +21,10 @@ from homeassistant.core import (
 )
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.dispatcher import async_dispatcher_send
+from homeassistant.helpers.entity_platform import EntityPlatform
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from homeassistant.util import slugify
-from pytest_homeassistant_custom_component.common import MockConfigEntry, MockEntityPlatform
+from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.scheduler.const import (
     ADD_SCHEDULE_SCHEMA,
@@ -180,9 +181,9 @@ class SchedulerCoordinatorStub(DataUpdateCoordinator):
 
         # Add the schedule to hass
         if new_schedule.name and len(slugify(new_schedule.name)):
-            entity_id = f"{ScheduleEntityPlatform}.schedule_{slugify(new_schedule.name)}"
+            entity_id = f"{SchedulerEntityPlatform}.schedule_{slugify(new_schedule.name)}"
         else:
-            entity_id = f"{ScheduleEntityPlatform}.schedule_{schedule_id}"
+            entity_id = f"{SchedulerEntityPlatform}.schedule_{schedule_id}"
 
         entity = ScheduleEntity(
             coordinator=self,
@@ -281,21 +282,20 @@ class SchedulerStorageStub:
         return self._coordinator.get_schedules()
 
 
-def set_storage_stub_return_value(hass: HomeAssistant, scheduler_storage):
+def set_storage_stub_return_value(mock_config_entry: MockConfigEntry, scheduler_storage):
     """Mock implementation of scheduler.store.async_get_registry."""
 
-    coordinator: SchedulerCoordinatorStub = hass.data[SchedulerDomain]["coordinator"]
+    coordinator: SchedulerCoordinatorStub = mock_config_entry.runtime_data["coordinator"]
     scheduler_storage.return_value = SchedulerStorageStub(coordinator=coordinator)
 
     return scheduler_storage
 
 
-class SchedulerPlatformStub(MockEntityPlatform):
+class SchedulerPlatformStub:
     """A stub supporting the scheduler service features used by `remeha_modbus`."""
 
     def __init__(
         self,
-        hass: HomeAssistant,
         add_schedule_callback: Callable[[ScheduleEntry], None] | None = None,
         edit_schedule_callback: Callable[[ScheduleEntry], None] | None = None,
     ):
@@ -310,15 +310,8 @@ class SchedulerPlatformStub(MockEntityPlatform):
 
         """
 
-        super().__init__(
-            hass=hass,
-            logger=_LOGGER,
-            domain=ScheduleEntityPlatform,
-            platform_name=SchedulerDomain,
-            platform=None,
-            scan_interval=timedelta(seconds=0),
-            entity_namespace=None,
-        )
+        self._hass: HomeAssistant
+        self._platform: EntityPlatform
 
         self._user_callbacks: dict[str, Callable[[ScheduleEntry], None] | None] = {
             SERVICE_ADD: add_schedule_callback,
@@ -326,13 +319,49 @@ class SchedulerPlatformStub(MockEntityPlatform):
         }
         self._coordinator: SchedulerCoordinatorStub
 
+        self._callback_logs: dict[str, list[ServiceCall]] = {}
+
+    async def async_add_to_hass(self, hass: HomeAssistant):
+        """Add this platform to hass."""
+
+        self._platform = EntityPlatform(
+            hass=hass,
+            logger=_LOGGER,
+            domain=SchedulerEntityPlatform,
+            platform_name=SchedulerDomain,
+            platform=None,
+            scan_interval=timedelta(seconds=0),
+            entity_namespace=None,
+        )
+
+        entry = MockConfigEntry(domain=SchedulerDomain, title="scheduler", version=2)
+        entry.runtime_data = {}
+        entry.runtime_data["coordinator"] = self._coordinator = SchedulerCoordinatorStub(
+            hass, entry
+        )
+        entry.add_to_hass(hass)
+
+        hass.config.components.add(SchedulerDomain)
+        hass.data[SchedulerDomain] = {
+            "coordinator": self._coordinator,
+            "get_call_logs": self.call_logs,
+            "schedules": {},
+        }
+
+        async def _async_add_callback(call: ServiceCall):
+            await self._coordinator.async_create_schedule(
+                call=call,
+                async_add_entities=self._platform.async_add_entities,
+                user_callback=self._user_callbacks.get(SERVICE_ADD),
+            )
+
         self._callback_logs = {
             SERVICE_ADD: async_add_mock_service(
                 hass=hass,
                 domain=SchedulerDomain,
                 schema=ADD_SCHEDULE_SCHEMA,
                 service=SERVICE_ADD,
-                user_callback=self._async_add_callback,
+                user_callback=_async_add_callback,
             ),
             SERVICE_EDIT: async_add_mock_service(
                 hass=hass,
@@ -344,23 +373,6 @@ class SchedulerPlatformStub(MockEntityPlatform):
                 ),
             ),
         }
-
-    async def async_add_to_hass(self):
-        """Add this platform to hass."""
-
-        entry = MockConfigEntry(domain=SchedulerDomain, title="scheduler", version=2)
-        entry.runtime_data = {}
-        entry.runtime_data["coordinator"] = SchedulerCoordinatorStub(self.hass, entry)
-        entry.add_to_hass(self.hass)
-
-        self.hass.config.components.add(SchedulerDomain)
-
-    async def _async_add_callback(self, call: ServiceCall):
-        await self._coordinator.async_create_schedule(
-            call=call,
-            async_add_entities=self.async_add_entities,
-            user_callback=self._user_callbacks.get(SERVICE_ADD),
-        )
 
     def call_logs(self, service: str) -> list[ServiceCall]:
         """Return a copy of the service call logs for the given service."""

@@ -33,6 +33,7 @@ from pytest_homeassistant_custom_component.common import (
 )
 
 from custom_components.remeha_modbus.api import ConnectionType, RemehaApi
+from custom_components.remeha_modbus.api.store import RemehaModbusStore
 from custom_components.remeha_modbus.blend.scheduler.const import SchedulerSchedule
 from custom_components.remeha_modbus.const import (
     AUTO_SCHEDULE_SELECTED_SCHEDULE,
@@ -244,6 +245,30 @@ def mock_config_entry(request) -> Generator[MockConfigEntry]:
         )
 
 
+@pytest.fixture
+def modbus_test_store(request, hass) -> RemehaModbusStore:
+    """Create a testing store.
+
+    To configure the store with defaults, pass no parameters.
+    Otherwise, arguments may be passed in a dict of str:
+    ```
+    {
+        version: int,
+        minor_version: int,
+        key: str
+    }
+    ```
+    """
+
+    args: dict[str, Any] = request.param if hasattr(request, "param") else {}
+    return RemehaModbusStore(
+        hass=hass,
+        version=args.get("version", 1),
+        minor_version=args.get("minor_version", 0),
+        key=args.get("key", "remeha-modbus-test-store"),
+    )
+
+
 async def setup_platform(
     hass: HomeAssistant,
     config_entry: MockConfigEntry,
@@ -265,8 +290,8 @@ async def setup_platform(
     Args:
         hass (HomeAssistant): Home Assistant instance.
         config_entry (MockConfigEntry): The config entry to use for setting up the platform.
-        add_schedule_callback (Callable[[ServiceCall], None] | None): A callback function for the `scheduler.add` service.
-        edit_schedule_callback (Callable[[ServiceCall], None] | None): A callback function for the `scheduler.edit` service.
+        add_schedule_callback (Callable[[ScheduleEntry], None] | None): A callback function for the `scheduler.add` service.
+        edit_schedule_callback (Callable[[ScheduleEntry], None] | None): A callback function for the `scheduler.edit` service.
 
     """
 
@@ -301,12 +326,11 @@ async def setup_platform(
 
     # Add the scheduler component
     scheduler_component = SchedulerPlatformStub(
-        hass=hass,
         add_schedule_callback=add_schedule_callback,
         edit_schedule_callback=edit_schedule_callback,
     )
 
-    await scheduler_component.async_add_to_hass()
+    await scheduler_component.async_add_to_hass(hass=hass)
 
     config_entry.add_to_hass(hass=hass)
 
