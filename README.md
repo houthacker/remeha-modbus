@@ -1,6 +1,9 @@
 # Remeha Modbus Gateway integration for Home Assistant
 
-![Remeha logo](logos/remeha-small.png)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="./custom_components/remeha_modbus/brand/dark_logo.png">
+  <img alt="Remeha logo" src="./custom_components/remeha_modbus/brand/logo.png">
+</picture>
 
 [![Hassfest](https://github.com/houthacker/remeha-modbus/actions/workflows/hassfest.yaml/badge.svg)](https://github.com/houthacker/remeha-modbus/actions/workflows/hassfest.yaml)
 [![Validate HACS](https://github.com/houthacker/remeha-modbus/actions/workflows/hacs.yaml/badge.svg)](https://github.com/houthacker/remeha-modbus/actions/workflows/hacs.yaml)
