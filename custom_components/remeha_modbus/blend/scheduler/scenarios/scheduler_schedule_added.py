@@ -9,11 +9,10 @@ from homeassistant.core import HomeAssistant, State
 from custom_components.remeha_modbus.blend.blender import Scenario
 from custom_components.remeha_modbus.blend.scheduler.const import SCHEDULER_TAG_PREFIX
 from custom_components.remeha_modbus.blend.scheduler.helpers import decompose_scheduler_tag
-from custom_components.remeha_modbus.const import ATTR_SCHEDULER_TAGS, DOMAIN
+from custom_components.remeha_modbus.const import ATTR_SCHEDULER_TAGS
 
 if TYPE_CHECKING:
     from custom_components.remeha_modbus.coordinator import RemehaUpdateCoordinator  # noqa: TC004
-from custom_components.remeha_modbus.errors import ScenarioExecutionError
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -25,20 +24,10 @@ class SchedulerScheduleAdded(Scenario):
         self,
         hass: HomeAssistant,
         coordinator: RemehaUpdateCoordinator,
-        schedule_state: State | None,
+        schedule_state: State,
         track_schedule_state: Callable[[], None],
     ) -> None:
         """Create a new SchedulerScheduleAdded scenario."""
-
-        if schedule_state is None:
-            raise ScenarioExecutionError(
-                translation_domain=DOMAIN,
-                translation_key="scenario_execution_error_missing_required_state",
-                translation_placeholders={
-                    "scenario": "scheduler_schedule_added",
-                    "component": "scheduler",
-                },
-            )
 
         self._hass = hass
         self._coordinator = coordinator
@@ -65,32 +54,29 @@ class SchedulerScheduleAdded(Scenario):
         )
 
         if tag is None:
-            raise ScenarioExecutionError(
-                translation_domain=DOMAIN,
-                translation_key="scenario_execution_error_no_tag_in_attrs",
-                translation_placeholders={
-                    "scenario": "scheduler_schedule_added",
-                    "entity": self._schedule_state.entity_id,
-                },
+            _LOGGER.debug(
+                "Added scheduler.schedule %s contains no tags starting with %s; ignoring.",
+                self._schedule_state.entity_id,
+                SCHEDULER_TAG_PREFIX,
             )
+        else:
+            try:
+                uuid = decompose_scheduler_tag(tag)
 
-        try:
-            uuid = decompose_scheduler_tag(tag)
+                # Can assert here because if tag is not None, it *must* be suffixed by a valid UUID.
+                assert uuid is not None
 
-            # Can assert here because if tag is not None, it *must* be suffixed by a valid UUID.
-            assert uuid is not None
+                waiting_list_entry = self._coordinator.remove_from_linking_waiting_list(uuid)
+                if waiting_list_entry is not None:
+                    await self._coordinator.async_upsert_scheduler_link(
+                        waiting_list_entry.zone_schedule_uid, self._schedule_state.entity_id
+                    )
 
-            waiting_list_entry = self._coordinator.remove_from_linking_waiting_list(uuid)
-            if waiting_list_entry is not None:
-                await self._coordinator.async_upsert_scheduler_link(
-                    waiting_list_entry.zone_schedule_uid, self._schedule_state.entity_id
+                    self._track_schedule_state()
+
+            except ValueError as e:
+                _LOGGER.exception(
+                    "Invalid schedule tag when executing scenario schedule_added",
+                    exc_info=e,
+                    stack_info=True,
                 )
-
-                self._track_schedule_state()
-
-        except ValueError as e:
-            _LOGGER.exception(
-                "Invalid schedule tag when executing scenario schedule_added",
-                exc_info=e,
-                stack_info=True,
-            )

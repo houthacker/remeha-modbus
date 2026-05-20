@@ -2,7 +2,7 @@
 
 import logging
 import uuid
-from collections.abc import Callable, Generator
+from collections.abc import Callable, Generator, Iterable
 from datetime import timedelta, tzinfo
 from typing import Any, Final, cast
 from unittest.mock import AsyncMock, MagicMock, Mock, patch
@@ -34,7 +34,6 @@ from pytest_homeassistant_custom_component.common import (
 
 from custom_components.remeha_modbus.api import ConnectionType, RemehaApi
 from custom_components.remeha_modbus.api.store import RemehaModbusStore
-from custom_components.remeha_modbus.blend.scheduler.const import SchedulerSchedule
 from custom_components.remeha_modbus.const import (
     AUTO_SCHEDULE_SELECTED_SCHEDULE,
     CONFIG_AUTO_SCHEDULE,
@@ -274,6 +273,7 @@ async def setup_platform(
     config_entry: MockConfigEntry,
     add_schedule_callback: Callable[[ScheduleEntry], None] | None = None,
     edit_schedule_callback: Callable[[ScheduleEntry], None] | None = None,
+    scheduler_entities: Iterable[MockEntity] = [],
 ):
     """Set up the platform based on the given `config_entry`, using a `RemehaUpdateCoordinator` that does not update.
 
@@ -292,6 +292,7 @@ async def setup_platform(
         config_entry (MockConfigEntry): The config entry to use for setting up the platform.
         add_schedule_callback (Callable[[ScheduleEntry], None] | None): A callback function for the `scheduler.add` service.
         edit_schedule_callback (Callable[[ScheduleEntry], None] | None): A callback function for the `scheduler.edit` service.
+        scheduler_entities (Iterable[MockEntity]): An optional list of mock entities to add to the scheduler component.
 
     """
 
@@ -331,6 +332,7 @@ async def setup_platform(
     )
 
     await scheduler_component.async_add_to_hass(hass=hass)
+    await scheduler_component.async_add_entities(entities=scheduler_entities)
 
     config_entry.add_to_hass(hass=hass)
 
@@ -344,20 +346,6 @@ async def setup_platform(
 
     # Ensure hass and RemehaApi are using the same time zone.
     await hass.config.async_update(time_zone=TESTING_TIME_ZONE)
-
-
-def replace_tag_template(fixture: SchedulerSchedule, uuid: uuid.UUID) -> SchedulerSchedule:
-    """Replace the `__UUID__` template in the given fixture with the actual `UUID`."""
-
-    template = "__UUID__"
-    if "tags" in fixture:
-        templated_tag = next(iter([tag for tag in fixture["tags"] if template in tag]))
-
-        fixture["tags"] = [
-            templated_tag.replace(template, str(uuid)),
-            *[tag for tag in fixture["tags"] if template not in tag],
-        ]
-    return fixture
 
 
 def _create_config_entry(
@@ -405,7 +393,7 @@ def _create_config_entry(
             if dhw_energy_label is not None:
                 entry_data[DHW_BOILER_CONFIG_SECTION] |= {DHW_BOILER_ENERGY_LABEL: dhw_energy_label}
 
-    return MockConfigEntry(
+    config_entry = MockConfigEntry(
         domain=DOMAIN,
         title=f"Remeha Modbus {hub_name}",
         unique_id=str(uuid.uuid4()),
@@ -413,3 +401,7 @@ def _create_config_entry(
         version=version[0],
         minor_version=version[1],
     )
+
+    config_entry.runtime_data = {}
+
+    return config_entry

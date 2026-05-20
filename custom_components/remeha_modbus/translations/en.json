@@ -211,11 +211,11 @@
     "scenario_execution_error_missing_required_state": {
       "message": "Cannot execute scenario {scenario}: missing required entity state from {component} integration."
     },
-    "scenario_execution_error_no_tag_in_attrs": {
-      "message": "Cannot excecute scenario {scenario}: scheduler entity {entity} is missing the tag required to link it to a ZoneSchedule."
-    },
     "scenario_execution_error_missing_climate": {
       "message": "Cannot execute scenario {scenario}: climate linked to scheduler.schedule {scheduler_entity} is missing."
+    },
+    "service_error_missing_state": {
+      "message": "Cannot process newly added entity {entity_id}: new state is unavailable."
     },
     "parse_error_entity_not_found": {
       "message": "Cannot parse ZoneSchedule into scheduler schedule: The required climate entity cannot be found."

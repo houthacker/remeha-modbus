@@ -16,7 +16,7 @@
     "current_slot": 0,
     "next_slot": 0,
     "next_trigger": "2026-05-18:T08:00:00+02:00",
-    "tags": ["test_remeha", "remeha_modbus___UUID__"],
+    "tags": [],
     "icon": "mdi:calendar-clock",
     "friendly_name": "Scheduler remeha_test_schedule"
   }

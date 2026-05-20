@@ -19,13 +19,13 @@ from custom_components.remeha_modbus.api.schedule import (
 from custom_components.remeha_modbus.blend.scheduler import helpers
 from custom_components.remeha_modbus.blend.scheduler.const import (
     SCHEDULER_TAG_PREFIX,
-    SchedulerSchedule,
     SchedulerState,
     ServiceOperation,
 )
 from custom_components.remeha_modbus.const import ClimateZoneScheduleId, Weekday, ZoneScheduleUID
 from custom_components.remeha_modbus.errors import ParseError, RemehaModbusError
-from tests.conftest import get_api, replace_tag_template, setup_platform
+from tests.conftest import get_api, setup_platform
+from tests.util.util import replace_tag_template
 
 
 def test_compose_scheduler_tag():
@@ -71,7 +71,7 @@ def test_to_scheduler_state(json_fixture: dict[str, Any]):
         "timeslots": ["08:00:00 - 16:00:00"],
         "entities": ["climate.remeha_modbus_dhw"],
         "actions": [{"service": "climate.set_preset_mode", "data": {"preset_mode": "schedule_1"}}],
-        "tags": ["test_remeha"],
+        "tags": ["test_remeha", "remeha_modbus___UUID__"],
     }
 
 
@@ -122,7 +122,7 @@ def test_to_zone_schedule_invalid(json_fixture: dict[str, Any]):
 @pytest.mark.parametrize("mock_modbus_client", ["modbus_store.json"], indirect=True)
 @pytest.mark.parametrize("json_fixture", ["scheduler_schedule.json"], indirect=True)
 async def test_to_scheduler_schedule(
-    hass: HomeAssistant, mock_modbus_client, mock_config_entry, json_fixture: SchedulerSchedule
+    hass: HomeAssistant, mock_modbus_client, mock_config_entry, json_fixture: dict[str, Any]
 ):
     """Test that to_scheduler_schedule converts a ZoneSchedule correctly."""
 

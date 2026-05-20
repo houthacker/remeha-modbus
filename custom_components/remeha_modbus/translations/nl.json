@@ -210,11 +210,11 @@
     "scenario_execution_error_missing_required_state": {
       "message": "Kan scenario {scenario} niet uitvoeren: vereiste entitystate uit integratie {component} mist."
     },
-    "scenario_execution_error_no_tag_in_attrs": {
-      "message": "Kan scenario {scenario} niet uitvoeren: scheduler entity {entity} mist de benodigde tag om het aan een ZoneSchedule te koppelen."
-    },
     "scenario_execution_error_missing_climate": {
       "message": "Kan scenario {scenario} niet uitvoeren: climate dat gekoppeld is aan scheduler.schedule {scheduler_entity} niet gevonden."
+    },
+    "service_error_missing_state": {
+      "message": "Kan nieuw toegevoegde entity {entity_id} niet verwerken: nieuwe state niet beschikbaar."
     },
     "parse_error_entity_not_found": {
       "message": "Kan ZoneSchedule niet vertalen naar scheduler schema: kan vereiste climate entity_id niet vinden."

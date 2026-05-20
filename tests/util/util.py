@@ -1,7 +1,8 @@
 """Testing utilities."""
 
 import logging
-from collections.abc import Callable, Coroutine
+import uuid
+from collections.abc import Callable, Coroutine, Iterable
 from datetime import timedelta
 from inspect import iscoroutinefunction
 from secrets import token_hex
@@ -21,6 +22,7 @@ from homeassistant.core import (
 )
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.dispatcher import async_dispatcher_send
+from homeassistant.helpers.entity import Entity
 from homeassistant.helpers.entity_platform import EntityPlatform
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from homeassistant.util import slugify
@@ -92,6 +94,30 @@ def async_add_mock_service(
     )
 
     return call_log
+
+
+def replace_tag_template[T: dict[str, Any]](fixture: T, uuid: uuid.UUID) -> T:
+    """Replace the `__UUID__` template in the given fixture with the actual `UUID`."""
+
+    template = "__UUID__"
+    is_state = "attributes" in fixture
+
+    if "tags" in fixture or (is_state and "tags" in fixture["attributes"]):
+        tag_list = list(fixture["attributes"]["tags"]) if is_state else fixture["tags"]
+        templated_tag = next(iter([tag for tag in tag_list if template in tag]))
+        actual_tag = templated_tag.replace(template, str(uuid))
+
+        if is_state:
+            fixture["attributes"]["tags"] = [
+                actual_tag,
+                *[tag for tag in tag_list if template not in tag],
+            ]
+        else:
+            fixture["tags"] = [
+                actual_tag,
+                *[tag for tag in fixture["tags"] if template not in tag],
+            ]
+    return fixture
 
 
 class SchedulerCoordinatorStub(DataUpdateCoordinator):
@@ -373,6 +399,11 @@ class SchedulerPlatformStub:
                 ),
             ),
         }
+
+    async def async_add_entities(self, entities: Iterable[Entity]):
+        """Add entities."""
+
+        await self._platform.async_add_entities(new_entities=entities)
 
     def call_logs(self, service: str) -> list[ServiceCall]:
         """Return a copy of the service call logs for the given service."""

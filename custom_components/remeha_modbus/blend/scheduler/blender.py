@@ -6,7 +6,7 @@ from typing import Final, override
 
 from homeassistant.components.switch.const import DOMAIN as SwitchDomain
 from homeassistant.const import STATE_ON
-from homeassistant.core import Event, HomeAssistant, callback
+from homeassistant.core import Event, HomeAssistant, State, callback
 from homeassistant.helpers.event import EventStateChangedData, async_track_state_change_event
 
 from custom_components.remeha_modbus.api.schedule import ZoneSchedule
@@ -28,7 +28,7 @@ from custom_components.remeha_modbus.blend.scheduler.scenarios.scheduler_schedul
 )
 from custom_components.remeha_modbus.const import DOMAIN, SWITCH_SCHEDULE_SYNC
 from custom_components.remeha_modbus.coordinator import RemehaUpdateCoordinator
-from custom_components.remeha_modbus.errors import MissingExternalComponent
+from custom_components.remeha_modbus.errors import MissingExternalComponent, RemehaServiceError
 from custom_components.remeha_modbus.helpers.entities import is_scheduler_switch
 
 from .event_dispatcher import EventDispatcher, UnsubscribeCallback
@@ -114,10 +114,19 @@ class SchedulerBlender(Blender):
                         )
                     )
 
+                # Since we're tracking added entities, new_state *must* exist.
+                new_state: State | None = event.data["new_state"]
+                if new_state is None:
+                    raise RemehaServiceError(
+                        translation_domain=DOMAIN,
+                        translation_key="service_error_missing_state",
+                        translation_placeholders={"entity_id": event.data["entity_id"]},
+                    )
+
                 scenario = SchedulerScheduleAdded(
                     self._hass,
                     self._coordinator,
-                    event.data["new_state"],
+                    new_state,
                     async_track_schedule_updated,
                 )
 
