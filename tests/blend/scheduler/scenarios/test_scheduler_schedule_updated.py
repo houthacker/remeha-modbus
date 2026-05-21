@@ -46,7 +46,7 @@ async def test_schedule_updated_not_on_waiting_list(
             schedule_state=scheduler_state,
         )
 
-        # The entity is not on the waiting list, so remove_from_update_waiting_list returns None.
+        # The entity is not on the waiting list, so is_modbus_sourced_update returns False.
         # This means we proceed to check if it's linked and potentially update modbus.
         with patch.object(coordinator, "async_get_linked_zone_schedule_uid", return_value=None):
             await scenario.async_execute()
@@ -84,10 +84,10 @@ async def test_schedule_updated_not_linked(
             schedule_state=scheduler_state,
         )
 
-        # Mock remove_from_update_waiting_list to return None (not on waiting list)
+        # Mock is_modbus_sourced_update to return False (update sourced from outside our integration)
         # Mock async_get_linked_zone_schedule_uid to return None (not linked)
         with (
-            patch.object(coordinator, "remove_from_update_waiting_list", return_value=None),
+            patch.object(coordinator, "is_modbus_sourced_update", return_value=False),
             patch.object(coordinator, "async_get_linked_zone_schedule_uid", return_value=None),
         ):
             await scenario.async_execute()
@@ -131,7 +131,7 @@ async def test_schedule_updated_missing_climate(
         )
 
         with (
-            patch.object(coordinator, "remove_from_update_waiting_list", return_value=None),
+            patch.object(coordinator, "is_modbus_sourced_update", return_value=False),
             patch.object(coordinator, "async_get_linked_zone_schedule_uid", return_value=fake_uid),
             patch.object(coordinator, "get_climate", return_value=None),
             pytest.raises(ScenarioExecutionError) as exc_info,
@@ -232,9 +232,9 @@ async def test_schedule_updated_calls_async_write_schedule_with_correct_data(
             schedule_state=scheduler_state,
         )
 
-        # Mock remove_from_update_waiting_list to return None (not on waiting list)
+        # Mock is_modbus_sourced_update to return None (not on waiting list)
         with (
-            patch.object(coordinator, "remove_from_update_waiting_list", return_value=None),
+            patch.object(coordinator, "is_modbus_sourced_update", return_value=False),
             patch.object(coordinator, "async_get_linked_zone_schedule_uid", return_value=uid),
             patch.object(coordinator, "get_climate", return_value=climate),
             patch.object(coordinator, "async_write_schedule") as mock_write,
@@ -283,14 +283,14 @@ async def test_init_with_none_state(
 
 
 @pytest.mark.parametrize("json_fixture", ["scheduler.state.json"], indirect=True)
-async def test_schedule_updated_on_waiting_list_is_ignored(
+async def test_schedule_modbus_sourced_update_is_ignored(
     hass: HomeAssistant,
     mock_modbus_client,
     mock_config_entry,
     modbus_test_store,
     json_fixture: dict,
 ):
-    """Test that an updated schedule on the waiting list is ignored (prevents update cycles)."""
+    """Test that an updated schedule sourced by modbus is ignored (prevents update cycles)."""
 
     api = get_api(mock_modbus_client=mock_modbus_client)
     with (
@@ -314,15 +314,21 @@ async def test_schedule_updated_on_waiting_list_is_ignored(
             schedule_state=scheduler_state,
         )
 
-        # Mock remove_from_update_waiting_list to return the entity_id (on waiting list)
+        # Mock is_modbus_sourced_update to return False
         # This should cause the method to exit early without doing anything
         with (
             patch.object(
                 coordinator,
-                "remove_from_update_waiting_list",
-                return_value=scheduler_state.entity_id,
+                "is_modbus_sourced_update",
+                return_value=True,
             ),
-            patch.object(coordinator, "async_get_linked_zone_schedule_uid") as mock_get,
+            patch.object(
+                coordinator,
+                "async_get_linked_zone_schedule_uid",
+                return_value=ZoneScheduleUID(
+                    zone_id=2, schedule_id=ClimateZoneScheduleId.SCHEDULE_1, weekday=Weekday.MONDAY
+                ),
+            ) as mock_get,
         ):
             await scenario.async_execute()
 
@@ -362,11 +368,11 @@ async def test_schedule_updated_on_waiting_list_removes_from_list(
             schedule_state=scheduler_state,
         )
 
-        # Mock remove_from_update_waiting_list to return the entity_id (on waiting list)
+        # Mock is_modbus_sourced_update to return false
         with patch.object(
-            coordinator, "remove_from_update_waiting_list", return_value=scheduler_state.entity_id
-        ) as remove_from_update_waiting_list:
+            coordinator, "is_modbus_sourced_update", return_value=False
+        ) as is_modbus_sourced_update:
             await scenario.async_execute()
 
-            # Verify remove_from_update_waiting_list was called with correct entity_id
-            remove_from_update_waiting_list.assert_called_with(scheduler_state.entity_id)
+            # Verify is_modbus_sourced_update was called with correct entity_id
+            is_modbus_sourced_update.assert_called_with(scheduler_state.entity_id)
