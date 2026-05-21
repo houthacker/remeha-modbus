@@ -14,6 +14,7 @@ from homeassistant.components.switch.const import DOMAIN as SchedulerEntityPlatf
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import ATTR_ENTITY_ID
 from homeassistant.core import (
+    HassJob,
     HomeAssistant,
     ServiceCall,
     ServiceResponse,
@@ -359,6 +360,7 @@ class SchedulerPlatformStub:
             scan_interval=timedelta(seconds=0),
             entity_namespace=None,
         )
+        hass.async_add_shutdown_job(hassjob=HassJob(target=self._platform.async_shutdown))
 
         entry = MockConfigEntry(domain=SchedulerDomain, title="scheduler", version=2)
         entry.runtime_data = {}
