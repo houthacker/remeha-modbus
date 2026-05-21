@@ -329,31 +329,29 @@ class RemehaUpdateCoordinator(DataUpdateCoordinator):
 
         return self._store.remove_from_linking_waiting_list(uuid=uuid)
 
-    def enqueue_for_update(self, entity_id: str):
-        """Store the given entity id on the waiting list for scheduler updates.
-
-        If an equal entity id already exists, this method has no effect.
+    def notify_of_modbus_sourced_update(self, entity_id: str):
+        """Notify us that the next update of `entity_id` originates from modbus.
 
         Args:
             entity_id (str): The entity id from the `scheduler.schedule`.
 
         """
-        self._store.add_to_update_waiting_list(entity_id)
 
-    def remove_from_update_waiting_list(self, entity_id: str) -> str | None:
-        """Pop the entity id from the waiting list for scheduler updates.
+        # TODO Can this be replaced by an event source?
+        self._store.notify_of_modbus_sourced_update(entity_id)
 
-        If the entity is on the list, it is removed from it and returned.
+    def is_modbus_sourced_update(self, entity_id: str) -> bool:
+        """Return whether an update of `entity_id` is expected.
 
         Args:
             entity_id (str): The entity id from the `scheduler.schedule`
 
         Returns:
-            The entity id, or `None` if it was not on the list.
+            `True` if an update is expected, `False` otherwise.
 
         """
 
-        return self._store.remove_from_update_waiting_list(entity_id)
+        return self._store.is_modbus_sourced_update(entity_id)
 
     async def async_upsert_scheduler_link(
         self, uid: ZoneScheduleUID, scheduler_entity_id: str

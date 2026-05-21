@@ -93,7 +93,7 @@ class ModbusScheduleUpdated(Scenario):
             # removing the link from the waiting list. If it's not on the waiting list, the
             # update originated from the scheduler component itself and the update is pushed
             # to modbus.
-            self._coordinator.enqueue_for_update(entity_id=scheduler_entity)
+            self._coordinator.notify_of_modbus_sourced_update(entity_id=scheduler_entity)
 
             await self._hass.services.async_call(
                 domain=SchedulerDomain,

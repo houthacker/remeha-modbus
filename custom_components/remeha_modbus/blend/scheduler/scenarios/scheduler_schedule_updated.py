@@ -51,10 +51,7 @@ class SchedulerScheduleUpdated(Scenario):
         there.
         """
 
-        if (
-            self._coordinator.remove_from_update_waiting_list(self._schedule_state.entity_id)
-            is None
-        ):
+        if not self._coordinator.is_modbus_sourced_update(self._schedule_state.entity_id):
             # The updated schedule must be linked to a ZoneSchedule.
             uid = await self._coordinator.async_get_linked_zone_schedule_uid(
                 self._schedule_state.entity_id

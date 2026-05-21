@@ -9,7 +9,7 @@
       {
         "service": "climate.set_preset_mode",
         "data": {
-          "preset_mode": "schedule_1"
+          "preset_mode": "comfort"
         }
       }
     ],

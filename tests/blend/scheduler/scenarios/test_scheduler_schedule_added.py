@@ -151,4 +151,4 @@ async def test_schedule_added(
         await scenario.async_execute()
 
         assert schedule_state_tracked[0]
-        assert coordinator.async_get_linked_scheduler_entity(zone_uid) is not None
+        assert await coordinator.async_get_linked_scheduler_entity(zone_uid) is not None

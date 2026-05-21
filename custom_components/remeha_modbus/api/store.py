@@ -109,7 +109,7 @@ class RemehaModbusStorage:
         The waiting list is not persisted into the backing file, but only in memory.
         """
 
-        self._update_waiting_list: list[str] = []
+        self._modbus_sourced_updates: list[str] = []
         """A list containing `scheduler.schedule` entity ids that have been updated through the modbus interface.
 
         This list is only persisted in memory.
@@ -152,20 +152,20 @@ class RemehaModbusStorage:
         """
         return self._linking_waiting_list.pop(uuid, None)
 
-    def add_to_update_waiting_list(self, entity_id: str):
-        """Add a new entry to the waiting list for schedule updates."""
+    def notify_of_modbus_sourced_update(self, entity_id: str):
+        """Add a new entry to the list of expected schedule updates."""
 
-        if entity_id not in self._update_waiting_list:
-            self._update_waiting_list.append(entity_id)
+        if entity_id not in self._modbus_sourced_updates:
+            self._modbus_sourced_updates.append(entity_id)
 
-    def remove_from_update_waiting_list(self, entity_id: str) -> str | None:
-        """Remove an entry from the waiting list for schedule updates."""
+    def is_modbus_sourced_update(self, entity_id: str) -> bool:
+        """Return whether the update of `entity_id` originated from modbus."""
 
-        if entity_id in self._update_waiting_list:
-            self._update_waiting_list.remove(entity_id)
-            return entity_id
+        if entity_id in self._modbus_sourced_updates:
+            self._modbus_sourced_updates.remove(entity_id)
+            return True
 
-        return None
+        return False
 
     async def async_load(self):
         """Load the data from the backing file."""

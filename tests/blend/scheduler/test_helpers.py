@@ -70,7 +70,7 @@ def test_to_scheduler_state(json_fixture: dict[str, Any]):
         "weekdays": ["mon"],
         "timeslots": ["08:00:00 - 16:00:00"],
         "entities": ["climate.remeha_modbus_dhw"],
-        "actions": [{"service": "climate.set_preset_mode", "data": {"preset_mode": "schedule_1"}}],
+        "actions": [{"service": "climate.set_preset_mode", "data": {"preset_mode": "comfort"}}],
         "tags": ["test_remeha", "remeha_modbus___UUID__"],
     }
 
