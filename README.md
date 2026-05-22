@@ -19,19 +19,20 @@ According to Remeha, the following appliances can be extended with a GTW-08 (mod
 
 | Appliance type     | Supported by GTW-08 | Tested  |
 | ------------------ | :-----------------: | :-----: |
+| Confida 50E        |       &check;       | &check; |
 | Elga Ace           |       &check;       | &cross; |
 | Elga Ace MB        |       &check;       | &cross; |
-| Mercuria           |       &check;       | &cross; |
 | Eria Tower         |       &check;       | &cross; |
 | Eria Tower Ace (S) |       &check;       | &cross; |
+| Gas 220 Ace        |       &check;       | &cross; |
+| Gas 320/620 Ace    |       &check;       | &cross; |
+| Mercuria           |       &check;       | &cross; |
 | Mercuria Ace       |       &check;       | &check; |
 | Mercuria Ace MB    |       &check;       | &check; |
-| Gas 220 Ace        |       &check;       | &cross; |
-| Quinta Ace 65      |       &check;       | &check; |
-| Quinta Ace 160     |       &check;       | &cross; |
-| Gas 320/620 Ace    |       &check;       | &cross; |
 | miTerra            |       &check;       | &cross; |
 | miTerra plus       |       &check;       | &cross; |
+| Quinta Ace 65      |       &check;       | &check; |
+| Quinta Ace 160     |       &check;       | &cross; |
 
 This integration is known to be working with the tested devices, but since the modbus interface is the same for all others, it is very likely that it will work for those too. This list is also available on the Remeha site (Dutch &#x1f1f3;&#x1f1f1;): [Remeha modbus support](https://kennisbank.remeha.nl/welke-remeha-toestellen-hebben-een-modbus-interface/).
 
