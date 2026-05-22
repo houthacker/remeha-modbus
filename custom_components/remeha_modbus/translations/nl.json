@@ -199,7 +199,7 @@
       "message": "Modbus fout tijdens het lezen van de registers."
     },
     "read_registers_illegal_struct_format": {
-      "message": "Kan registers niet verwerken: ongeldig struct format {struct-format}."
+      "message": "Kan registers niet verwerken: ongeldig struct format {struct_format}."
     },
     "read_registers_unknown_error": {
       "message": "Onbekende fout tijdens het lezen van de registers. Zie log voor details."
