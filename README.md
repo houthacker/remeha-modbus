@@ -17,24 +17,31 @@ This integration allows you to manage your Remeha heating/cooling appliance loca
 
 According to Remeha, the following appliances can be extended with a GTW-08 (modbus interface), or have one pre-installed:
 
-| Appliance type     | Supported by GTW-08 | Tested  |
-| ------------------ | :-----------------: | :-----: |
-| Confida 50E        |       &check;       | &check; |
-| Elga Ace           |       &check;       | &cross; |
-| Elga Ace MB        |       &check;       | &cross; |
-| Eria Tower         |       &check;       | &cross; |
-| Eria Tower Ace (S) |       &check;       | &cross; |
-| Gas 220 Ace        |       &check;       | &cross; |
-| Gas 320/620 Ace    |       &check;       | &cross; |
-| Mercuria           |       &check;       | &cross; |
-| Mercuria Ace       |       &check;       | &check; |
-| Mercuria Ace MB    |       &check;       | &check; |
-| miTerra            |       &check;       | &cross; |
-| miTerra plus       |       &check;       | &cross; |
-| Quinta Ace 65      |       &check;       | &check; |
-| Quinta Ace 160     |       &check;       | &cross; |
+| Appliance type       | Supported by GTW-08 | Tested  |                                           Notes |
+| -------------------- | :-----------------: | :-----: | ----------------------------------------------: |
+| Confida 50E          |       &check;       | &check; |
+| Elga Ace             |       &check;       | &cross; |
+| Elga Ace MB          |       &check;       | &cross; |
+| Eria Tower           |       &check;       | &cross; |
+| Eria Tower Ace (S)   |       &check;       | &cross; |
+| Gas 220 Ace          |       &check;       | &cross; |
+| Gas 320/620 Ace      |       &check;       | &cross; |
+| Hera Condens HC 3-32 |       &check;       | &check; | [see below](#notes-on-the-hera-condens-hc-3-32) |
+| Mercuria             |       &check;       | &cross; |
+| Mercuria Ace         |       &check;       | &check; |
+| Mercuria Ace MB      |       &check;       | &check; |
+| miTerra              |       &check;       | &cross; |
+| miTerra plus         |       &check;       | &cross; |
+| Quinta Ace 65        |       &check;       | &check; |
+| Quinta Ace 160       |       &check;       | &cross; |
 
 This integration is known to be working with the tested devices, but since the modbus interface is the same for all others, it is very likely that it will work for those too. This list is also available on the Remeha site (Dutch &#x1f1f3;&#x1f1f1;): [Remeha modbus support](https://kennisbank.remeha.nl/welke-remeha-toestellen-hebben-een-modbus-interface/).
+
+### Notes on the Hera Condens HC 3-32
+
+- If the mainboard is a `CU-OH-04`, the GTW-08 is supported on the L-Bus connector X13.
+- The heating returns water temperature reads `-33` as long as the physical NTC sensor has not been added.
+- Water pressure value of the appliance (register 409, `varApWaterPressure`) appears to be incorrect.
 
 ## Supported modbus proxies
 
