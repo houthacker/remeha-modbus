@@ -53,7 +53,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         )
 
     api: RemehaApi = RemehaApi.create(
-        name=modbus_hub_name, config=entry.data, time_zone=tz.gettz(name=hass.config.time_zone)
+        name=modbus_hub_name,
+        config=entry.data,
+        time_zone=await hass.async_add_executor_job(tz.gettz, hass.config.time_zone),
     )
 
     # Ensure the modbus device is reachable and actually talking Modbus
