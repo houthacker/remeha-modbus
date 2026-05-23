@@ -90,9 +90,6 @@ class DeviceBoardType(Enum):
 
     EEC = int("1b", 16)
     """Motherboard for gas boilers like GAS 120 Ace"""
-    
-    EHC_ALT = int("21", 16)
-    """Unknown/alternate heatpump mainboard (seen on Confida)"""
 
     EHC_ALT = int("21", 16)
     """Unknown/alternate heatpump mainboard (seen on Confida)"""
