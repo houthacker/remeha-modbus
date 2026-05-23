@@ -58,9 +58,9 @@ Planned features and features under discussion are available in the [issues](htt
   - Linked to a device, showing the type of board in the Remeha appliance, including its soft- and hardware versions.
   - Climate features are enabled depending on the climate zone type (for instance, a DHW zone is only able to heat, not cool).
 - DHW auto scheduling:
-  - This integration exposes a service called `dhw_auto_schedule` that can be used in automations or scripts. A detailed explanation follows below.
+  - This integration exposes a service called `dhw_auto_schedule` that can be used in automations or scripts. A detailed explanation follows [below](#dhw-auto-scheduling).
 - Time schedule editing:
-  If you install the [scheduler](https://github.com/nielsfaber/scheduler-card) integration, you can edit your DHW schedules from Home Assistant after [enabling it](#schedule-synchronization).
+  If you install the [scheduler](https://github.com/nielsfaber/scheduler-card) integration, you can edit your DHW schedules from Home Assistant after [enabling it](#schedule-synchronization). Description is located [here](#dhw-schedule-synchronization).
 
 ## Entities
 
@@ -180,3 +180,17 @@ automation, manually change the preset mode of your DHW boiler climate to `Sched
 Showing current temperature, target temperature and heating status.
 
 ![DHW History View](/.github/assets/remeha-dhw-history.png)
+
+## DHW schedule synchronization
+
+If you enable the `switch.enable_schedule_sync` switch, the DHW time schedules are synchronized between your Remeha appliance
+and the [scheduler](https://github.com/nielsfaber/scheduler-card) integration.
+
+**Note**: If you edit a time schedule entry in Home Assistant, it takes between 10 and 30 minutes for it to show up in
+the Remeha Home app.
+This is because the Remeha Home app doesn't update the schedules that frequently from external sources like modbus.
+Schedule edits from the Remeha Home app show up within one minute in Home Assistant however.
+
+See also the [heatpump managed schedules](#heatpump-managed-schedules) entity.
+
+![Synchronized DHW schedule example](/.github/assets/remeha-synced-schedule-small.png)
