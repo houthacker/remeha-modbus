@@ -5,12 +5,16 @@ from datetime import datetime, time
 import pytest
 
 from custom_components.remeha_modbus.api import (
+    ConnectionType,
+    DeviceInstance,
+)
+from custom_components.remeha_modbus.api.appliance import (
     Appliance,
     ApplianceErrorPriority,
     ApplianceStatus,
-    ClimateZone,
-    ConnectionType,
-    DeviceInstance,
+)
+from custom_components.remeha_modbus.api.climate_zone import ClimateZone
+from custom_components.remeha_modbus.api.schedule import (
     Timeslot,
     TimeslotActivity,
     TimeslotSetpointType,
@@ -89,7 +93,7 @@ async def test_read_sensor_values(mock_modbus_client):
     """Read values for a given list of variables that are configured as sensors."""
 
     api = get_api(mock_modbus_client=mock_modbus_client)
-    v = await api.async_read_sensor_values(descriptions=REMEHA_SENSORS.keys())
+    v = await api.async_read_sensor_values(descriptions=list(REMEHA_SENSORS.keys()))
     assert v == dict(
         zip(
             REMEHA_SENSORS.keys(),
@@ -126,7 +130,7 @@ async def test_read_zone(mock_modbus_client):
     """Read a single zone."""
 
     api = get_api(mock_modbus_client=mock_modbus_client)
-    zone: ClimateZone = await api.async_read_zone(id=1)
+    zone: ClimateZone | None = await api.async_read_zone(id=1)
 
     assert zone is not None
     assert zone.current_setpoint == 20.0
@@ -166,9 +170,11 @@ async def test_read_zone_update(mock_modbus_client):
     api = get_api(mock_modbus_client=mock_modbus_client)
 
     # Read a single zone
-    zone: ClimateZone = await api.async_read_zone(1)
+    zone: ClimateZone | None = await api.async_read_zone(1)
+    assert zone is not None
     assert zone.is_central_heating()
     assert zone.mode == ClimateZoneMode.MANUAL
+    assert zone.current_setpoint is not None
 
     # Update a variable directly at the modbus interface
     new_setpoint: float = zone.current_setpoint + 2
@@ -214,7 +220,8 @@ async def test_write_variable(mock_modbus_client):
     await api.async_write_variable(ZoneRegisters.ROOM_MANUAL_SETPOINT, 20.5)
 
     # Retrieve a single zone
-    zone: ClimateZone = await api.async_read_zone(1)
+    zone: ClimateZone | None = await api.async_read_zone(1)
+    assert zone is not None
 
     # None
     await api.async_write_variable(
@@ -312,7 +319,7 @@ async def test_write_zone_schedule(mock_modbus_client):
     )
 
     # Retrieve schedule from modbus, must be None.
-    actual_schedule: ZoneSchedule = await api.async_read_zone_schedule(
+    actual_schedule: ZoneSchedule | None = await api.async_read_zone_schedule(
         zone=2, schedule_id=ClimateZoneScheduleId.SCHEDULE_2, day=Weekday.FRIDAY
     )
     assert actual_schedule is None

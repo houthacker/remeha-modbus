@@ -6,12 +6,13 @@ from unittest.mock import patch
 import pytest
 from homeassistant.const import UnitOfTemperature
 
-from custom_components.remeha_modbus.api import HourlyForecast, WeatherForecast
 from custom_components.remeha_modbus.api.schedule import (
     ClimateZoneScheduleId,
+    HourlyForecast,
     Timeslot,
     TimeslotActivity,
     TimeslotSetpointType,
+    WeatherForecast,
     ZoneSchedule,
 )
 from custom_components.remeha_modbus.const import (
@@ -32,10 +33,13 @@ def test_decode_time_schedule():
 
     encoded_schedule: bytes = bytes.fromhex("05 c810 24 c830 2a c820 36 c840 60 c800 87 0000 0000")
     schedule = ZoneSchedule.decode(
-        id=2, zone_id=1, day=Weekday.MONDAY, encoded_schedule=encoded_schedule
+        id=ClimateZoneScheduleId.SCHEDULE_3,
+        zone_id=1,
+        day=Weekday.MONDAY,
+        encoded_schedule=encoded_schedule,
     )
 
-    assert schedule.id == 2
+    assert schedule.id == ClimateZoneScheduleId.SCHEDULE_3
     assert schedule.zone_id == 1
     assert schedule.day == Weekday.MONDAY
     assert schedule.time_slots == [
@@ -74,6 +78,7 @@ def test_decode_time_schedule_from_registers():
     data = from_registers(
         registers=registers, destination_variable=WEEKDAY_TO_MODBUS_VARIABLE[Weekday.FRIDAY]
     )
+    assert isinstance(data, bytes)
     assert data == bytes.fromhex("05 c83030 c82036 c8104e c8406c c80087 00000000")
     actual: ZoneSchedule = ZoneSchedule.decode(
         id=ClimateZoneScheduleId.SCHEDULE_1, zone_id=1, day=Weekday.FRIDAY, encoded_schedule=data
@@ -120,7 +125,7 @@ def test_encode_time_schedule():
 
     expected: bytes = bytes.fromhex("05 c81024 c8302a c82036 c84060 c80087 0000 0000")
     schedule: ZoneSchedule = ZoneSchedule(
-        id=2,
+        id=ClimateZoneScheduleId.SCHEDULE_2,
         zone_id=1,
         day=Weekday.MONDAY,
         time_slots=[
@@ -183,6 +188,8 @@ async def test_generate_dhw_time_schedule(json_fixture, mock_modbus_client):
     ):
         appliance = await api.async_read_appliance()
         zone = await api.async_read_zone(id=2)
+        assert zone is not None
+
         schedule: ZoneSchedule = ZoneSchedule.generate(
             weather_forecast=weather_forecast,
             pv_system=pv_system,
@@ -254,6 +261,8 @@ async def test_generate_dhw_time_schedule_without_solar_yield(json_fixture, mock
     ):
         appliance = await api.async_read_appliance()
         zone = await api.async_read_zone(id=2)
+        assert zone is not None
+
         schedule: ZoneSchedule = ZoneSchedule.generate(
             weather_forecast=weather_forecast,
             pv_system=pv_system,

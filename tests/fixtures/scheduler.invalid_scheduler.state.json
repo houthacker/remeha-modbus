@@ -1,0 +1,13 @@
+{
+  "entity_id": "light.woonkamer_eettafel",
+  "state": "on",
+  "attributes": {
+    "friendly_name": "Verlichting eettafel",
+    "supported_color_modes": ["brightness"],
+    "color_mode": "brightness",
+    "brightness": 167,
+    "off_with_transition": false,
+    "off_brightness": null,
+    "supported_features": 40
+  }
+}

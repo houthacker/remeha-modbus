@@ -37,6 +37,7 @@ async def test_dhw_hysteresis(hass: HomeAssistant, mock_modbus_client, mock_conf
         await hass.async_block_till_done()
 
         hysteresis = hass.states.get("number.remeha_modbus_test_hub_dhw_hysteresis")
+        assert hysteresis is not None
         assert hysteresis.state == "3.0"
         assert hysteresis.domain == "number"
         assert hysteresis.name == "Remeha Modbus test_hub dhw_hysteresis"
@@ -54,6 +55,7 @@ async def test_dhw_hysteresis(hass: HomeAssistant, mock_modbus_client, mock_conf
         )
 
         hysteresis = hass.states.get(hysteresis.entity_id)
+        assert hysteresis is not None
         assert hysteresis.state == "20.0"
 
 

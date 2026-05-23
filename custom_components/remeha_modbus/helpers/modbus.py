@@ -1,7 +1,7 @@
 """Modbus helper functions."""
 
 import logging
-from typing import Final
+from typing import Any, Final, cast
 
 from pymodbus.client.mixin import ModbusClientMixin
 
@@ -34,27 +34,25 @@ HA_TO_PYMODBUS_TYPE: Final[dict[DataType, ModbusClientMixin.DATATYPE]] = {
     DataType.TUPLE16: ModbusClientMixin.DATATYPE.UINT16,
 }
 
-
-def _is_gtw08_null_value(variable: ModbusVariableDescription, val: int | bytes) -> bool:
-    if variable.data_type in NULL_VALUES:
-        return val == NULL_VALUES[variable.data_type]
-
-    return val is None
+type ModbusPrimitive = int | float | str | list[bool] | list[int] | list[float]
 
 
-def _to_gtw08_null_value(data_type: DataType) -> int | bytes:
-    if data_type in NULL_VALUES:
-        return NULL_VALUES[data_type]
+def _is_gtw08_null_value(variable: ModbusVariableDescription, val: ModbusPrimitive | bytes) -> bool:
+    return (
+        val == NULL_VALUES[variable.data_type] if variable.data_type in NULL_VALUES else val is None
+    )
 
-    return None
+
+def _to_gtw08_null_value(data_type: DataType) -> int | bytes | None:
+    return NULL_VALUES.get(data_type, None)
 
 
 def _from_registers(
     variable: ModbusVariableDescription, registers: list[int]
-) -> str | int | float | tuple[int, int] | bytes | None:
+) -> ModbusPrimitive | bytes | tuple[int, int] | None:
     # If variable requires a bytes result, use our own conversion since the ModbusClientMixin doesn't support them.
     val = (
-        b"".join([x.to_bytes(2) for x in registers])
+        bytes_from_registers(registers=registers)
         if variable.data_type in [DataType.CIA_301_TIME_OF_DAY, DataType.ZONE_TIME_PROGRAM]
         else ModbusClientMixin.convert_from_registers(
             registers=registers, data_type=HA_TO_PYMODBUS_TYPE[variable.data_type]
@@ -65,25 +63,26 @@ def _from_registers(
     if _is_gtw08_null_value(variable=variable, val=val):
         return None
     if variable.data_type == DataType.TUPLE16:
-        return tuple(int(val).to_bytes(2))
+        temp = int(cast(Any, val)).to_bytes(2)
+        return (temp[0], temp[1])
     if variable.data_type == DataType.UINT8:
         # Ignore the first byte to get a clean uint8
-        val = val & int("00ff", 16)
+        val = int(cast(Any, val)) & int("00ff", 16)
 
     # Apply scale
     if variable.scale is not None:
         # Always round to 3 decimals when scaling.
         # HA frontend can always choose to show a less precise value.
-        val = round(val * variable.scale, 3)
+        val = round(cast(Any, val) * variable.scale, 3)
 
     return val
 
 
 def _to_registers(
     source_variable: ModbusVariableDescription,
-    value: str | float | bytes | None,
+    value: ModbusPrimitive | bytes | None,
 ) -> list[int]:
-    mixin_data_type: ModbusClientMixin.DATATYPE = HA_TO_PYMODBUS_TYPE.get(
+    mixin_data_type: ModbusClientMixin.DATATYPE | None = HA_TO_PYMODBUS_TYPE.get(
         source_variable.data_type, None
     )
 
@@ -98,7 +97,7 @@ def _to_registers(
     # de-scale non-null values
     if value is not None and source_variable.scale is not None:
         # Do not round the value here, but let pymodbus do that if necessary.
-        value: float = float(value) / source_variable.scale
+        value = float(cast(float, value)) / source_variable.scale
 
         # Convert to int if integer value.
         if value.is_integer():
@@ -115,12 +114,15 @@ def _to_registers(
     ]:
         return [int.from_bytes(value[i : i + 2]) for i in range(0, len(value), 2)]
 
-    return ModbusClientMixin.convert_to_registers(value=value, data_type=mixin_data_type)
+    return ModbusClientMixin.convert_to_registers(
+        value=cast(ModbusPrimitive, value),
+        data_type=cast(ModbusClientMixin.DATATYPE, mixin_data_type),
+    )
 
 
 def to_registers(
     source_variable: ModbusVariableDescription,
-    value: str | float | tuple[int, int] | bytes | None,
+    value: ModbusPrimitive | tuple[int, int] | bytes | None,
 ) -> list[int]:
     """Serialize `value` to a list of modbus register values.
 
@@ -160,7 +162,7 @@ def to_registers(
 def from_registers(
     registers: list[int],
     destination_variable: ModbusVariableDescription,
-) -> str | int | float | tuple[int, int] | bytes | None:
+) -> ModbusPrimitive | bytes | tuple[int, int] | None:
     """Deserializes `response` into a value of type `data_type`.
 
     #### Scaling response values
@@ -191,3 +193,9 @@ def from_registers(
         )
 
     return _from_registers(variable=destination_variable, registers=registers)
+
+
+def bytes_from_registers(registers: list[int]) -> bytes:
+    """Return the raw bytes from the given list of registers."""
+
+    return b"".join([x.to_bytes(2) for x in registers])

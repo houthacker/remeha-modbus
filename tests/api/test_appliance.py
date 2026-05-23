@@ -1,8 +1,9 @@
 """Tests for the appliance."""
 
-from custom_components.remeha_modbus.api import (
+from custom_components.remeha_modbus.api.appliance import (
     Appliance,
     ApplianceErrorPriority,
+    ApplianceStatus,
     SeasonalMode,
 )
 
@@ -14,7 +15,7 @@ def test_error_as_str():
         Appliance(
             current_error=None,
             error_priority=ApplianceErrorPriority.NO_ERROR,
-            status=None,
+            status=ApplianceStatus((1, 1)),
             season_mode=SeasonalMode.SUMMER_NEUTRAL_BAND,
         ).error_as_str()
         == "OK"
@@ -24,7 +25,7 @@ def test_error_as_str():
         Appliance(
             current_error=int("0207", 16),
             error_priority=ApplianceErrorPriority.WARNING,
-            status=None,
+            status=ApplianceStatus((1, 1)),
             season_mode=SeasonalMode.SUMMER_NEUTRAL_BAND,
         ).error_as_str()
         == "A02.07"
@@ -34,7 +35,7 @@ def test_error_as_str():
         Appliance(
             current_error=int("0207", 16),
             error_priority=ApplianceErrorPriority.BLOCKING,
-            status=None,
+            status=ApplianceStatus((1, 1)),
             season_mode=SeasonalMode.SUMMER_NEUTRAL_BAND,
         ).error_as_str()
         == "H02.07"
@@ -44,7 +45,7 @@ def test_error_as_str():
         Appliance(
             current_error=int("0207", 16),
             error_priority=ApplianceErrorPriority.LOCKING,
-            status=None,
+            status=ApplianceStatus((1, 1)),
             season_mode=SeasonalMode.SUMMER_NEUTRAL_BAND,
         ).error_as_str()
         == "E02.07"

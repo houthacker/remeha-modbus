@@ -1,0 +1,118 @@
+{
+  "name": "zone_2_schedule_1_monday",
+  "repeat_type": "repeat",
+  "tags": ["remeha_modbus___UUID__", "remeha_modbus"],
+  "timeslots": [
+    {
+      "actions": [
+        {
+          "entity_id": "climate.remeha_modbus_test_hub_dhw",
+          "service": "climate.set_preset_mode",
+          "service_data": {
+            "preset_mode": "eco"
+          }
+        }
+      ],
+      "conditions": [
+        {
+          "attribute": "state",
+          "entity_id": "switch.heatpump_managed_schedules",
+          "match_type": "is",
+          "value": "off"
+        }
+      ],
+      "condition_type": "and",
+      "start": "00:00:00",
+      "stop": "00:00:00"
+    },
+    {
+      "actions": [
+        {
+          "entity_id": "climate.remeha_modbus_test_hub_dhw",
+          "service": "climate.set_preset_mode",
+          "service_data": {
+            "preset_mode": "comfort"
+          }
+        }
+      ],
+      "conditions": [
+        {
+          "attribute": "state",
+          "entity_id": "switch.heatpump_managed_schedules",
+          "match_type": "is",
+          "value": "off"
+        }
+      ],
+      "condition_type": "and",
+      "start": "10:00:00",
+      "stop": "13:00:00"
+    },
+    {
+      "actions": [
+        {
+          "entity_id": "climate.remeha_modbus_test_hub_dhw",
+          "service": "climate.set_preset_mode",
+          "service_data": {
+            "preset_mode": "eco"
+          }
+        }
+      ],
+      "conditions": [
+        {
+          "attribute": "state",
+          "entity_id": "switch.heatpump_managed_schedules",
+          "match_type": "is",
+          "value": "off"
+        }
+      ],
+      "condition_type": "and",
+      "start": "13:00:00",
+      "stop": "18:00:00"
+    },
+    {
+      "actions": [
+        {
+          "entity_id": "climate.remeha_modbus_test_hub_dhw",
+          "service": "climate.set_preset_mode",
+          "service_data": {
+            "preset_mode": "comfort"
+          }
+        }
+      ],
+      "conditions": [
+        {
+          "attribute": "state",
+          "entity_id": "switch.heatpump_managed_schedules",
+          "match_type": "is",
+          "value": "off"
+        }
+      ],
+      "condition_type": "and",
+      "start": "18:00:00",
+      "stop": "00:00:00"
+    },
+    {
+      "actions": [
+        {
+          "entity_id": "climate.remeha_modbus_test_hub_dhw",
+          "service": "climate.set_preset_mode",
+          "service_data": {
+            "preset_mode": "eco"
+          }
+        }
+      ],
+      "conditions": [
+        {
+          "attribute": "state",
+          "entity_id": "switch.heatpump_managed_schedules",
+          "match_type": "is",
+          "value": "off"
+        }
+      ],
+      "condition_type": "and",
+      "start": "00:00:00",
+      "stop": "00:00:00"
+    }
+  ],
+  "weekdays": ["mon"]
+}

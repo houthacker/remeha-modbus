@@ -1,6 +1,7 @@
 """Platform for number entities in the Remeha Modbus integration."""
 
 import logging
+from typing import cast
 
 from homeassistant.components.number import NumberDeviceClass, NumberEntity
 from homeassistant.config_entries import ConfigEntry
@@ -9,7 +10,8 @@ from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from custom_components.remeha_modbus.api import ClimateZone, DeviceInstance, RemehaApi
+from custom_components.remeha_modbus.api import DeviceInstance, RemehaApi
+from custom_components.remeha_modbus.api.climate_zone import ClimateZone
 from custom_components.remeha_modbus.const import DOMAIN, TEMPERATURE_STEP, Limits, ZoneRegisters
 from custom_components.remeha_modbus.coordinator import RemehaUpdateCoordinator
 
@@ -19,7 +21,7 @@ _LOGGER = logging.getLogger(__name__)
 async def async_setup_entry(
     hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
 ) -> None:
-    """Instantiate a new Remeha Modbus climate entity based on the given config entry."""
+    """Add all Remeha Modbus number entities based on the given config entry."""
 
     api: RemehaApi = entry.runtime_data["api"]
     coordinator: RemehaUpdateCoordinator = entry.runtime_data["coordinator"]
@@ -36,7 +38,7 @@ async def async_setup_entry(
         _LOGGER.debug("No DHW climates found so not adding any DhwHysteresis entities.")
 
 
-class DhwHysteresisEntity(CoordinatorEntity, NumberEntity):
+class DhwHysteresisEntity(CoordinatorEntity[RemehaUpdateCoordinator], NumberEntity):
     """Hysteresis entity linked to a RemehaDhwClimate."""
 
     _attr_has_entity_name = True
@@ -67,7 +69,7 @@ class DhwHysteresisEntity(CoordinatorEntity, NumberEntity):
     def native_value(self) -> float:
         """Return the current hysteris."""
 
-        return self._zone.dhw_calorifier_hysteresis
+        return cast(float, self._zone.dhw_calorifier_hysteresis)
 
     async def async_set_native_value(self, value: float) -> None:
         """Update the current hysteris value."""
@@ -96,11 +98,15 @@ class DhwHysteresisEntity(CoordinatorEntity, NumberEntity):
         if zone.owning_device is None:
             return None
 
-        device_instance: DeviceInstance = self.coordinator.get_device(id=zone.owning_device)
-        return DeviceInfo(
-            identifiers={(DOMAIN, device_instance.article_number)},
-            hw_version=f"HW{device_instance.hw_version[0]:02d}.{device_instance.hw_version[1]:02d}",
-            manufacturer="Remeha",
-            model=str(device_instance.board_category),
-            sw_version=f"SW{device_instance.sw_version[0]:02d}.{device_instance.sw_version[1]:02d}",
+        device_instance: DeviceInstance | None = self.coordinator.get_device(id=zone.owning_device)
+        return (
+            DeviceInfo(
+                identifiers={(DOMAIN, str(device_instance.article_number))},
+                hw_version=f"HW{device_instance.hw_version[0]:02d}.{device_instance.hw_version[1]:02d}",
+                manufacturer="Remeha",
+                model=str(device_instance.board_category),
+                sw_version=f"SW{device_instance.sw_version[0]:02d}.{device_instance.sw_version[1]:02d}",
+            )
+            if device_instance is not None
+            else None
         )

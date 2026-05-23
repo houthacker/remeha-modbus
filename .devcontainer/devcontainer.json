@@ -1,57 +1,79 @@
 // See https://aka.ms/vscode-remote/devcontainer.json for format details.
 {
-	"image": "mcr.microsoft.com/devcontainers/python:3.14-trixie",
-	"name": "Remeha Modbus integration development",
-	"postCreateCommand": "scripts/setup",
-	"containerEnv": {
-		"PYTHONASYNCIODEBUG": "1"
-	},
-	"forwardPorts": [
-		8123
-	],
-	"portsAttributes": {
-		"8123": {
-			"label": "Home Assistant",
-			"onAutoForward": "notify"
-		}
-	},
-	"customizations": {
-		"vscode": {
-			"extensions": [
-				"charliermarsh.ruff",
-				"donjayamanne.python-extension-pack",
-				"ms-python.pylint",
-				"ms-python.vscode-python-envs",
-				"redhat.vscode-yaml",
-				"esbenp.prettier-vscode",
-				"gitHub.vscode-pull-request-github"
-			],
-			"settings": {
-				"files.eol": "\n",
-				"editor.tabSize": 2,
-				"terminal.integrated.shell.linux": "/bin/bash",
-				"python.defaultInterpreterPath": "/usr/local/bin/python",
-				"python.analysis.autoSearchPaths": false,
-				"editor.defaultFormatter": "charliermarsh.ruff",
-				"editor.formatOnPaste": false,
-				"editor.formatOnSave": true,
-				"editor.formatOnType": true,
-				"files.trimTrailingWhitespace": true,
-				"extensions.verifySignature": false,
-				"[python]": {
-					"editor.formatOnSave": true,
-					"editor.codeActionsOnSave": {
-						"source.organizeImports": "explicit"
-					},
-					"linting.pylintEnabled": true,
-					"linting.enabled": true
-				}
-			}
-		}
-	},
-	"remoteUser": "vscode",
-	"features": {
-		"ghcr.io/devcontainers/features/github-cli:1": {},
-		"ghcr.io/warrenbuckley/codespace-features/sqlite:latest": {}
-	}
+  "image": "mcr.microsoft.com/devcontainers/python:3.14-trixie",
+  "name": "Remeha Modbus integration development",
+  "postCreateCommand": "scripts/setup",
+  "postStartCommand": "scripts/devenv",
+  "containerEnv": {
+    "PYTHONASYNCIODEBUG": "1",
+    "PYTHONPATH": "${containerWorkspaceFolder}/custom_components:${containerWorkspaceFolder}/config/custom_components",
+    "VIRTUAL_ENV": "${containerWorkspaceFolder}/.venv"
+  },
+  "forwardPorts": [8123],
+  "portsAttributes": {
+    "8123": {
+      "label": "Home Assistant",
+      "onAutoForward": "notify"
+    }
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "charliermarsh.ruff",
+        "ms-python.python",
+        "ms-python.pylint",
+        "ms-python.vscode-python-envs",
+        "redhat.vscode-yaml",
+        "esbenp.prettier-vscode",
+        "wholroyd.jinja",
+        "gitHub.vscode-pull-request-github",
+        "njpwerner.autodocstring",
+        "KevinRose.vsc-python-indent",
+        "donjayamanne.python-environment-manager"
+      ],
+      "settings": {
+        "[python]": {
+          "editor.defaultFormatter": "charliermarsh.ruff",
+          "editor.formatOnSave": true,
+          "editor.codeActionsOnSave": {
+            "source.organizeImports": "explicit"
+          },
+          "linting.pylintEnabled": true,
+          "linting.enabled": true
+        },
+        "[json]": {
+          "editor.defaultFormatter": "esbenp.prettier-vscode"
+        },
+        "[jsonc]": {
+          "editor.defaultFormatter": "esbenp.prettier-vscode"
+        },
+        "[yaml]": {
+          "editor.defaultFormatter": "esbenp.prettier-vscode"
+        },
+        "editor.tabSize": 2,
+        "editor.formatOnPaste": false,
+        "editor.formatOnSave": true,
+        "editor.formatOnType": true,
+        "extensions.verifySignature": false,
+        "files.eol": "\n",
+        "files.trimTrailingWhitespace": true,
+        "json.schemaDownload.enable": true,
+        "python.terminal.activateEnvInCurrentTerminal": true,
+        "python.defaultInterpreterPath": "/usr/local/bin/python",
+        "python.analysis.autoSearchPaths": false,
+        "terminal.integrated.defaultProfile.linux": "zsh"
+      }
+    }
+  },
+  "remoteUser": "vscode",
+  "features": {
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {
+      "moby": false
+    },
+    "ghcr.io/devcontainers/features/github-cli:1": {},
+    "ghcr.io/warrenbuckley/codespace-features/sqlite:latest": {},
+    "ghcr.io/rocker-org/devcontainer-features/apt-packages:1": {
+      "packages": "autoconf,bluez,build-essential,cmake,curl,ffmpeg,git,libssl-dev,libpcap-dev,libxml2,libxml2-dev,libxslt1-dev,libjpeg-dev,libturbojpeg0,libffi-dev,libudev-dev,zlib1g-dev,pkg-config,libavformat-dev,libavcodec-dev,libavdevice-dev,libavutil-dev,libswscale-dev,libswresample-dev,libavfilter-dev,libgammu-dev,libyaml-dev"
+    }
+  }
 }

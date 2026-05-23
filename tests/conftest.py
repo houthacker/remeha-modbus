@@ -2,9 +2,9 @@
 
 import logging
 import uuid
-from collections.abc import Generator
+from collections.abc import Callable, Generator, Iterable
 from datetime import timedelta, tzinfo
-from typing import Any, Final
+from typing import Any, Final, cast
 from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import pytest
@@ -14,12 +14,13 @@ from homeassistant.components.weather import (
     SERVICE_GET_FORECASTS,
     Forecast,
     WeatherEntity,
-    WeatherEntityFeature,
     async_get_forecasts_service,
 )
 from homeassistant.components.weather.const import DOMAIN as WeatherDomain
+from homeassistant.components.weather.const import WeatherEntityFeature
 from homeassistant.const import CONF_HOST, CONF_NAME, CONF_PORT, CONF_TYPE
 from homeassistant.core import HomeAssistant, SupportsResponse
+from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.entity_component import EntityComponent
 from homeassistant.util import dt
 from homeassistant.util.json import JsonObjectType, JsonValueType
@@ -32,6 +33,7 @@ from pytest_homeassistant_custom_component.common import (
 )
 
 from custom_components.remeha_modbus.api import ConnectionType, RemehaApi
+from custom_components.remeha_modbus.api.store import RemehaModbusStore
 from custom_components.remeha_modbus.const import (
     AUTO_SCHEDULE_SELECTED_SCHEDULE,
     CONFIG_AUTO_SCHEDULE,
@@ -56,6 +58,8 @@ from custom_components.remeha_modbus.const import (
     BoilerEnergyLabel,
     ZoneRegisters,
 )
+from custom_components.scheduler.store import ScheduleEntry
+from tests.util import SchedulerPlatformStub
 
 TESTING_TIME_ZONE: Final[str] = "Europe/Amsterdam"
 
@@ -76,14 +80,14 @@ class MockWeatherEntity(MockEntity, WeatherEntity):
         """Return the hourly forecast in native units."""
 
         # TODO Update timestamps to now() + relative hours.
-        return load_json_value_fixture("weather_forecast.json")
+        return cast(list[Forecast], load_json_value_fixture("weather_forecast.json"))
 
 
 def get_api(
     mock_modbus_client: ModbusBaseClient,
     name: str = "test_api",
     device_address: int = 100,
-    time_zone: tzinfo = tz.gettz(TESTING_TIME_ZONE),
+    time_zone: tzinfo | None = tz.gettz(TESTING_TIME_ZONE),
 ) -> RemehaApi:
     """Create a new RemehaApi instance with a mocked modbus client."""
 
@@ -103,6 +107,16 @@ def get_api(
 
 
 @pytest.fixture
+def finalizer():
+    """Return a list of callables that are executed after the test method finishes."""
+    callables = []
+    yield callables
+
+    for fn in callables:
+        fn()
+
+
+@pytest.fixture
 def json_fixture(request) -> JsonValueType:
     """Read a fixture and return it as a `JsonValueType`."""
     return load_json_value_fixture(filename=request.param)
@@ -112,6 +126,12 @@ def json_fixture(request) -> JsonValueType:
 def auto_enable_custom_integrations(enable_custom_integrations):
     """Enable custom integrations."""
     return
+
+
+@pytest.fixture
+def entity_registry(hass: HomeAssistant) -> er.EntityRegistry:
+    """Return the entity registry for the current hass instance."""
+    return er.async_get(hass)
 
 
 @pytest.fixture
@@ -146,7 +166,7 @@ def mock_modbus_client(request) -> Generator[AsyncMock]:
 
         def get_registers(address: int, count: int) -> list[int]:
             return [
-                int(store["server"]["registers"][str(r)], 16)
+                int(store["server"]["registers"][str(r)], 16)  # type: ignore  # noqa: PGH003
                 for r in range(address, address + count)
             ]
 
@@ -163,7 +183,7 @@ def mock_modbus_client(request) -> Generator[AsyncMock]:
 
         async def write_to_store(address: int, values: list[int], **kwargs):
             for idx, r in enumerate(values):
-                store["server"]["registers"][str(address + idx)] = int(r).to_bytes(2).hex()
+                store["server"]["registers"][str(address + idx)] = int(r).to_bytes(2).hex()  # type: ignore  # noqa: PGH003
 
             write_pdu.side_effect = AsyncMock()
             write_pdu.isError = Mock(return_value=False)
@@ -224,11 +244,60 @@ def mock_config_entry(request) -> Generator[MockConfigEntry]:
         )
 
 
-async def setup_platform(hass: HomeAssistant, config_entry: MockConfigEntry):
-    """Set up the platform."""
+@pytest.fixture
+def modbus_test_store(request, hass) -> RemehaModbusStore:
+    """Create a testing store.
+
+    To configure the store with defaults, pass no parameters.
+    Otherwise, arguments may be passed in a dict of str:
+    ```
+    {
+        version: int,
+        minor_version: int,
+        key: str
+    }
+    ```
+    """
+
+    args: dict[str, Any] = request.param if hasattr(request, "param") else {}
+    return RemehaModbusStore(
+        hass=hass,
+        version=args.get("version", 1),
+        minor_version=args.get("minor_version", 0),
+        key=args.get("key", "remeha-modbus-test-store"),
+    )
+
+
+async def setup_platform(
+    hass: HomeAssistant,
+    config_entry: MockConfigEntry,
+    add_schedule_callback: Callable[[ScheduleEntry], None] | None = None,
+    edit_schedule_callback: Callable[[ScheduleEntry], None] | None = None,
+    scheduler_entities: Iterable[MockEntity] = [],
+):
+    """Set up the platform based on the given `config_entry`, using a `RemehaUpdateCoordinator` that does not update.
+
+    Additionally, the following entities and services are configured:
+     * A `weather.fake_weather` entity;
+     * A mocked `weather.get_forecasts` entity service;
+     * A mocked `scheduler.add` service;
+     * A mocked `scheduler.edit` service;
+     * `hass.data['remeha_modbus']['add_scheduler_calls']` contains a list of service calls to the `scheduler.add` service.
+     * `hass.data['remeha_modbus']['edit_schedule_calls']` contains a list of service calls to the `scheduler.edit` service.
+
+    If the scheduler services require a side effect, provide the respective callback.
+
+    Args:
+        hass (HomeAssistant): Home Assistant instance.
+        config_entry (MockConfigEntry): The config entry to use for setting up the platform.
+        add_schedule_callback (Callable[[ScheduleEntry], None] | None): A callback function for the `scheduler.add` service.
+        edit_schedule_callback (Callable[[ScheduleEntry], None] | None): A callback function for the `scheduler.edit` service.
+        scheduler_entities (Iterable[MockEntity]): An optional list of mock entities to add to the scheduler component.
+
+    """
 
     # Prepare hass by adding a weather entity.
-    component = EntityComponent[WeatherEntity](
+    weather_component = EntityComponent[WeatherEntity](
         logger=logging.getLogger("weather"),
         domain=WeatherDomain,
         hass=hass,
@@ -236,13 +305,13 @@ async def setup_platform(hass: HomeAssistant, config_entry: MockConfigEntry):
     )
 
     # Stop timers when HA stops.
-    component.register_shutdown()
+    weather_component.register_shutdown()
 
     # Add fake weather entity.
     entity: WeatherEntity = MockWeatherEntity(entity_id="weather.fake_weather")
-    await component.async_add_entities([entity])
+    await weather_component.async_add_entities([entity])
 
-    component.async_register_entity_service(
+    weather_component.async_register_entity_service(
         name=SERVICE_GET_FORECASTS,
         schema={vol.Required("type"): vol.In(("daily", "hourly", "twice_daily"))},
         func=async_get_forecasts_service,
@@ -253,6 +322,17 @@ async def setup_platform(hass: HomeAssistant, config_entry: MockConfigEntry):
         ],
         supports_response=SupportsResponse.ONLY,
     )
+
+    hass.data.setdefault(DOMAIN, {})
+
+    # Add the scheduler component
+    scheduler_component = SchedulerPlatformStub(
+        add_schedule_callback=add_schedule_callback,
+        edit_schedule_callback=edit_schedule_callback,
+    )
+
+    await scheduler_component.async_add_to_hass(hass=hass)
+    await scheduler_component.async_add_entities(entities=scheduler_entities)
 
     config_entry.add_to_hass(hass=hass)
 
@@ -313,7 +393,7 @@ def _create_config_entry(
             if dhw_energy_label is not None:
                 entry_data[DHW_BOILER_CONFIG_SECTION] |= {DHW_BOILER_ENERGY_LABEL: dhw_energy_label}
 
-    return MockConfigEntry(
+    config_entry = MockConfigEntry(
         domain=DOMAIN,
         title=f"Remeha Modbus {hub_name}",
         unique_id=str(uuid.uuid4()),
@@ -321,3 +401,7 @@ def _create_config_entry(
         version=version[0],
         minor_version=version[1],
     )
+
+    config_entry.runtime_data = {}
+
+    return config_entry
