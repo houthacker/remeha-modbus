@@ -43,7 +43,8 @@ def _is_gtw08_null_value(variable: ModbusVariableDescription, val: ModbusPrimiti
     )
 
 
-def _to_gtw08_null_value(data_type: DataType) -> int | bytes | None:
+def to_gtw08_null_value(data_type: DataType) -> int | bytes | None:
+    """Return the GTW-08 NULL variant for the given data type."""
     return NULL_VALUES.get(data_type, None)
 
 
@@ -105,7 +106,7 @@ def _to_registers(
 
     # None-values might have to be GTW-08 null values.
     if value is None:
-        value = _to_gtw08_null_value(source_variable.data_type)
+        value = to_gtw08_null_value(source_variable.data_type)
 
     # bytes to registers does not go through the ModbusClientMixin, since it has no bytes support.
     if isinstance(value, bytes) and source_variable.data_type in [
