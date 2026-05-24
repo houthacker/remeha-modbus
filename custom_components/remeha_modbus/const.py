@@ -619,6 +619,7 @@ class Limits(float, Enum):
 
 
 # Base register information for zones, device info, time schedules
+REMEHA_MAX_ZONES: Final[int] = 12
 REMEHA_ZONE_RESERVED_REGISTERS: Final[int] = 512
 REMEHA_DEVICE_INSTANCE_RESERVED_REGISTERS: Final[int] = 6
 REMEHA_TIME_PROGRAM_RESERVED_REGISTERS: Final[int] = 70
