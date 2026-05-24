@@ -58,6 +58,9 @@ ozw_log.txt
 # .nfs files are created when an open file is removed but is still being accessed
 .nfs*
 
+### MacOS ###
+.DS_Store
+
 ### Python ###
 # Byte-compiled / optimized / DLL files
 __pycache__/
