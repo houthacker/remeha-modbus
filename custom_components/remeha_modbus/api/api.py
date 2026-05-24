@@ -42,6 +42,7 @@ from custom_components.remeha_modbus.const import (
     MODBUS_SERIAL_PARITY,
     MODBUS_SERIAL_STOPBITS,
     REMEHA_DEVICE_INSTANCE_RESERVED_REGISTERS,
+    REMEHA_MAX_ZONES,
     REMEHA_TIME_PROGRAM_RESERVED_REGISTERS,
     REMEHA_ZONE_RESERVED_REGISTERS,
     WEEKDAY_TO_MODBUS_VARIABLE,
@@ -736,7 +737,14 @@ class RemehaApi:
 
         """
 
-        number_of_zones: int = await self.async_read_number_of_zones()
+        number_of_zones = await self.async_read_number_of_zones()
+        if number_of_zones is None or number_of_zones == 0:
+            _LOGGER.debug(
+                "MetaRegisters.NUMBER_OF_ZONES (%i) reports an invalid number of zones. "
+                "Trying all zones sequentially until one is ClimateZoneType.NOT_PRESENT."
+            )
+            number_of_zones = REMEHA_MAX_ZONES
+
         return [
             zone
             for zone in [
@@ -745,11 +753,11 @@ class RemehaApi:
             if zone is not None
         ]
 
-    async def async_read_number_of_zones(self) -> int:
+    async def async_read_number_of_zones(self) -> int | None:
         """Retrieve the number of zones defined in the appliance.
 
         Returns
-            `int`: The number of zones.
+            `int | None`: The number of zones, or `None` if the modbus address is empty.
 
         Raises
             `ModbusException`: If the number of zones cannot be obtained.
@@ -757,7 +765,7 @@ class RemehaApi:
 
         """
         return cast(
-            int,
+            int | None,
             from_registers(
                 registers=await self._async_read_registers(variable=MetaRegisters.NUMBER_OF_ZONES),
                 destination_variable=MetaRegisters.NUMBER_OF_ZONES,
