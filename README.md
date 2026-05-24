@@ -67,18 +67,23 @@ Planned features and features under discussion are available in the [issues](htt
 - DHW auto scheduling:
   - This integration exposes a service called `dhw_auto_schedule` that can be used in automations or scripts. A detailed explanation follows [below](#dhw-auto-scheduling).
 - Time schedule editing:
-  If you install the [scheduler](https://github.com/nielsfaber/scheduler-card) integration, you can edit your DHW schedules from Home Assistant after [enabling it](#schedule-synchronization). Description is located [here](#dhw-schedule-synchronization).
+  If you install the [scheduler](https://github.com/nielsfaber/scheduler-card) integration, you can edit your DHW schedules from Home Assistant after [enabling it](#switchenable_schedule_sync). Description is located [here](#dhw-schedule-synchronization).
 
 ## Entities
 
-Notworthy entities are described here.
+The entities described here require some extra attention.
 
-### Heatpump managed schedules
+### `climate.remeha_modbus_*`
 
-The entity named `switch.heatpump_managed_schedules` is switched on by default, and is unavailable
-if the `scheduler-component` integration is not installed. If it's available though, switching this switch
-to 'off' causes the `scheduler-component` to execute the actions listed in synchronized zone schedules
-directly, instead of letting the Remeha appliance handle schedule execution.
+The climates exposed by this integration are unavailable if their zone function (CP020, modbus base register 641)
+is `0: Disabled`. If a zone is enabled in your Remeha appliance, Home Assistant must be restarted or this integration
+disabled and then enabled to see those changes.
+
+### `switch.heatpump_managed_schedules`
+
+This entity is switched on by default, and is unavailable if the `scheduler-component` integration is not installed.
+If it's available though, switching this switch to 'off' causes the `scheduler-component` to execute the actions
+listed in synchronized zone schedules directly, instead of letting the Remeha appliance handle schedule execution.
 
 This might be undesirable, because:
 
@@ -90,14 +95,14 @@ This might be undesirable, because:
 
 To ensure that you have been warned about this, a persistent notification is triggered as well.
 
-### Schedule synchronization
+### `switch.enable_schedule_sync`
 
 The entity named `switch.enable_schedule_sync` is switched off by default, and is unavailable if the
 `scheduler-component` integration is not installed. If it's available though, switching this switch
 to 'on' causes the DHW time zone schedules from your Remeha appliance to be synchronized with the `scheduler-component`
 integration, allowing you to edit them in Home Assistant as well.
 
-## Services
+## Services / actions
 
 ### dhw_auto_schedule
 
@@ -198,6 +203,6 @@ the Remeha Home app.
 This is because the Remeha Home app doesn't update the schedules that frequently from external sources like modbus.
 Schedule edits from the Remeha Home app show up within one minute in Home Assistant however.
 
-See also the [heatpump managed schedules](#heatpump-managed-schedules) entity.
+See also the [heatpump managed schedules](#switchheatpump_managed_schedules) entity.
 
 ![Synchronized DHW schedule example](/.github/assets/remeha-synced-schedule-small.png)
