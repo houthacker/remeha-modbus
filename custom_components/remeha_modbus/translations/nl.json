@@ -135,6 +135,10 @@
     }
   },
   "services": {
+    "bootstrap_blenders": {
+      "name": "Blenders opstarten",
+      "description": "Verbindingen met andere integraties opstarten. Herhaalde aanroepen van deze service hebben geen effect."
+    },
     "dhw_auto_schedule": {
       "name": "SWW automatische planning",
       "description": "Maak een SWW planning voor de volgende dag, gebaseerd op de weersvoorspelling en de boiler/zonnepanelen configuration. Vereiest een weather integratie die voorziet in zonnestraling (GHI) in de uurlijkse voorspellingen."

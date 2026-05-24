@@ -136,6 +136,10 @@
     }
   },
   "services": {
+    "bootstrap_blenders": {
+      "name": "Bootstrap blenders",
+      "description": "Bootstrap connections with other integrations. Calling this multiple times has no additional effect."
+    },
     "dhw_auto_schedule": {
       "name": "DHW auto scheduling",
       "description": "Create a DHW schedule for the next day based on weather forecast and boiler/solar configuration. Requires a weather integration that provides solar irradiance (GHI) in hourly forecasts."
