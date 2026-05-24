@@ -35,6 +35,7 @@ from custom_components.remeha_modbus.const import (
     HA_PRESET_MANUAL,
     HA_SCHEDULE_TO_REMEHA_SCHEDULE,
     TEMPERATURE_STEP,
+    ClimateZoneFunction,
     ClimateZoneHeatingMode,
     ClimateZoneMode,
     ClimateZoneScheduleId,
@@ -111,6 +112,16 @@ class RemehaClimateEntity(CoordinatorEntity, ClimateEntity):
     def _zone(self) -> ClimateZone:
         """Return the modbus climate zone."""
         return self.coordinator.data["climates"][self.climate_zone_id]
+
+    @property
+    def available(self) -> bool:
+        """Return True if the climate is available.
+
+        If the underlying `ClimateZone.function` is `ClimateZoneFunction.DISABLED`,
+        this entity will be unavailable.
+        """
+
+        return super().available and self._zone.function is not ClimateZoneFunction.DISABLED
 
     @property
     def current_temperature(self) -> float | None:
