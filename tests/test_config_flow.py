@@ -55,8 +55,8 @@ async def test_generic_config_invalid_data(
     result = await hass.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
-    assert result["type"] is FlowResultType.FORM
-    assert result["errors"] == {}
+    assert result.get("type") is FlowResultType.FORM
+    assert result.get("errors") == {}
 
     with pytest.raises(InvalidData):
         # Fill in the form correctly
@@ -77,8 +77,8 @@ async def test_config_modbus_serial(hass: HomeAssistant, mock_setup_entry: Async
     result = await hass.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
-    assert result["type"] is FlowResultType.FORM
-    assert result["errors"] == {}
+    assert result.get("type") is FlowResultType.FORM
+    assert result.get("errors") == {}
 
     # Fill in the form correctly
     result = await hass.config_entries.flow.async_configure(
@@ -89,7 +89,7 @@ async def test_config_modbus_serial(hass: HomeAssistant, mock_setup_entry: Async
 
     # We should have been presented with the 2nd form, to fill in the
     # serial connection details.
-    assert result["type"] is FlowResultType.FORM
+    assert result.get("type") is FlowResultType.FORM
 
     # Fill in the details, check the result.
     result = await hass.config_entries.flow.async_configure(
@@ -105,9 +105,9 @@ async def test_config_modbus_serial(hass: HomeAssistant, mock_setup_entry: Async
     )
     await hass.async_block_till_done()
 
-    assert result["type"] is FlowResultType.CREATE_ENTRY
-    assert result["title"] == "Remeha Modbus"
-    assert result["data"] == {
+    assert result.get("type") is FlowResultType.CREATE_ENTRY
+    assert result.get("title") == "Remeha Modbus"
+    assert result.get("data") == {
         CONF_NAME: "test_serial_modbus_hub",
         CONF_TYPE: CONNECTION_SERIAL,
         MODBUS_DEVICE_ADDRESS: 100,
@@ -127,8 +127,8 @@ async def test_config_modbus_socket(hass: HomeAssistant, mock_setup_entry: Async
     result = await hass.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
-    assert result["type"] is FlowResultType.FORM
-    assert result["errors"] == {}
+    assert result.get("type") is FlowResultType.FORM
+    assert result.get("errors") == {}
 
     # Fill in the form with a socket modbus connection type.
     result = await hass.config_entries.flow.async_configure(
@@ -139,7 +139,7 @@ async def test_config_modbus_socket(hass: HomeAssistant, mock_setup_entry: Async
 
     # We should have been presented with the 2nd form, to fill in the
     # socket connection details.
-    assert result["type"] is FlowResultType.FORM
+    assert result.get("type") is FlowResultType.FORM
 
     # Fill in the details, check the result.
     result = await hass.config_entries.flow.async_configure(
@@ -147,9 +147,9 @@ async def test_config_modbus_socket(hass: HomeAssistant, mock_setup_entry: Async
     )
     await hass.async_block_till_done()
 
-    assert result["type"] is FlowResultType.CREATE_ENTRY
-    assert result["title"] == "Remeha Modbus"
-    assert result["data"] == {
+    assert result.get("type") is FlowResultType.CREATE_ENTRY
+    assert result.get("title") == "Remeha Modbus"
+    assert result.get("data") == {
         CONF_NAME: "test_socket_modbus_hub",
         CONF_TYPE: CONNECTION_RTU_OVER_TCP,
         MODBUS_DEVICE_ADDRESS: 100,
@@ -166,8 +166,8 @@ async def test_config_auto_scheduling(hass: HomeAssistant, mock_setup_entry: Asy
     result = await hass.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
-    assert result["type"] is FlowResultType.FORM
-    assert result["errors"] == {}
+    assert result.get("type") is FlowResultType.FORM
+    assert result.get("errors") == {}
 
     # Fill in the form with a socket modbus connection type.
     result = await hass.config_entries.flow.async_configure(
@@ -182,7 +182,7 @@ async def test_config_auto_scheduling(hass: HomeAssistant, mock_setup_entry: Asy
 
     # We should have been presented with the 2nd form, to fill in the
     # auto schedule details.
-    assert result["type"] is FlowResultType.FORM
+    assert result.get("type") is FlowResultType.FORM
 
     # Fill in the details, check the result.
     result = await hass.config_entries.flow.async_configure(
@@ -206,7 +206,7 @@ async def test_config_auto_scheduling(hass: HomeAssistant, mock_setup_entry: Asy
 
     # We should have been presented with the 3rd form, to fill in the
     # socket connection details.
-    assert result["type"] is FlowResultType.FORM
+    assert "type" in result and result.get("type") is FlowResultType.FORM
 
     # Fill in the details, check the result.
     result = await hass.config_entries.flow.async_configure(
@@ -214,9 +214,9 @@ async def test_config_auto_scheduling(hass: HomeAssistant, mock_setup_entry: Asy
     )
     await hass.async_block_till_done()
 
-    assert result["type"] is FlowResultType.CREATE_ENTRY
-    assert result["title"] == "Remeha Modbus"
-    assert result["data"] == {
+    assert result.get("type") is FlowResultType.CREATE_ENTRY
+    assert result.get("title") == "Remeha Modbus"
+    assert result.get("data") == {
         CONF_NAME: "test_socket_modbus_hub",
         CONF_TYPE: CONNECTION_RTU_OVER_TCP,
         MODBUS_DEVICE_ADDRESS: 100,
@@ -264,8 +264,8 @@ async def test_config_auto_scheduling_no_installation_date(
     result = await hass.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
-    assert result["type"] is FlowResultType.FORM
-    assert result["errors"] == {}
+    assert result.get("type") is FlowResultType.FORM
+    assert result.get("errors") == {}
 
     # Fill in the form with a socket modbus connection type.
     result = await hass.config_entries.flow.async_configure(
@@ -280,7 +280,7 @@ async def test_config_auto_scheduling_no_installation_date(
 
     # We should have been presented with the 2nd form, to fill in the
     # auto schedule details.
-    assert result["type"] is FlowResultType.FORM
+    assert result.get("type") is FlowResultType.FORM
 
     # Fill in the details, check the result.
     # Leave out AUTO_SCHEDULE_SELECTED_SCHEDULE, since it has a default value.
@@ -303,7 +303,7 @@ async def test_config_auto_scheduling_no_installation_date(
 
     # We should have been presented with the 3rd form, to fill in the
     # socket connection details.
-    assert result["type"] is FlowResultType.FORM
+    assert result.get("type") is FlowResultType.FORM
 
     # Fill in the details, check the result.
     result = await hass.config_entries.flow.async_configure(
@@ -311,9 +311,9 @@ async def test_config_auto_scheduling_no_installation_date(
     )
     await hass.async_block_till_done()
 
-    assert result["type"] is FlowResultType.CREATE_ENTRY
-    assert result["title"] == "Remeha Modbus"
-    assert result["data"] == {
+    assert result.get("type") is FlowResultType.CREATE_ENTRY
+    assert result.get("title") == "Remeha Modbus"
+    assert result.get("data") == {
         CONF_NAME: "test_socket_modbus_hub",
         CONF_TYPE: CONNECTION_RTU_OVER_TCP,
         MODBUS_DEVICE_ADDRESS: 100,
@@ -365,8 +365,8 @@ async def test_reconfigure_non_unique_id(
                 "entry_id": config_entry.entry_id,
             },
         )
-        assert result["type"] == FlowResultType.FORM
-        assert result["errors"] == {}
+        assert result.get("type") == FlowResultType.FORM
+        assert result.get("errors") == {}
 
         result = await hass.config_entries.flow.async_configure(
             result["flow_id"], {CONF_TYPE: CONNECTION_TCP}
@@ -375,7 +375,7 @@ async def test_reconfigure_non_unique_id(
 
         # We should have been presented with the 2nd form, to fill in the
         # socket connection details.
-        assert result["type"] is FlowResultType.FORM
+        assert result.get("type") is FlowResultType.FORM
 
         # Fill in the details, check the result.
         result = await hass.config_entries.flow.async_configure(
@@ -383,7 +383,7 @@ async def test_reconfigure_non_unique_id(
         )
         await hass.async_block_till_done()
 
-        assert result["type"] is FlowResultType.ABORT
+        assert result.get("type") is FlowResultType.ABORT
 
         entries = hass.config_entries.async_entries(domain=DOMAIN)
 
