@@ -3,6 +3,8 @@ bootstrap_blenders:
 
 dhw_auto_schedule:
 
+force_system_rediscovery:
+
 read_registers:
   fields:
     start_register:

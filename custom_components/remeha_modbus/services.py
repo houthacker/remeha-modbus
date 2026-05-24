@@ -20,6 +20,7 @@ from custom_components.remeha_modbus.const import (
     BOOTSTRAP_BLENDERS_SERVICE_NAME,
     CONFIG_AUTO_SCHEDULE,
     DOMAIN,
+    FORCE_SYSTEM_REDISCOVERY_SERVICE_NAME,
     READ_REGISTERS_REGISTER_COUNT,
     READ_REGISTERS_SERVICE_NAME,
     READ_REGISTERS_SERVICE_SCHEMA,
@@ -131,6 +132,14 @@ def register_services(  # noqa: C901
                     translation_domain=DOMAIN, translation_key="bootstrap_blenders_error"
                 ) from e
 
+    async def async_force_system_rediscovery(_: ServiceCall) -> None:
+        try:
+            await coordinator.async_force_system_rediscovery()
+        except ModbusException as e:
+            raise RemehaServiceError(
+                translation_domain=DOMAIN, translation_key="service_error_force_system_rediscovery"
+            ) from e
+
     hass.services.async_register(
         domain=DOMAIN,
         service=AUTO_SCHEDULE_SERVICE_NAME,
@@ -153,5 +162,12 @@ def register_services(  # noqa: C901
         domain=DOMAIN,
         service=BOOTSTRAP_BLENDERS_SERVICE_NAME,
         service_func=async_bootstrap_blenders,
+        supports_response=SupportsResponse.NONE,
+    )
+
+    hass.services.async_register(
+        domain=DOMAIN,
+        service=FORCE_SYSTEM_REDISCOVERY_SERVICE_NAME,
+        service_func=async_force_system_rediscovery,
         supports_response=SupportsResponse.NONE,
     )
