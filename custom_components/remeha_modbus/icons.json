@@ -34,6 +34,9 @@
     }
   },
   "services": {
-    "dhw_auto_schedule": { "service": "mdi:auto-mode" }
+    "bootstrap_blenders": { "service": "mdi:ray-start-arrow" },
+    "dhw_auto_schedule": { "service": "mdi:auto-mode" },
+    "force_system_rediscovery": { "service": "mdi:auto-renew" },
+    "read_registers": { "service": "mdi:memory" }
   }
 }
