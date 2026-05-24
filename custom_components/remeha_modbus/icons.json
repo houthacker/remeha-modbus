@@ -36,7 +36,7 @@
   "services": {
     "bootstrap_blenders": { "service": "mdi:ray-start-arrow" },
     "dhw_auto_schedule": { "service": "mdi:auto-mode" },
-    "force_system_rediscovery": { "service": "mdi:auto-renew" },
+    "force_system_rediscovery": { "service": "mdi:autorenew" },
     "read_registers": { "service": "mdi:memory" }
   }
 }
