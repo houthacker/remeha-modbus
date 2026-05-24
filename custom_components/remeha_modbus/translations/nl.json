@@ -145,7 +145,7 @@
     },
     "force_system_rediscovery": {
       "name": "Forceer systeemontdekking",
-      "description": "Forceer je Remeha installatie apparaat- en zone-informatie te verversen. Na het uitvoeren van deze service moet Remeha Modbus herladen worden."
+      "description": "Forceer je Remeha installatie apparaat- en zone-informatie te verversen. Na het uitvoeren van deze service moet Home Assistant herstart worden."
     },
     "read_registers": {
       "name": "Lees modbus registers",
@@ -244,6 +244,17 @@
     "heatpump_managed_schedules_turned_off": {
       "title": "Klokprogramma's niet beheerd door warmtepomp.",
       "description": "Je hebt een switch uitgeschakeld waardoor Home Assistant de klokprogramma's uitvoert i.p.v je warmtepomp. Negeer dit bericht als dit echt is wat je wilt."
+    },
+    "restart_required_force_system_rediscovery": {
+      "title": "Herstart vereist",
+      "fix_flow": {
+        "step": {
+          "confirm_restart": {
+            "title": "Herstart vereist",
+            "description": "Je Remeha apparaat heeft de apparaat- en zone-informatie ververst. Daardoor is een herstart van Home Assistant vereist. Klik op verzenden om nu te herstarten."
+          }
+        }
+      }
     }
   }
 }
