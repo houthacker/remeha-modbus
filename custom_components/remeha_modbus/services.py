@@ -9,6 +9,7 @@ from homeassistant.components.weather.const import DOMAIN as WeatherDomain
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import UnitOfTemperature
 from homeassistant.core import HomeAssistant, ServiceCall, ServiceResponse, State, SupportsResponse
+from homeassistant.helpers import issue_registry as ir
 from pymodbus import ModbusException
 
 from custom_components.remeha_modbus.blend.scheduler.blender import (
@@ -135,6 +136,17 @@ def register_services(  # noqa: C901
     async def async_force_system_rediscovery(_: ServiceCall) -> None:
         try:
             await coordinator.async_force_system_rediscovery()
+
+            ir.async_create_issue(
+                hass=hass,
+                domain=DOMAIN,
+                issue_id="restart_required_force_system_rediscovery",
+                is_fixable=True,
+                is_persistent=False,
+                issue_domain=DOMAIN,
+                severity=ir.IssueSeverity.WARNING,
+                translation_key="restart_required_force_system_rediscovery",
+            )
         except ModbusException as e:
             raise RemehaServiceError(
                 translation_domain=DOMAIN, translation_key="service_error_force_system_rediscovery"
