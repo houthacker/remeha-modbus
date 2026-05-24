@@ -104,25 +104,6 @@ integration, allowing you to edit them in Home Assistant as well.
 
 ## Services / actions
 
-### dhw_auto_schedule
-
-- Fields: no
-- Return value: no
-- Raised errors: `RemehaIncorrectServiceCall` if called when either:
-  - There is no DHW climate
-  - The configured weather forecast does not supply a `solar_irradiance` field
-
-A description of this service is available in [DHW auto scheduling](#dhw-auto-scheduling)
-
-### read_registers
-
-Read arbitrary modbus registers from the Remeha modbus interface.
-| Field | Type | Required | Description |
-|-------|------|:---------:|-------------|
-| `start_register` | `int` | &check; | The address of the first register to read. |
-| `register_count` | `int` | &check; | The amount of registers to read (max 10). Defaults to 1 |
-| `struct_format` | `str` | &check; | The struct format of the returned registers. Defaults to `=H` |
-
 ### bootstrap_blenders
 
 - Fields: no
@@ -133,6 +114,34 @@ Read arbitrary modbus registers from the Remeha modbus interface.
 Bootstraps integrations with other components.
 This service is called automatically once Home Assistant has started.
 Calling it multiple times has no additional effect, except possibly when the blenders didn't bootstrap somehow.
+
+### dhw_auto_schedule
+
+- Fields: no
+- Return value: no
+- Raised errors: `RemehaIncorrectServiceCall` if called when either:
+  - There is no DHW climate
+  - The configured weather forecast does not supply a `solar_irradiance` field
+
+A description of this service is available in [DHW auto scheduling](#dhw-auto-scheduling)
+
+### force_system_rediscovery
+
+To force your appliance to reset the discovery table, execute this service. This integration
+must be reloaded after executing this service.
+
+> [!CAUTION]
+> Run this service at your own risk. Executing it may mess up your existing Remeha devices and entities
+> if devices have been added or (re)moved.
+
+### read_registers
+
+Read arbitrary modbus registers from the Remeha modbus interface.
+| Field | Type | Required | Description |
+|-------|------|:---------:|-------------|
+| `start_register` | `int` | &check; | The address of the first register to read. |
+| `register_count` | `int` | &check; | The amount of registers to read (max 10). Defaults to 1 |
+| `struct_format` | `str` | &check; | The struct format of the returned registers. Defaults to `=H` |
 
 ## Installation
 

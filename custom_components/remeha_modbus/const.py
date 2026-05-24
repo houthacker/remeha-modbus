@@ -454,9 +454,12 @@ class ZoneScheduleUID(NamedTuple):
 
 CONFIG_AUTO_SCHEDULE: Final[str] = "auto_schedule"
 
+### Service names. Keep in sync with services.yaml service name. ###
 BOOTSTRAP_BLENDERS_SERVICE_NAME: Final[str] = "bootstrap_blenders"
-
 READ_REGISTERS_SERVICE_NAME: Final[str] = "read_registers"
+AUTO_SCHEDULE_SERVICE_NAME: Final[str] = "dhw_auto_schedule"
+FORCE_SYSTEM_REDISCOVERY_SERVICE_NAME: Final[str] = "force_system_rediscovery"
+
 READ_REGISTERS_START_REGISTER: Final[str] = "start_register"
 READ_REGISTERS_REGISTER_COUNT: Final[str] = "register_count"
 READ_REGISTERS_STRUCT_FORMAT: Final[str] = "struct_format"
@@ -468,9 +471,6 @@ READ_REGISTERS_SERVICE_SCHEMA: vol.Schema = vol.Schema(
         vol.Required(READ_REGISTERS_STRUCT_FORMAT, default="=H"): remeha_cv.struct_format,
     }
 )
-
-# Keep in sync with services.yaml service name.
-AUTO_SCHEDULE_SERVICE_NAME: Final[str] = "dhw_auto_schedule"
 
 AUTO_SCHEDULE_DEFAULT_ID: Final[ClimateZoneScheduleId] = ClimateZoneScheduleId.SCHEDULE_1
 """The default schedule id for auto scheduling."""
@@ -706,6 +706,9 @@ class MetaRegisters:
     )
     NUMBER_OF_ZONES: Final[ModbusVariableDescription] = ModbusVariableDescription(
         start_address=189, name="NumberOfZones", data_type=DataType.UINT8
+    )
+    RESET_DISCOVERY_TABLE: Final[ModbusVariableDescription] = ModbusVariableDescription(
+        start_address=200, name="Reset discovery table", data_type=DataType.UINT8
     )
 
     OUTSIDE_TEMPERATURE: Final[ModbusVariableDescription] = ModbusVariableDescription(

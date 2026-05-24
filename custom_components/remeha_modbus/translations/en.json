@@ -144,6 +144,10 @@
       "name": "DHW auto scheduling",
       "description": "Create a DHW schedule for the next day based on weather forecast and boiler/solar configuration. Requires a weather integration that provides solar irradiance (GHI) in hourly forecasts."
     },
+    "force_system_rediscovery": {
+      "name": "Force system rediscovery",
+      "description": "Force your Remeha appliance to rediscover device- and zone metadata. A restart of Home Assistant is required after running this service."
+    },
     "read_registers": {
       "name": "Read modbus registers",
       "description": "Read a list of consecutive modbus registers from the GTW-08",

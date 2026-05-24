@@ -43,6 +43,7 @@ from custom_components.remeha_modbus.const import (
     BoilerConfiguration,
     BoilerEnergyLabel,
     ClimateZoneScheduleId,
+    MetaRegisters,
     ModbusVariableDescription,
     PVSystem,
     PVSystemOrientation,
@@ -246,6 +247,20 @@ class RemehaUpdateCoordinator(DataUpdateCoordinator):
             self._schedule_subscribers.remove(subscriber)
             if callback in self._schedule_subscribers
             else None
+        )
+
+    async def async_force_system_rediscovery(self):
+        """Force the Remeha appliance to execute system discovery.
+
+        This instructs the appliance to rebuild the discovery table(registers 128 - 199).
+
+        Raises:
+            `ModbusException` if writing the related modbus register fails.
+
+        """
+
+        await self._api.async_write_variable(
+            variable=MetaRegisters.RESET_DISCOVERY_TABLE, value=0x5A
         )
 
     def is_cooling_forced(self) -> bool:

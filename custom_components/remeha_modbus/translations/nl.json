@@ -143,6 +143,10 @@
       "name": "SWW automatische planning",
       "description": "Maak een SWW planning voor de volgende dag, gebaseerd op de weersvoorspelling en de boiler/zonnepanelen configuration. Vereiest een weather integratie die voorziet in zonnestraling (GHI) in de uurlijkse voorspellingen."
     },
+    "force_system_rediscovery": {
+      "name": "Forceer systeemontdekking",
+      "description": "Forceer je Remeha installatie apparaat- en zone-informatie te verversen. Na het uitvoeren van deze service moet Remeha Modbus herladen worden."
+    },
     "read_registers": {
       "name": "Lees modbus registers",
       "description": "Lees een aantal opeenvolgende modbus registers van de GTW-08",
