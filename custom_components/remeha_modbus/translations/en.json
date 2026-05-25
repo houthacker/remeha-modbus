@@ -259,7 +259,7 @@
         "step": {
           "confirm_undo": {
             "title": "Let appliance manage time schedules",
-            "description": "You turned off a switch which causes Home Assistant to manage time schedules directly instead of letting the Remeha appliance manage that. Click submit to revert this. Or, if this really is what you want, ignore this issue."
+            "description": "You turned off a switch which causes Home Assistant to manage time schedules directly instead of letting the Remeha appliance manage that. Click submit to revert this, or reboot Home Assistant to ignore this issue."
           }
         }
       }

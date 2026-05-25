@@ -186,7 +186,7 @@ class RemehaHeatpumpManagedSchedulesSwitch(RemehaModbusSwitch):
             data={"switch": self.entity_id, **undo_presets},
             issue_id=ISSUE_HEATPUMP_MANAGED_SCHEDULES_OFF,
             is_fixable=True,
-            is_persistent=True,
+            is_persistent=False,
             issue_domain=DOMAIN,
             learn_more_url=UNEXPECTED_ACTION_ISSUE_URL,
             severity=ir.IssueSeverity.WARNING,
