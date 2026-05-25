@@ -42,7 +42,6 @@ from custom_components.remeha_modbus.const import (
     MODBUS_SERIAL_PARITY,
     MODBUS_SERIAL_STOPBITS,
     REMEHA_DEVICE_INSTANCE_RESERVED_REGISTERS,
-    REMEHA_MAX_ZONES,
     REMEHA_TIME_PROGRAM_RESERVED_REGISTERS,
     REMEHA_ZONE_RESERVED_REGISTERS,
     WEEKDAY_TO_MODBUS_VARIABLE,
@@ -53,6 +52,7 @@ from custom_components.remeha_modbus.const import (
     Weekday,
     ZoneRegisters,
 )
+from custom_components.remeha_modbus.errors import DiscoveryTableCorruptedError
 from custom_components.remeha_modbus.helpers.gtw08 import TimeOfDay
 from custom_components.remeha_modbus.helpers.modbus import (
     ModbusPrimitive,
@@ -732,6 +732,7 @@ class RemehaApi:
             `list[ClimateZone]`: A list of all discovered zones.
 
         Raises
+            `DiscoveryTableCorruptedError`: If the modbus discovery table has been corrupted.
             `ModbusException`: If the list of zones cannot be obtained.
             `ValueError`: If the retrieved modbus data cannot be successfully deserialized.
 
@@ -739,11 +740,7 @@ class RemehaApi:
 
         number_of_zones = await self.async_read_number_of_zones()
         if number_of_zones is None or number_of_zones == 0:
-            _LOGGER.debug(
-                "MetaRegisters.NUMBER_OF_ZONES (%i) reports an invalid number of zones. "
-                "Trying all zones sequentially until one is ClimateZoneType.NOT_PRESENT."
-            )
-            number_of_zones = REMEHA_MAX_ZONES
+            raise DiscoveryTableCorruptedError("number_of_zones")
 
         return [
             zone

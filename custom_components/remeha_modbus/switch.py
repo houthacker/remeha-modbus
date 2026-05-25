@@ -22,6 +22,7 @@ from custom_components.remeha_modbus.blend.scheduler.helpers import scheduler_is
 from custom_components.remeha_modbus.const import (
     DOMAIN,
     HEATPUMP_MANAGED_SCHEDULES,
+    ISSUE_HEATPUMP_MANAGED_SCHEDULES_OFF,
     SWITCH_SCHEDULE_SYNC,
     UNEXPECTED_ACTION_ISSUE_URL,
 )
@@ -156,7 +157,7 @@ class RemehaHeatpumpManagedSchedulesSwitch(RemehaModbusSwitch):
             await self.hass.services.async_call(
                 domain=ClimateDomain,
                 service=SERVICE_SET_PRESET_MODE,
-                service_data={"preset_mode": PRESET_ECO},
+                service_data={ATTR_PRESET_MODE: PRESET_ECO},
                 target={"entity_id": entity_id},
             )
 
@@ -183,7 +184,7 @@ class RemehaHeatpumpManagedSchedulesSwitch(RemehaModbusSwitch):
             hass=self.hass,
             domain=DOMAIN,
             data={"switch": self.entity_id, **undo_presets},
-            issue_id="heatpump_managed_schedules_off",
+            issue_id=ISSUE_HEATPUMP_MANAGED_SCHEDULES_OFF,
             is_fixable=True,
             is_persistent=True,
             issue_domain=DOMAIN,

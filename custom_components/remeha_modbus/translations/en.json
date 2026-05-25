@@ -242,6 +242,17 @@
     }
   },
   "issues": {
+    "discovery_table_corrupted": {
+      "title": "Modbus discovery table corrupted",
+      "fix_flow": {
+        "step": {
+          "confirm_force_rediscovery": {
+            "title": "Force modbus discovery",
+            "description": "The GTW-08 discovery table seems to be corrupted. You can fix this by forcing its rediscovery and restarting Home Assistant. This does not affect the settings of your Remeha appliance."
+          }
+        }
+      }
+    },
     "heatpump_managed_schedules_turned_off": {
       "title": "Time schedules not managed by appliance",
       "fix_flow": {
