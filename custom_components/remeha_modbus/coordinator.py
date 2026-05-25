@@ -34,6 +34,7 @@ from custom_components.remeha_modbus.const import (
     DOMAIN,
     HA_SCHEDULE_TO_REMEHA_SCHEDULE,
     ISSUE_DISCOVERY_TABLE_CORRUPTED,
+    ISSUE_DISCOVERY_TABLE_CORRUPTED_LEARN_MORE_URL,
     PV_ANNUAL_EFFICIENCY_DECREASE,
     PV_CONFIG_SECTION,
     PV_INSTALLATION_DATE,
@@ -196,6 +197,7 @@ class RemehaUpdateCoordinator(DataUpdateCoordinator):
                 issue_id=ISSUE_DISCOVERY_TABLE_CORRUPTED,
                 is_fixable=True,
                 is_persistent=False,
+                learn_more_url=ISSUE_DISCOVERY_TABLE_CORRUPTED_LEARN_MORE_URL,
                 severity=ir.IssueSeverity.ERROR,
                 translation_key="discovery_table_corrupted",
             )

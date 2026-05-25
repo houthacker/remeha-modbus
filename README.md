@@ -13,6 +13,53 @@
 
 This integration allows you to manage your Remeha heating/cooling appliance locally from Home Assistant.
 
+## Table of Contents
+- [Installation](#installation)
+- [Current features](#current-features)
+  - [Modbus Discovery Table](#modbus-discovery-table)
+- [DHW Auto Scheduling](#dhw-auto-scheduling)
+- [DHW Schedule Synchronization](#dhw-schedule-synchronization)
+- [Noteworthy entities](#entities)
+- [Exposed services](#services--actions)
+- [Supported appliances](#supported-appliances)
+- [Supported modbus proxies](#supported-modbus-proxies)
+
+## Installation
+
+To install this integration, you need to have [HACS](https://hacs.xyz/docs/use) installed in your Home Assistant.
+
+[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=houthacker&repository=remeha-modbus&category=integration)
+
+## Current features
+
+Planned features and features under discussion are available in the [issues](https://github.com/houthacker/remeha-modbus/issues). If you're missing a feature that has not been mentioned yet in the issues, please submit an issue or a PR.
+
+- Connections:
+  - Directly through a serial port
+  - Indirectly through a proxy over WiFi or ethernet.
+- Supported climate zones are exposed as [climate](https://www.home-assistant.io/integrations/climate/) entities
+  - DHW (domestic hot water)
+  - CH (central heating)
+  - Automatically discovered once the integration has been set up.
+  - Linked to a device, showing the type of board in the Remeha appliance, including its soft- and hardware versions.
+  - Climate features are enabled depending on the climate zone type (for instance, a DHW zone is only able to heat, not cool).
+- DHW auto scheduling:
+  - This integration exposes a service called `dhw_auto_schedule` that can be used in automations or scripts. A detailed explanation follows [below](#dhw-auto-scheduling).
+- Time schedule editing:
+  If you install the [scheduler](https://github.com/nielsfaber/scheduler-card) integration, you can edit your DHW schedules from Home Assistant after [enabling it](#switchenable_schedule_sync). Description is located [here](#dhw-schedule-synchronization).
+
+### Modbus discovery table
+
+At some point when installing the GTW-08 in your appliance, the meta data of your appliance is stored in
+the "discovery table". This encompasses registers 128 - 199 and some more in the zone register list. For reasons
+yet unknown, this table can become corrupted. Educated guesses (but guesses nonetheless) as to why this happens
+might be power cycles, updating the zone configuration or adding new hardware _after_ te GTW-08 has been installed.
+
+To allow users to force the GTW-08 to rediscover your appliance configuration, `remeha_modbus` exposes a service
+named `force_system_rediscovery`. This service can be called manually, but is also used in an automatic repair
+when a possibly corrupted discovery table is found after Home Assistant has started.
+Home Assistant must be restarted after this service has been called.
+
 ## Supported appliances
 
 According to Remeha, the following appliances can be extended with a GTW-08 (modbus interface), or have one pre-installed:
@@ -50,24 +97,6 @@ The following proxies are known to be working with this integration. Other gatew
 | Device type                              | URL                                                                     |
 | ---------------------------------------- | ----------------------------------------------------------------------- |
 | Waveshare RS232/485 to WiFi and Ethernet | https://www.waveshare.com/product/rs232-485-to-wifi-eth-b.htm?sku=25222 |
-
-## Current features
-
-Planned features and features under discussion are available in the [issues](https://github.com/houthacker/remeha-modbus/issues). If you're missing a feature that has not been mentioned yet in the issues, please submit an issue or a PR.
-
-- Connections:
-  - Directly through a serial port
-  - Indirectly through a proxy over WiFi or ethernet.
-- Supported climate zones are exposed as [climate](https://www.home-assistant.io/integrations/climate/) entities
-  - DHW (domestic hot water)
-  - CH (central heating)
-  - Automatically discovered once the integration has been set up.
-  - Linked to a device, showing the type of board in the Remeha appliance, including its soft- and hardware versions.
-  - Climate features are enabled depending on the climate zone type (for instance, a DHW zone is only able to heat, not cool).
-- DHW auto scheduling:
-  - This integration exposes a service called `dhw_auto_schedule` that can be used in automations or scripts. A detailed explanation follows [below](#dhw-auto-scheduling).
-- Time schedule editing:
-  If you install the [scheduler](https://github.com/nielsfaber/scheduler-card) integration, you can edit your DHW schedules from Home Assistant after [enabling it](#switchenable_schedule_sync). Description is located [here](#dhw-schedule-synchronization).
 
 ## Entities
 
@@ -142,12 +171,6 @@ Read arbitrary modbus registers from the Remeha modbus interface.
 | `start_register` | `int` | &check; | The address of the first register to read. |
 | `register_count` | `int` | &check; | The amount of registers to read (max 10). Defaults to 1 |
 | `struct_format` | `str` | &check; | The struct format of the returned registers. Defaults to `=H` |
-
-## Installation
-
-To install this integration, you need to have [HACS](https://hacs.xyz/docs/use) installed in your Home Assistant.
-
-[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=houthacker&repository=remeha-modbus&category=integration)
 
 ## DHW auto scheduling
 

@@ -22,9 +22,9 @@ from custom_components.remeha_modbus.blend.scheduler.helpers import scheduler_is
 from custom_components.remeha_modbus.const import (
     DOMAIN,
     HEATPUMP_MANAGED_SCHEDULES,
+    ISSUE_HEATPUMP_MANAGED_SCHEDULES_LEARN_MORE_URL,
     ISSUE_HEATPUMP_MANAGED_SCHEDULES_OFF,
     SWITCH_SCHEDULE_SYNC,
-    UNEXPECTED_ACTION_ISSUE_URL,
 )
 from custom_components.remeha_modbus.coordinator import RemehaUpdateCoordinator
 from custom_components.remeha_modbus.helpers.entities import get_climate_entity_id
@@ -188,7 +188,7 @@ class RemehaHeatpumpManagedSchedulesSwitch(RemehaModbusSwitch):
             is_fixable=True,
             is_persistent=False,
             issue_domain=DOMAIN,
-            learn_more_url=UNEXPECTED_ACTION_ISSUE_URL,
+            learn_more_url=ISSUE_HEATPUMP_MANAGED_SCHEDULES_LEARN_MORE_URL,
             severity=ir.IssueSeverity.WARNING,
             translation_key="heatpump_managed_schedules_turned_off",
         )

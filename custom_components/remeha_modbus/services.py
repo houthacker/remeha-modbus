@@ -19,6 +19,7 @@ from custom_components.remeha_modbus.blend.scheduler.blender import SchedulerBle
 from custom_components.remeha_modbus.const import (
     CONFIG_AUTO_SCHEDULE,
     DOMAIN,
+    ISSUE_RESTART_REQUIRED_REDISCOVERY,
     READ_REGISTERS_REGISTER_COUNT,
     READ_REGISTERS_SERVICE_SCHEMA,
     READ_REGISTERS_START_REGISTER,
@@ -140,7 +141,7 @@ def register_services(  # noqa: C901
             ir.async_create_issue(
                 hass=hass,
                 domain=DOMAIN,
-                issue_id="restart_required_force_system_rediscovery",
+                issue_id=ISSUE_RESTART_REQUIRED_REDISCOVERY,
                 is_fixable=True,
                 is_persistent=False,
                 issue_domain=DOMAIN,

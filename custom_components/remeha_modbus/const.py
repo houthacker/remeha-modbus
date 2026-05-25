@@ -52,11 +52,16 @@ The recommended setting is 'on', as to have the heat pump manage time schedule e
 
 ISSUE_HEATPUMP_MANAGED_SCHEDULES_OFF: Final[str] = "heatpump_managed_schedules_off"
 
-ISSUE_DISCOVERY_TABLE_CORRUPTED: Final[str] = "modbus_discovery_table_corrupted"
-
-UNEXPECTED_ACTION_ISSUE_URL: Final[str] = (
+ISSUE_HEATPUMP_MANAGED_SCHEDULES_LEARN_MORE_URL: Final[str] = (
     "https://github.com/houthacker/remeha-modbus#heatpump-managed-schedules"
 )
+
+ISSUE_DISCOVERY_TABLE_CORRUPTED: Final[str] = "modbus_discovery_table_corrupted"
+ISSUE_DISCOVERY_TABLE_CORRUPTED_LEARN_MORE_URL: Final[str] = (
+    "https://github.com/houthacker/remeha-modbus#modbus-discovery-table"
+)
+
+ISSUE_RESTART_REQUIRED_REDISCOVERY: Final[str] = "restart_required_force_system_rediscovery"
 
 MAXIMUM_NORMAL_SURFACE_IRRADIANCE_NL: Final[int] = 1000
 """The maximum normal surface irradiance in The Netherlands, in W/m²"""
