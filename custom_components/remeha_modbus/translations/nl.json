@@ -258,7 +258,7 @@
         "step": {
           "confirm_undo": {
             "title": "Laat klokprogramma's uitvoeren door je Remeha apparaat",
-            "description": "Je hebt een switch uitgeschakeld waardoor Home Assistant de klokprogramma's uitvoert i.p.v. je Remeha apparaat. Klik op verzenden om dit te herstellen, of negeer dit bericht als dit echt is wat je wilt."
+            "description": "Je hebt een switch uitgeschakeld waardoor Home Assistant de klokprogramma's uitvoert i.p.v. je Remeha apparaat. Klik op verzenden om dit te herstellen, of herstart Home Assistant om dit te negeren."
           }
         }
       }
