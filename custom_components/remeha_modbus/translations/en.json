@@ -244,7 +244,14 @@
   "issues": {
     "heatpump_managed_schedules_turned_off": {
       "title": "Time schedules not managed by appliance",
-      "description": "You turned off a switch which causes Home Assistant to manage time schedules directly instead of letting the Remeha appliance manage that. If this really is what you want, ignore this message."
+      "fix_flow": {
+        "step": {
+          "confirm_undo": {
+            "title": "Let appliance manage time schedules",
+            "description": "You turned off a switch which causes Home Assistant to manage time schedules directly instead of letting the Remeha appliance manage that. Click submit to revert this. Or, if this really is what you want, ignore this issue."
+          }
+        }
+      }
     },
     "restart_required_force_system_rediscovery": {
       "title": "Restart required",
