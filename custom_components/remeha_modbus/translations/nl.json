@@ -242,8 +242,15 @@
   },
   "issues": {
     "heatpump_managed_schedules_turned_off": {
-      "title": "Klokprogramma's niet beheerd door warmtepomp.",
-      "description": "Je hebt een switch uitgeschakeld waardoor Home Assistant de klokprogramma's uitvoert i.p.v je warmtepomp. Negeer dit bericht als dit echt is wat je wilt."
+      "title": "Klokprogramma's niet uitgevoerd door Remeha apparaat.",
+      "fix_flow": {
+        "step": {
+          "confirm_undo": {
+            "title": "Laat klokprogramma's uitvoeren door je Remeha apparaat",
+            "description": "Je hebt een switch uitgeschakeld waardoor Home Assistant de klokprogramma's uitvoert i.p.v. je Remeha apparaat. Klik op verzenden om dit te herstellen, of negeer dit bericht als dit echt is wat je wilt."
+          }
+        }
+      }
     },
     "restart_required_force_system_rediscovery": {
       "title": "Herstart vereist",
