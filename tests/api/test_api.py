@@ -33,6 +33,7 @@ from custom_components.remeha_modbus.const import (
     Weekday,
     ZoneRegisters,
 )
+from custom_components.remeha_modbus.errors import DiscoveryTableCorruptedError
 from custom_components.remeha_modbus.helpers.modbus import to_gtw08_null_value
 from tests.conftest import get_api
 
@@ -222,13 +223,13 @@ async def test_read_zones_fallback(mock_modbus_client):
 
     for number_of_zones in [0, to_gtw08_null_value(MetaRegisters.NUMBER_OF_ZONES.data_type)]:
         # Set NumberOfZones
-        mock_modbus_client.write_registers(
+        await mock_modbus_client.write_registers(
             MetaRegisters.NUMBER_OF_ZONES.start_address, [number_of_zones]
         )
 
         # Validate zones
-        zones: list[ClimateZone] = await api.async_read_zones()
-        assert len(zones) == 2
+        with pytest.raises(expected_exception=DiscoveryTableCorruptedError):
+            await api.async_read_zones()
 
 
 @pytest.mark.parametrize("mock_modbus_client", ["modbus_store.json"], indirect=True)
