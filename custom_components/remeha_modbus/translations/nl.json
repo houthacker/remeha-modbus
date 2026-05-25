@@ -247,7 +247,7 @@
         "step": {
           "confirm_force_rediscovery": {
             "title": "Forceer modbus verkenning",
-            "description": "De verkenningstabel van de GTW-08 lijkt corrupt geraakt. Je kunt dit oplossen door modbus verkenning te forceren en Home Assistant te herstarten. Dit heeft geen invloed op de instellingen van je Remeha apparaat."
+            "description": "De verkenningstabel van de GTW-08 lijkt ongeldig te zijn. Je kunt dit oplossen door modbus verkenning te forceren en Home Assistant te herstarten. Dit heeft geen invloed op de instellingen van je Remeha apparaat."
           }
         }
       }
