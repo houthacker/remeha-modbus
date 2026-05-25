@@ -50,6 +50,10 @@ HEATPUMP_MANAGED_SCHEDULES: Final[str] = "heatpump_managed_schedules"
 The recommended setting is 'on', as to have the heat pump manage time schedule execution.
 """
 
+ISSUE_HEATPUMP_MANAGED_SCHEDULES_OFF: Final[str] = "heatpump_managed_schedules_off"
+
+ISSUE_DISCOVERY_TABLE_CORRUPTED: Final[str] = "modbus_discovery_table_corrupted"
+
 UNEXPECTED_ACTION_ISSUE_URL: Final[str] = (
     "https://github.com/houthacker/remeha-modbus#heatpump-managed-schedules"
 )
@@ -619,7 +623,6 @@ class Limits(float, Enum):
 
 
 # Base register information for zones, device info, time schedules
-REMEHA_MAX_ZONES: Final[int] = 12
 REMEHA_ZONE_RESERVED_REGISTERS: Final[int] = 512
 REMEHA_DEVICE_INSTANCE_RESERVED_REGISTERS: Final[int] = 6
 REMEHA_TIME_PROGRAM_RESERVED_REGISTERS: Final[int] = 70
