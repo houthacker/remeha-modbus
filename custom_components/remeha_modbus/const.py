@@ -459,10 +459,10 @@ class ZoneScheduleUID(NamedTuple):
 CONFIG_AUTO_SCHEDULE: Final[str] = "auto_schedule"
 
 ### Service names. Keep in sync with services.yaml service name. ###
-BOOTSTRAP_BLENDERS_SERVICE_NAME: Final[str] = "bootstrap_blenders"
-READ_REGISTERS_SERVICE_NAME: Final[str] = "read_registers"
-AUTO_SCHEDULE_SERVICE_NAME: Final[str] = "dhw_auto_schedule"
-FORCE_SYSTEM_REDISCOVERY_SERVICE_NAME: Final[str] = "force_system_rediscovery"
+SERVICE_BOOTSTRAP_BLENDERS: Final[str] = "bootstrap_blenders"
+SERVICE_READ_REGISTERS: Final[str] = "read_registers"
+SERVICE_AUTO_SCHEDULE: Final[str] = "dhw_auto_schedule"
+SERVICE_FORCE_SYSTEM_REDISCOVERY: Final[str] = "force_system_rediscovery"
 
 READ_REGISTERS_START_REGISTER: Final[str] = "start_register"
 READ_REGISTERS_REGISTER_COUNT: Final[str] = "register_count"
