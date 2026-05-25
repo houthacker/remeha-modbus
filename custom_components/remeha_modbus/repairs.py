@@ -14,7 +14,12 @@ from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers import issue_registry as ir
 
-from custom_components.remeha_modbus.const import DOMAIN
+from custom_components.remeha_modbus.const import (
+    DOMAIN,
+    ISSUE_DISCOVERY_TABLE_CORRUPTED,
+    ISSUE_HEATPUMP_MANAGED_SCHEDULES_OFF,
+    SERVICE_FORCE_SYSTEM_REDISCOVERY,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -90,6 +95,28 @@ class UndoManualScheduleExecutionFixFlow(RepairsFlow):
         return self.async_show_form(step_id="confirm_undo", data_schema=vol.Schema({}))
 
 
+class DiscoveryTableCorruptedFixFlow(RepairsFlow):
+    """A flow to repair a corrupted modbus discovery table."""
+
+    async def async_step_init(self, user_input: dict[str, str] | None = None) -> FlowResult:
+        """Handle the initial step."""
+
+        return await self.async_step_confirm_force_rediscovery()
+
+    async def async_step_confirm_force_rediscovery(
+        self, user_input: dict[str, str] | None = None
+    ) -> FlowResult:
+        """Have the user confirm they want to force modbus rediscovery."""
+
+        if user_input is not None:
+            await self.hass.services.async_call(
+                domain=DOMAIN, service=SERVICE_FORCE_SYSTEM_REDISCOVERY
+            )
+            return self.async_create_entry(title="", data={})
+
+        return self.async_show_form(step_id="confirm_force_rediscovery", data_schema=vol.Schema({}))
+
+
 async def async_create_fix_flow(
     hass: HomeAssistant,
     issue_id: str,
@@ -104,7 +131,9 @@ async def async_create_fix_flow(
 
     if issue_id.startswith("restart_required"):
         return RestartRequiredFixFlow()
-    if issue_id == "heatpump_managed_schedules_off":
+    if issue_id == ISSUE_HEATPUMP_MANAGED_SCHEDULES_OFF:
         return UndoManualScheduleExecutionFixFlow(issue_id)
+    if issue_id == ISSUE_DISCOVERY_TABLE_CORRUPTED:
+        return DiscoveryTableCorruptedFixFlow()
 
     return None

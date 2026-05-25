@@ -11,6 +11,7 @@ from homeassistant.components.switch.const import DOMAIN as SwitchPlatform
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import UnitOfTemperature
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers import issue_registry as ir
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from pymodbus import ModbusException
 
@@ -32,6 +33,7 @@ from custom_components.remeha_modbus.const import (
     DHW_BOILER_VOLUME,
     DOMAIN,
     HA_SCHEDULE_TO_REMEHA_SCHEDULE,
+    ISSUE_DISCOVERY_TABLE_CORRUPTED,
     PV_ANNUAL_EFFICIENCY_DECREASE,
     PV_CONFIG_SECTION,
     PV_INSTALLATION_DATE,
@@ -50,6 +52,7 @@ from custom_components.remeha_modbus.const import (
     UnsubscribeCallback,
 )
 from custom_components.remeha_modbus.errors import (
+    DiscoveryTableCorruptedError,
     IncorrectEntityPlatformError,
     RemehaIncorrectServiceCall,
     RemehaServiceError,
@@ -185,6 +188,18 @@ class RemehaUpdateCoordinator(DataUpdateCoordinator):
                     new_zones={zone.id: zone for zone in zones},
                 )
 
+        except DiscoveryTableCorruptedError as ex:
+            ir.async_create_issue(
+                hass=self.hass,
+                domain=DOMAIN,
+                issue_domain=DOMAIN,
+                issue_id=ISSUE_DISCOVERY_TABLE_CORRUPTED,
+                is_fixable=True,
+                is_persistent=False,
+                severity=ir.IssueSeverity.ERROR,
+                translation_key="discovery_table_corrupted",
+            )
+            raise UpdateFailed("Modbus discovery table corrupted") from ex
         except ModbusException as ex:
             raise UpdateFailed("Error while communicating with modbus device.") from ex
 

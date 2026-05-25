@@ -9,12 +9,12 @@ from pymodbus import ModbusException
 from custom_components.remeha_modbus.api.climate_zone import ClimateZone, Weekday, ZoneSchedule
 from custom_components.remeha_modbus.const import (
     AUTO_SCHEDULE_DEFAULT_ID,
-    AUTO_SCHEDULE_SERVICE_NAME,
     DOMAIN,
     READ_REGISTERS_REGISTER_COUNT,
-    READ_REGISTERS_SERVICE_NAME,
     READ_REGISTERS_START_REGISTER,
     READ_REGISTERS_STRUCT_FORMAT,
+    SERVICE_AUTO_SCHEDULE,
+    SERVICE_READ_REGISTERS,
     ClimateZoneMode,
     ClimateZoneScheduleId,
 )
@@ -41,7 +41,7 @@ async def test_scheduling_service(hass: HomeAssistant, mock_modbus_client, mock_
         # Call the service
         await hass.services.async_call(
             domain=DOMAIN,
-            service=AUTO_SCHEDULE_SERVICE_NAME,
+            service=SERVICE_AUTO_SCHEDULE,
             blocking=True,
             return_response=False,
         )
@@ -77,7 +77,7 @@ async def test_read_registers_service(hass: HomeAssistant, mock_modbus_client, m
         # Call the service
         assert await hass.services.async_call(
             domain=DOMAIN,
-            service=READ_REGISTERS_SERVICE_NAME,
+            service=SERVICE_READ_REGISTERS,
             blocking=True,
             return_response=True,
             service_data={
@@ -111,7 +111,7 @@ async def test_read_registers_service_exceptions(
         with pytest.raises(expected_exception=RemehaServiceError):
             await hass.services.async_call(
                 domain=DOMAIN,
-                service=READ_REGISTERS_SERVICE_NAME,
+                service=SERVICE_READ_REGISTERS,
                 blocking=True,
                 return_response=True,
                 service_data={

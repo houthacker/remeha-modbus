@@ -241,6 +241,17 @@
     }
   },
   "issues": {
+    "discovery_table_corrupted": {
+      "title": "Modbus discovery tabel ongeldig",
+      "fix_flow": {
+        "step": {
+          "confirm_force_rediscovery": {
+            "title": "Forceer modbus verkenning",
+            "description": "De verkenningstabel van de GTW-08 lijkt corrupt geraakt. Je kunt dit oplossen door modbus verkenning te forceren en Home Assistant te herstarten. Dit heeft geen invloed op de instellingen van je Remeha apparaat."
+          }
+        }
+      }
+    },
     "heatpump_managed_schedules_turned_off": {
       "title": "Klokprogramma's niet uitgevoerd door Remeha apparaat.",
       "fix_flow": {

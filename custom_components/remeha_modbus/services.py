@@ -17,16 +17,16 @@ from custom_components.remeha_modbus.blend.scheduler.blender import (
 )
 from custom_components.remeha_modbus.blend.scheduler.blender import SchedulerBlender
 from custom_components.remeha_modbus.const import (
-    AUTO_SCHEDULE_SERVICE_NAME,
-    BOOTSTRAP_BLENDERS_SERVICE_NAME,
     CONFIG_AUTO_SCHEDULE,
     DOMAIN,
-    FORCE_SYSTEM_REDISCOVERY_SERVICE_NAME,
     READ_REGISTERS_REGISTER_COUNT,
-    READ_REGISTERS_SERVICE_NAME,
     READ_REGISTERS_SERVICE_SCHEMA,
     READ_REGISTERS_START_REGISTER,
     READ_REGISTERS_STRUCT_FORMAT,
+    SERVICE_AUTO_SCHEDULE,
+    SERVICE_BOOTSTRAP_BLENDERS,
+    SERVICE_FORCE_SYSTEM_REDISCOVERY,
+    SERVICE_READ_REGISTERS,
     WEATHER_ENTITY_ID,
 )
 from custom_components.remeha_modbus.errors import (
@@ -50,7 +50,7 @@ def register_services(  # noqa: C901
     if not coordinator.get_climates(lambda climate: climate.is_domestic_hot_water()):
         _LOGGER.warning(
             "Not registering service '%s' since no DHW climate was discovered by this integration.",
-            AUTO_SCHEDULE_SERVICE_NAME,
+            SERVICE_AUTO_SCHEDULE,
         )
         return
 
@@ -154,7 +154,7 @@ def register_services(  # noqa: C901
 
     hass.services.async_register(
         domain=DOMAIN,
-        service=AUTO_SCHEDULE_SERVICE_NAME,
+        service=SERVICE_AUTO_SCHEDULE,
         service_func=dhw_auto_schedule,
         supports_response=SupportsResponse.NONE,
     )
@@ -164,7 +164,7 @@ def register_services(  # noqa: C901
         description_placeholders={
             "python_struct_format_docs_url": "https://docs.python.org/3/library/struct.html#format-characters"
         },
-        service=READ_REGISTERS_SERVICE_NAME,
+        service=SERVICE_READ_REGISTERS,
         service_func=async_read_registers,
         schema=READ_REGISTERS_SERVICE_SCHEMA,
         supports_response=SupportsResponse.OPTIONAL,
@@ -172,14 +172,14 @@ def register_services(  # noqa: C901
 
     hass.services.async_register(
         domain=DOMAIN,
-        service=BOOTSTRAP_BLENDERS_SERVICE_NAME,
+        service=SERVICE_BOOTSTRAP_BLENDERS,
         service_func=async_bootstrap_blenders,
         supports_response=SupportsResponse.NONE,
     )
 
     hass.services.async_register(
         domain=DOMAIN,
-        service=FORCE_SYSTEM_REDISCOVERY_SERVICE_NAME,
+        service=SERVICE_FORCE_SYSTEM_REDISCOVERY,
         service_func=async_force_system_rediscovery,
         supports_response=SupportsResponse.NONE,
     )

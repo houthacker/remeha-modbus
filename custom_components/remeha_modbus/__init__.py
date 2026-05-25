@@ -21,10 +21,10 @@ if TYPE_CHECKING:
     from custom_components.remeha_modbus.blend.blender import Blender
 from custom_components.remeha_modbus.const import (
     AUTO_SCHEDULE_SELECTED_SCHEDULE,
-    BOOTSTRAP_BLENDERS_SERVICE_NAME,
     CONFIG_AUTO_SCHEDULE,
     DOMAIN,
     REMEHA_PRESET_SCHEDULE_1,
+    SERVICE_BOOTSTRAP_BLENDERS,
 )
 from custom_components.remeha_modbus.coordinator import RemehaUpdateCoordinator
 from custom_components.remeha_modbus.services import register_services
@@ -84,7 +84,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         """Call the bootstrap_blenders service to set up communication with other integrations."""
         await hass.services.async_call(
             domain=DOMAIN,
-            service=BOOTSTRAP_BLENDERS_SERVICE_NAME,
+            service=SERVICE_BOOTSTRAP_BLENDERS,
             blocking=False,
             return_response=False,
         )

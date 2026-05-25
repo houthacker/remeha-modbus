@@ -1,6 +1,7 @@
 """Errors for the remeha_modbus integration."""
 
 from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
+from pymodbus import ModbusException
 
 
 class RemehaModbusError(HomeAssistantError):
@@ -45,3 +46,11 @@ class RemehaServiceError(RemehaModbusError):
 
 class MissingExternalComponent(RemehaModbusError):
     """Exception to indicate that a component is missing which is required for some action."""
+
+
+class DiscoveryTableCorruptedError(ModbusException):
+    """Exception to indicate the modbus discovery table seems corrupted.
+
+    This happens for example if the number of devices is 0 or None.
+    This can be fixed by calling the `force_system_rediscovery` service.
+    """
