@@ -187,7 +187,7 @@ class Timeslot:
         # slot_bytes must be exactly 3 bytes.
         if len(encoded_time_slot) != SLOT_SIZE:
             raise ValueError(
-                f"Cannod decode time program: require time slot of {SLOT_SIZE} bytes but got {len(encoded_time_slot)}."
+                f"Cannot decode time program: require time slot of {SLOT_SIZE} bytes but got {len(encoded_time_slot)}."
             )
 
         time_steps = int.from_bytes(encoded_time_slot[2:3])
