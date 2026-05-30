@@ -59,13 +59,6 @@ def register_services(  # noqa: C901
 ) -> None:
     """Register all services of this integration."""
 
-    if not coordinator.get_climates(lambda climate: climate.is_domestic_hot_water()):
-        _LOGGER.warning(
-            "Not registering service '%s' since no DHW climate was discovered by this integration.",
-            SERVICE_AUTO_SCHEDULE,
-        )
-        return
-
     if config.data[CONFIG_AUTO_SCHEDULE] is False:
         _LOGGER.info(
             "DHW auto scheduling is not required by configuration, but service is still registered since manual calls are also allowed."
