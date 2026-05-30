@@ -20,8 +20,6 @@ from custom_components.remeha_modbus.api.schedule import (
 )
 from custom_components.remeha_modbus.blend.scheduler.const import (
     SCHEDULER_TAG_PREFIX,
-    SHORT_DESC_TO_WEEKDAY,
-    WEEKDAY_TO_SHORT_DESC,
     SchedulerAction,
     SchedulerCondition,
     SchedulerDomain,
@@ -36,6 +34,8 @@ from custom_components.remeha_modbus.const import (
     ATTR_SCHEDULER_TAGS,
     DOMAIN,
     HEATPUMP_MANAGED_SCHEDULES,
+    SHORT_DESC_TO_WEEKDAY,
+    WEEKDAY_TO_SHORT_DESC,
     Weekday,
     ZoneScheduleUID,
 )

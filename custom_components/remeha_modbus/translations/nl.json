@@ -96,11 +96,22 @@
     }
   },
   "selector": {
-    "select_default_auto_schedule_id": {
+    "schedule_id": {
       "options": {
         "schedule_1": "Schema 1",
         "schedule_2": "Schema 2",
         "schedule_3": "Schema 3"
+      }
+    },
+    "weekday": {
+      "options": {
+        "mon": "maandag",
+        "tue": "dinsdag",
+        "wed": "woensdag",
+        "thu": "donderdag",
+        "fri": "vrijdag",
+        "sat": "zaterdag",
+        "sun": "zondag"
       }
     },
     "modbus_register": {},
@@ -138,6 +149,18 @@
     "bootstrap_blenders": {
       "name": "Blenders opstarten",
       "description": "Verbindingen met andere integraties opstarten. Herhaalde aanroepen van deze service hebben geen effect."
+    },
+    "create_default_zone_schema": {
+      "name": "Maak een standaard klokprogramma",
+      "description": "Maak een standaard klokprogramma voor het gekozen schema en de gekozen dag van de week",
+      "fields": {
+        "schedule_id": {
+          "name": "Selecteer het te gebruiken schema"
+        },
+        "weekday": {
+          "name": "Selecteer de dag van de week waarop het schema wordt toegepast"
+        }
+      }
     },
     "dhw_auto_schedule": {
       "name": "SWW automatische planning",
@@ -200,8 +223,23 @@
     "climate_unsupported_preset_mode": {
       "message": "Aanvraagde voorkeuzemodus {preset_mode} wordt niet ondersteund."
     },
+    "incorrect_entity_platform": {
+      "message": "Entity {entity_id} hoort niet bij platform {expected_platform} en/of integratie {expected_component}."
+    },
     "missing_external_component": {
       "message": "Integratie '{component}' niet gevonden. Installeer de integratie en probeer het opnieuw. Installatie-instructies zijn te vinden op {url}."
+    },
+    "parse_error_multiple_weekdays": {
+      "message": "Kan state {schedule_entity_id} niet vertalen naar ZoneSchedule: schema moet precies 1 weekdag hebben, maar het geldt voor meerdere."
+    },
+    "parse_error_entity_not_found": {
+      "message": "Kan ZoneSchedule niet vertalen naar scheduler schema: kan vereiste climate entity_id niet vinden."
+    },
+    "parse_error_scheduler_state_action": {
+      "message": "Kan state {schedule_entity_id} niet vertalen naar ZoneSchedule: vereiste service call om climate mode in te stellen niet gevonden."
+    },
+    "parse_error_time_slot": {
+      "message": "Kan state {schedule_entity_id} niet vertalen naar ZoneSchedule: timeslot {time_slot} moet uit precies 2 delen bestaan, maar heeft er {part_count}."
     },
     "read_registers_modbus_error": {
       "message": "Modbus fout tijdens het lezen van de registers."
@@ -224,20 +262,20 @@
     "service_error_missing_state": {
       "message": "Kan nieuw toegevoegde entity {entity_id} niet verwerken: nieuwe state niet beschikbaar."
     },
-    "parse_error_entity_not_found": {
-      "message": "Kan ZoneSchedule niet vertalen naar scheduler schema: kan vereiste climate entity_id niet vinden."
+    "service_error_create_default_zone_schema": {
+      "message": "Kan standaard klokprogramma niet maken: schrijven naar modbus is mislukt."
     },
-    "parse_error_time_slot": {
-      "message": "Kan state {schedule_entity_id} niet vertalen naar ZoneSchedule: timeslot {time_slot} moet uit precies 2 delen bestaan, maar heeft er {part_count}."
+    "service_error_create_default_zone_schema_invalid_field": {
+      "message": "Kan standaard klokprogramma niet maken: ongeldige waarde voor veld {field_name}."
     },
-    "parse_error_scheduler_state_action": {
-      "message": "Kan state {schedule_entity_id} niet vertalen naar ZoneSchedule: vereiste service call om climate mode in te stellen niet gevonden."
+    "update_failed_discovery_table_corrupted": {
+      "message": "Modbus discovery table is corrupt. Ga naar het repairs dashboard om dit op te lossen."
     },
-    "parse_error_multiple_weekdays": {
-      "message": "Kan state {schedule_entity_id} niet vertalen naar ZoneSchedule: schema moet precies 1 weekdag hebben, maar het geldt voor meerdere."
+    "update_failed_invalid_zone_schedule": {
+      "message": "Data update mislukt: Zone {zone} gebruikt klokschema {selected_schedule}, maar het decoderen ervan is mislukt. Ga naar het repairs dashboard om dit op te lossen."
     },
-    "incorrect_entity_platform": {
-      "message": "Entity {entity_id} hoort niet bij platform {expected_platform} en/of integratie {expected_component}."
+    "update_failed_modbus_exception": {
+      "message": "Data update mislukt: Modbus exception {modbus_message}"
     }
   },
   "issues": {
@@ -259,6 +297,17 @@
           "confirm_undo": {
             "title": "Laat klokprogramma's uitvoeren door je Remeha apparaat",
             "description": "Je hebt een switch uitgeschakeld waardoor Home Assistant de klokprogramma's uitvoert i.p.v. je Remeha apparaat. Klik op verzenden om dit te herstellen, of herstart Home Assistant om dit te negeren."
+          }
+        }
+      }
+    },
+    "invalid_zone_schedule": {
+      "title": "Ongeldig klokprogramma",
+      "fix_flow": {
+        "step": {
+          "confirm_overwrite": {
+            "title": "Overschrijf klokprogramma",
+            "description": "Los dit probleem op door het ongeldige klokprogramma te overschrijven met een standaard programma dat enkel de modus antivries/eco gebruikt, afhankelijk van het zone type."
           }
         }
       }

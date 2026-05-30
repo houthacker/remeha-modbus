@@ -35,6 +35,7 @@ from custom_components.remeha_modbus.const import (
     HA_SCHEDULE_TO_REMEHA_SCHEDULE,
     ISSUE_DISCOVERY_TABLE_CORRUPTED,
     ISSUE_DISCOVERY_TABLE_CORRUPTED_LEARN_MORE_URL,
+    ISSUE_INVALID_ZONE_SCHEDULE,
     PV_ANNUAL_EFFICIENCY_DECREASE,
     PV_CONFIG_SECTION,
     PV_INSTALLATION_DATE,
@@ -55,6 +56,7 @@ from custom_components.remeha_modbus.const import (
 from custom_components.remeha_modbus.errors import (
     DiscoveryTableCorruptedError,
     IncorrectEntityPlatformError,
+    InvalidZoneSchedule,
     RemehaIncorrectServiceCall,
     RemehaServiceError,
 )
@@ -201,9 +203,35 @@ class RemehaUpdateCoordinator(DataUpdateCoordinator):
                 severity=ir.IssueSeverity.ERROR,
                 translation_key="discovery_table_corrupted",
             )
-            raise UpdateFailed("Modbus discovery table corrupted") from ex
+            raise UpdateFailed(
+                translation_domain=DOMAIN, translation_key="update_failed_discovery_table_corrupted"
+            ) from ex
         except ModbusException as ex:
-            raise UpdateFailed("Error while communicating with modbus device.") from ex
+            raise UpdateFailed(
+                translation_domain=DOMAIN,
+                translation_key="update_failed_modbus_exception",
+                translation_placeholders={"modbus_message": ex.string},
+            ) from ex
+        except InvalidZoneSchedule as ex:
+            ir.async_create_issue(
+                hass=self.hass,
+                domain=DOMAIN,
+                data={"zone_id": ex.zone, "schedule_id": ex.schedule_id.name.lower()},
+                issue_domain=DOMAIN,
+                issue_id=ISSUE_INVALID_ZONE_SCHEDULE,
+                is_fixable=True,
+                is_persistent=False,
+                severity=ir.IssueSeverity.ERROR,
+                translation_key="invalid_zone_schedule",
+            )
+            raise UpdateFailed(
+                translation_domain=DOMAIN,
+                translation_key="update_failed_invalid_zone_schedule",
+                translation_placeholders={
+                    "zone": str(ex.zone),
+                    "selected_schedule": ex.schedule_id,
+                },
+            ) from ex
 
         return {
             "appliance": appliance,
@@ -489,7 +517,8 @@ class RemehaUpdateCoordinator(DataUpdateCoordinator):
         # Update the current schedule state if the updated schedule
         # is the current schedule. Otherwise no update of current state
         # necessary since we only store the schedules of the selected schedule.
-        if schedule.zone_id in self.data["climates"]:
+        # Before the first update, data["climates"] doesn't exist yet.
+        if not self._is_before_first_update() and schedule.zone_id in self.data["climates"]:
             zone: ClimateZone = self.data["climates"][schedule.zone_id]
 
             if zone.selected_schedule == schedule.id:

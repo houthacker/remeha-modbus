@@ -3,7 +3,7 @@
 from collections.abc import Callable
 from datetime import date
 from enum import Enum, StrEnum
-from typing import Final, NamedTuple, Self
+from typing import Final, Literal, NamedTuple, Self
 
 import voluptuous as vol
 from homeassistant.components.climate.const import (
@@ -18,6 +18,8 @@ from homeassistant.components.sensor import (
 )
 from homeassistant.core import Event, EventStateChangedData
 from homeassistant.helpers import config_validation as cv
+from homeassistant.helpers.selector import selector
+from homeassistant.helpers.typing import VolDictType
 from pydantic import Field, model_validator
 from pydantic.dataclasses import dataclass
 
@@ -55,6 +57,8 @@ ISSUE_HEATPUMP_MANAGED_SCHEDULES_OFF: Final[str] = "heatpump_managed_schedules_o
 ISSUE_HEATPUMP_MANAGED_SCHEDULES_LEARN_MORE_URL: Final[str] = (
     "https://github.com/houthacker/remeha-modbus#heatpump-managed-schedules"
 )
+
+ISSUE_INVALID_ZONE_SCHEDULE: Final[str] = "invalid_zone_schedule"
 
 ISSUE_DISCOVERY_TABLE_CORRUPTED: Final[str] = "modbus_discovery_table_corrupted"
 ISSUE_DISCOVERY_TABLE_CORRUPTED_LEARN_MORE_URL: Final[str] = (
@@ -461,6 +465,22 @@ class ZoneScheduleUID(NamedTuple):
         return f"{self.zone_id}.{self.schedule_id}.{self.weekday.name}"
 
 
+WEEKDAY_TO_SHORT_DESC: Final[
+    dict[Weekday, Literal["mon", "tue", "wed", "thu", "fri", "sat", "sun"]]
+] = {
+    Weekday.MONDAY: "mon",
+    Weekday.TUESDAY: "tue",
+    Weekday.WEDNESDAY: "wed",
+    Weekday.THURSDAY: "thu",
+    Weekday.FRIDAY: "fri",
+    Weekday.SATURDAY: "sat",
+    Weekday.SUNDAY: "sun",
+}
+
+SHORT_DESC_TO_WEEKDAY: Final[
+    dict[Literal["mon", "tue", "wed", "thu", "fri", "sat", "sun"], Weekday]
+] = {WEEKDAY_TO_SHORT_DESC[day]: day for day in Weekday}
+
 CONFIG_AUTO_SCHEDULE: Final[str] = "auto_schedule"
 
 ### Service names. Keep in sync with services.yaml service name. ###
@@ -468,11 +488,17 @@ SERVICE_BOOTSTRAP_BLENDERS: Final[str] = "bootstrap_blenders"
 SERVICE_READ_REGISTERS: Final[str] = "read_registers"
 SERVICE_AUTO_SCHEDULE: Final[str] = "dhw_auto_schedule"
 SERVICE_FORCE_SYSTEM_REDISCOVERY: Final[str] = "force_system_rediscovery"
+SERVICE_CREATE_DEFAULT_ZONESCHEMA: Final[str] = "create_default_zone_schema"
 
+### Service fields
 READ_REGISTERS_START_REGISTER: Final[str] = "start_register"
 READ_REGISTERS_REGISTER_COUNT: Final[str] = "register_count"
 READ_REGISTERS_STRUCT_FORMAT: Final[str] = "struct_format"
 
+CREATE_DEFAULT_ZONESCHEMA_SCHEDULE_ID: Final[str] = "schedule_id"
+CREATE_DEFAULT_ZONESCHEMA_WEEKDAY: Final[str] = "weekday"
+
+### Service schemes
 READ_REGISTERS_SERVICE_SCHEMA: vol.Schema = vol.Schema(
     {
         vol.Required(READ_REGISTERS_START_REGISTER): cv.positive_int,
@@ -480,6 +506,28 @@ READ_REGISTERS_SERVICE_SCHEMA: vol.Schema = vol.Schema(
         vol.Required(READ_REGISTERS_STRUCT_FORMAT, default="=H"): remeha_cv.struct_format,
     }
 )
+
+CREATE_DEFAULT_ZONESCHEMA_SCHEMA: VolDictType = {
+    vol.Required(CREATE_DEFAULT_ZONESCHEMA_SCHEDULE_ID): selector(
+        {
+            "select": {
+                "mode": "dropdown",
+                "translation_key": "schedule_id",
+                "options": [e.name.lower() for e in ClimateZoneScheduleId],
+            }
+        }
+    ),
+    vol.Required(CREATE_DEFAULT_ZONESCHEMA_WEEKDAY): selector(
+        {
+            "select": {
+                "mode": "dropdown",
+                "translation_key": "weekday",
+                "options": list(WEEKDAY_TO_SHORT_DESC.values()),
+            }
+        }
+    ),
+}
+
 
 AUTO_SCHEDULE_DEFAULT_ID: Final[ClimateZoneScheduleId] = ClimateZoneScheduleId.SCHEDULE_1
 """The default schedule id for auto scheduling."""

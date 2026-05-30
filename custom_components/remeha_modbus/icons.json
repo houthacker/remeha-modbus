@@ -35,6 +35,7 @@
   },
   "services": {
     "bootstrap_blenders": { "service": "mdi:ray-start-arrow" },
+    "create_default_zone_schema": { "service": "mdi:calendar-import" },
     "dhw_auto_schedule": { "service": "mdi:auto-mode" },
     "force_system_rediscovery": { "service": "mdi:autorenew" },
     "read_registers": { "service": "mdi:memory" }
