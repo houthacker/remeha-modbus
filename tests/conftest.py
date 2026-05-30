@@ -58,6 +58,7 @@ from custom_components.remeha_modbus.const import (
     BoilerEnergyLabel,
     ZoneRegisters,
 )
+from custom_components.remeha_modbus.services import register_services
 from custom_components.scheduler.store import ScheduleEntry
 from tests.util import SchedulerPlatformStub
 
@@ -343,6 +344,9 @@ async def setup_platform(
     ):
         await hass.config_entries.async_setup(entry_id=config_entry.entry_id)
         await hass.async_block_till_done()
+
+        # Register our services
+        register_services(hass, config_entry, config_entry.runtime_data["coordinator"])
 
     # Ensure hass and RemehaApi are using the same time zone.
     await hass.config.async_update(time_zone=TESTING_TIME_ZONE)

@@ -70,14 +70,17 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     coordinator = RemehaUpdateCoordinator(
         hass=hass, config_entry=entry, api=api, store=RemehaModbusStorage(hass=hass)
     )
-    await coordinator.async_config_entry_first_refresh()
     entry.runtime_data = {"api": api, "coordinator": coordinator, "blenders": {}}
 
-    # And setup all platforms after the coordinator is available.
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
-
-    # Register services only after everything else has been set up successfully.
+    # Services must be registered before the first data retrieval, since they're
+    # called if something fails when retrieving the data.
     register_services(hass=hass, config=entry, coordinator=coordinator)
+
+    # Retrieve the first batch of data.
+    await coordinator.async_config_entry_first_refresh()
+
+    # And setup all platforms after the data is available.
+    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     # After HA has started, bootstrap the blenders.
     async def _bootstrap_blenders(_: Event[NoEventData]) -> None:
