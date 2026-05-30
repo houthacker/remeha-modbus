@@ -36,6 +36,7 @@ from custom_components.remeha_modbus.const import (
     ISSUE_DISCOVERY_TABLE_CORRUPTED,
     ISSUE_DISCOVERY_TABLE_CORRUPTED_LEARN_MORE_URL,
     ISSUE_INVALID_ZONE_SCHEDULE,
+    ISSUE_TRACKER_URL,
     PV_ANNUAL_EFFICIENCY_DECREASE,
     PV_CONFIG_SECTION,
     PV_INSTALLATION_DATE,
@@ -223,6 +224,7 @@ class RemehaUpdateCoordinator(DataUpdateCoordinator):
                 is_persistent=False,
                 severity=ir.IssueSeverity.ERROR,
                 translation_key="invalid_zone_schedule",
+                translation_placeholders={"issue_tracker_url": ISSUE_TRACKER_URL},
             )
             raise UpdateFailed(
                 translation_domain=DOMAIN,
