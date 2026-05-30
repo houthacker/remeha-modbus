@@ -52,7 +52,7 @@ from custom_components.remeha_modbus.const import (
     Weekday,
     ZoneRegisters,
 )
-from custom_components.remeha_modbus.errors import DiscoveryTableCorruptedError
+from custom_components.remeha_modbus.errors import DiscoveryTableCorruptedError, InvalidZoneSchedule
 from custom_components.remeha_modbus.helpers.gtw08 import TimeOfDay
 from custom_components.remeha_modbus.helpers.modbus import (
     ModbusPrimitive,
@@ -473,6 +473,34 @@ class RemehaApi:
             if response.isError():
                 raise ModbusException("Modbus device returned an error while writing registers.")
 
+    async def _async_read_schedules(
+        self,
+        zone: int,
+        zone_mode: ClimateZoneMode,
+        schedule_id: ClimateZoneScheduleId,
+    ) -> dict[Weekday, ZoneSchedule | None]:
+        """Read the schedules for all weekdays.
+
+        Raises:
+            `InvalidZoneSchedule` if an error occurs when parsing the zone schedule.
+
+        """
+
+        # TODO Create tests
+        try:
+            return (
+                {
+                    day: await self.async_read_zone_schedule(
+                        zone=zone, schedule_id=schedule_id, day=day
+                    )
+                    for day in Weekday
+                }
+                if zone_mode is ClimateZoneMode.SCHEDULING and schedule_id is not None
+                else {}
+            )
+        except ValueError as e:
+            raise InvalidZoneSchedule(zone=zone, schedule_id=schedule_id) from e
+
     def get_zone_register_offset(self, zone: ClimateZone | int) -> int:
         """Get the offset in registers for the given `ClimateZone | int`."""
         zone_id: int = zone.id if isinstance(zone, ClimateZone) else zone
@@ -733,6 +761,7 @@ class RemehaApi:
 
         Raises
             `DiscoveryTableCorruptedError`: If the modbus discovery table has been corrupted.
+            `InvalidZoneSchedule`: If the climate zone is in scheduling mode but reading the schedule fails.
             `ModbusException`: If the list of zones cannot be obtained.
             `ValueError`: If the retrieved modbus data cannot be successfully deserialized.
 
@@ -800,6 +829,7 @@ class RemehaApi:
             `ClimateZone`: The requested zone, or `None` if `zone.type == ClimateZoneType.NOT_PRESENT`.
 
         Raises:
+            `InvalidZoneSchedule`: If the zone is in scheduling mode and parsing the schedule fails.
             `ModbusException`: If the zone registers cannot be read.
             `ValueError`: If deserializing the registers to a `ClimateZone` fails.
 
@@ -815,7 +845,7 @@ class RemehaApi:
         )
 
         # Bail out if the zone is not present.
-        if zone_type == ClimateZoneType.NOT_PRESENT.value:
+        if zone_type is None or zone_type == ClimateZoneType.NOT_PRESENT.value:
             _LOGGER.info("Ignoring zone(zone_id=%d), because its type is NOT_PRESENT.", id)
             return None
 
@@ -843,11 +873,13 @@ class RemehaApi:
                 destination_variable=ZoneRegisters.OWNING_DEVICE,
             ),
         )
-        zone_mode = from_registers(
-            registers=await self._async_read_registers(
-                variable=ZoneRegisters.MODE, offset=zone_register_offset
-            ),
-            destination_variable=ZoneRegisters.MODE,
+        zone_mode = ClimateZoneMode(
+            from_registers(
+                registers=await self._async_read_registers(
+                    variable=ZoneRegisters.MODE, offset=zone_register_offset
+                ),
+                destination_variable=ZoneRegisters.MODE,
+            )
         )
         temporary_setpoint = cast(
             float | None,
@@ -943,15 +975,14 @@ class RemehaApi:
             ),
         )
 
-        # Read zone schedules
+        # Read zone schedules.
+        # This raises an InvalidZoneSchedule error if reading a zone schedule fails,
+        # allowing the calling code to issue a repair.
         current_schedule: dict[Weekday, ZoneSchedule | None] = (
-            {
-                day: await self.async_read_zone_schedule(
-                    zone=id, schedule_id=ClimateZoneScheduleId(selected_schedule), day=day
-                )
-                for day in Weekday
-            }
-            if selected_schedule is not None
+            await self._async_read_schedules(
+                zone=id, zone_mode=zone_mode, schedule_id=ClimateZoneScheduleId(selected_schedule)
+            )
+            if zone_mode is ClimateZoneMode.SCHEDULING and selected_schedule is not None
             else {}
         )
 
@@ -961,7 +992,7 @@ class RemehaApi:
             function=ClimateZoneFunction(zone_function),
             short_name=zone_short_name,
             owning_device=owning_device,
-            mode=ClimateZoneMode(zone_mode),
+            mode=zone_mode,
             temporary_setpoint=temporary_setpoint,
             selected_schedule=(
                 None if selected_schedule is None else ClimateZoneScheduleId(selected_schedule)
@@ -1012,6 +1043,7 @@ class RemehaApi:
             `ClimateZone`: The updated zone.
 
         Raises:
+            `InvalidZoneSchedule`: If the zone is in scheduling mode and parsing the schedule fails.
             `ModbusException`: If the zone update registers cannot be read.
             `ValueError`: If deserializing any register fails.
 
@@ -1019,11 +1051,13 @@ class RemehaApi:
 
         zone_register_offset: int = self.get_zone_register_offset(zone)
 
-        zone_mode = from_registers(
-            registers=await self._async_read_registers(
-                variable=ZoneRegisters.MODE, offset=zone_register_offset
-            ),
-            destination_variable=ZoneRegisters.MODE,
+        zone_mode = ClimateZoneMode(
+            from_registers(
+                registers=await self._async_read_registers(
+                    variable=ZoneRegisters.MODE, offset=zone_register_offset
+                ),
+                destination_variable=ZoneRegisters.MODE,
+            )
         )
         temporary_setpoint = cast(
             float | None,
@@ -1119,15 +1153,16 @@ class RemehaApi:
             ),
         )
 
-        # Read zone schedules
+        # Read zone schedules.
+        # This raises an InvalidZoneSchedule error if reading a zone schedule fails,
+        # allowing the calling code to issue a repair.
         current_schedule: dict[Weekday, ZoneSchedule | None] = (
-            {
-                day: await self.async_read_zone_schedule(
-                    zone=zone, schedule_id=ClimateZoneScheduleId(selected_schedule), day=day
-                )
-                for day in Weekday
-            }
-            if selected_schedule is not None
+            await self._async_read_schedules(
+                zone=zone.id,
+                zone_mode=zone_mode,
+                schedule_id=ClimateZoneScheduleId(selected_schedule),
+            )
+            if zone_mode is ClimateZoneMode.SCHEDULING and selected_schedule is not None
             else {}
         )
 
@@ -1138,7 +1173,7 @@ class RemehaApi:
             function=zone.function,
             short_name=zone.short_name,
             owning_device=zone.owning_device,
-            mode=ClimateZoneMode(zone_mode),
+            mode=zone_mode,
             temporary_setpoint=temporary_setpoint,
             selected_schedule=(
                 None if selected_schedule is None else ClimateZoneScheduleId(selected_schedule)
