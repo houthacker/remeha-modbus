@@ -308,6 +308,42 @@ class ZoneSchedule:
         return cls(id=id, zone_id=zone_id, day=day, time_slots=list(_generate_timeslots()))
 
     @classmethod
+    def create_default(
+        cls, id: ClimateZoneScheduleId, zone_id: int, day: Weekday, is_dhw: bool
+    ) -> Self:
+        """Create a default `ZoneSchedule`.
+
+        A default schedule puts the zone in ECO mode for that given day. Default schedules are
+        used to repair an issue where the zone schedule cannot be parsed although it has been
+        selected. This can mean that there are missing options in our implementation or that
+        the data has been corrupted in transit or on the GTW-08.
+
+        Args:
+            id (ClimateZoneScheduleId): The schedule id.
+            zone_id (int): The one-based id of the `ClimateZone` containing the schedule.
+            day (Weekday): The day of the week this schedule is active in.
+            is_dhw (bool): Whether this schedule is for a DHW zone.
+
+        Returns:
+            The zone schedule.
+
+
+        """
+
+        return cls(
+            id=id,
+            zone_id=zone_id,
+            day=day,
+            time_slots=[
+                Timeslot(
+                    setpoint_type=TimeslotSetpointType.ECO,
+                    activity=TimeslotActivity.DHW if is_dhw else TimeslotActivity.HEAT_COOL,
+                    switch_time=datetime.time(hour=0),
+                )
+            ],
+        )
+
+    @classmethod
     def generate(
         cls,
         weather_forecast: WeatherForecast,
