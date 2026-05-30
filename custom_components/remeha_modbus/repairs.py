@@ -18,10 +18,84 @@ from custom_components.remeha_modbus.const import (
     DOMAIN,
     ISSUE_DISCOVERY_TABLE_CORRUPTED,
     ISSUE_HEATPUMP_MANAGED_SCHEDULES_OFF,
+    ISSUE_INVALID_ZONE_SCHEDULE,
+    SERVICE_CREATE_DEFAULT_ZONESCHEMA,
     SERVICE_FORCE_SYSTEM_REDISCOVERY,
+    SHORT_DESC_TO_WEEKDAY,
 )
+from custom_components.remeha_modbus.helpers.entities import get_climate_entity_id
 
 _LOGGER = logging.getLogger(__name__)
+
+
+class DiscoveryTableCorruptedFixFlow(RepairsFlow):
+    """A flow to repair a corrupted modbus discovery table."""
+
+    async def async_step_init(self, user_input: dict[str, str] | None = None) -> FlowResult:
+        """Handle the initial step."""
+
+        return await self.async_step_confirm_force_rediscovery()
+
+    async def async_step_confirm_force_rediscovery(
+        self, user_input: dict[str, str] | None = None
+    ) -> FlowResult:
+        """Have the user confirm they want to force modbus rediscovery."""
+
+        if user_input is not None:
+            await self.hass.services.async_call(
+                domain=DOMAIN, service=SERVICE_FORCE_SYSTEM_REDISCOVERY
+            )
+            return self.async_create_entry(title="", data={})
+
+        return self.async_show_form(step_id="confirm_force_rediscovery", data_schema=vol.Schema({}))
+
+
+class InvalidZoneScheduleFixFlow(RepairsFlow):
+    """Fix invalid zone schedule by overwriting it with a default schedule."""
+
+    async def async_step_init(self, user_input: dict[str, str] | None = None) -> FlowResult:
+        """Handle the initial step."""
+
+        return await self.async_step_confirm_overwrite()
+
+    async def async_step_confirm_overwrite(
+        self, user_input: dict[str, str] | None = None
+    ) -> FlowResult:
+        """Have the user confirm whether they want to fix the issue.
+
+        Fixing the issue means overwriting the faulty zone schedule with a default one.
+        """
+        if user_input is not None:
+            registry = ir.async_get(self.hass)
+            issue = registry.async_get_issue(domain=DOMAIN, issue_id=self.issue_id)
+
+            if issue is None:
+                _LOGGER.warning(
+                    "Cannot repair issue by writing default schedule: issue with id %s not found",
+                    self.issue_id,
+                )
+            elif issue.data is None:
+                _LOGGER.warning(
+                    "Cannot repair issue by writing default schedule: issue data is missing."
+                )
+            else:
+                zone_id = issue.data["zone_id"]
+                assert isinstance(zone_id, int)
+
+                climate_entity_id = get_climate_entity_id(hass=self.hass, zone=zone_id)
+
+                for short_day in SHORT_DESC_TO_WEEKDAY:
+                    await self.hass.services.async_call(
+                        domain=DOMAIN,
+                        service=SERVICE_CREATE_DEFAULT_ZONESCHEMA,
+                        service_data={
+                            "schedule_id": issue.data["schedule_id"],
+                            "weekday": short_day,
+                        },
+                        target={"entity_id": climate_entity_id},
+                    )
+
+        return self.async_show_form(step_id="confirm_overwrite", data_schema=vol.Schema({}))
 
 
 class RestartRequiredFixFlow(RepairsFlow):
@@ -95,28 +169,6 @@ class UndoManualScheduleExecutionFixFlow(RepairsFlow):
         return self.async_show_form(step_id="confirm_undo", data_schema=vol.Schema({}))
 
 
-class DiscoveryTableCorruptedFixFlow(RepairsFlow):
-    """A flow to repair a corrupted modbus discovery table."""
-
-    async def async_step_init(self, user_input: dict[str, str] | None = None) -> FlowResult:
-        """Handle the initial step."""
-
-        return await self.async_step_confirm_force_rediscovery()
-
-    async def async_step_confirm_force_rediscovery(
-        self, user_input: dict[str, str] | None = None
-    ) -> FlowResult:
-        """Have the user confirm they want to force modbus rediscovery."""
-
-        if user_input is not None:
-            await self.hass.services.async_call(
-                domain=DOMAIN, service=SERVICE_FORCE_SYSTEM_REDISCOVERY
-            )
-            return self.async_create_entry(title="", data={})
-
-        return self.async_show_form(step_id="confirm_force_rediscovery", data_schema=vol.Schema({}))
-
-
 async def async_create_fix_flow(
     hass: HomeAssistant,
     issue_id: str,
@@ -135,5 +187,7 @@ async def async_create_fix_flow(
         return UndoManualScheduleExecutionFixFlow(issue_id)
     if issue_id == ISSUE_DISCOVERY_TABLE_CORRUPTED:
         return DiscoveryTableCorruptedFixFlow()
+    if issue_id == ISSUE_INVALID_ZONE_SCHEDULE:
+        return InvalidZoneScheduleFixFlow()
 
     return None

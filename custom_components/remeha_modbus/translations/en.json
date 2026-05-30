@@ -97,11 +97,22 @@
     }
   },
   "selector": {
-    "select_default_auto_schedule_id": {
+    "schedule_id": {
       "options": {
         "schedule_1": "Schedule 1",
         "schedule_2": "Schedule 2",
         "schedule_3": "Schedule 3"
+      }
+    },
+    "weekday": {
+      "options": {
+        "mon": "Monday",
+        "tue": "Tuesday",
+        "wed": "Wednesday",
+        "thu": "Thursday",
+        "fri": "Friday",
+        "sat": "Saturday",
+        "sun": "Sunday"
       }
     },
     "modbus_register": {},
@@ -139,6 +150,18 @@
     "bootstrap_blenders": {
       "name": "Bootstrap blenders",
       "description": "Bootstrap connections with other integrations. Calling this multiple times has no additional effect."
+    },
+    "create_default_zone_schema": {
+      "name": "Create a default zone schedule",
+      "description": "Create a default zone schedule for the given schedule and day.",
+      "fields": {
+        "schedule_id": {
+          "name": "Select the schedule to use"
+        },
+        "weekday": {
+          "name": "Select the weekday to apply the schedule to"
+        }
+      }
     },
     "dhw_auto_schedule": {
       "name": "DHW auto scheduling",
@@ -201,8 +224,23 @@
     "climate_unsupported_preset_mode": {
       "message": "Requested preset mode {preset_mode} is unsupported."
     },
+    "incorrect_entity_platform": {
+      "message": "Entity {entity_id} doesn't belong to the expected platform {expected_platform} and/or the integration {expected_component}."
+    },
     "missing_external_component": {
       "message": "Missing external component {component}. Please install it and retry; installation instructions are at {url}."
+    },
+    "parse_error_entity_not_found": {
+      "message": "Cannot parse ZoneSchedule into scheduler schedule: The required climate entity cannot be found."
+    },
+    "parse_error_multiple_weekdays": {
+      "message": "Cannot parse state {schedule_entity_id} into ZoneSchedule: schedule is for multiple weekdays but require exactly one."
+    },
+    "parse_error_scheduler_state_action": {
+      "message": "Cannot parse state {schedule_entity_id} into ZoneSchedule: missing required service call to set preset mode."
+    },
+    "parse_error_time_slot": {
+      "message": "Cannot parse state {schedule_entity_id} into ZoneSchedule: timeslot string {time_slot} must have exactly two parts, but got {part_count}."
     },
     "read_registers_modbus_error": {
       "message": "Modbus error while reading registers."
@@ -225,20 +263,20 @@
     "service_error_missing_state": {
       "message": "Cannot process newly added entity {entity_id}: new state is unavailable."
     },
-    "parse_error_entity_not_found": {
-      "message": "Cannot parse ZoneSchedule into scheduler schedule: The required climate entity cannot be found."
+    "service_error_create_default_zone_schema": {
+      "message": "Cannot create default zone schema: modbus write failed."
     },
-    "parse_error_time_slot": {
-      "message": "Cannot parse state {schedule_entity_id} into ZoneSchedule: timeslot string {time_slot} must have exactly two parts, but got {part_count}."
+    "service_error_create_default_zone_schema_invalid_field": {
+      "message": "Cannot create default zone schema: invalid value for field {field_name}."
     },
-    "parse_error_scheduler_state_action": {
-      "message": "Cannot parse state {schedule_entity_id} into ZoneSchedule: missing required service call to set preset mode."
+    "update_failed_discovery_table_corrupted": {
+      "message": "Modbus discovery table corrupted. Please visit your repairs dashboard to fix this."
     },
-    "parse_error_multiple_weekdays": {
-      "message": "Cannot parse state {schedule_entity_id} into ZoneSchedule: schedule is for multiple weekdays but require exactly one."
+    "update_failed_invalid_zone_schedule": {
+      "message": "Failed to update: zone {zone} uses selected schedule {selected_schedule} which failed to decode. Please visit your repairs dashboard to fix this."
     },
-    "incorrect_entity_platform": {
-      "message": "Entity {entity_id} doesn't belong to the expected platform {expected_platform} and/or the integration {expected_component}."
+    "update_failed_modbus_exception": {
+      "message": "Failed to update due to modbus exception: {modbus_message}"
     }
   },
   "issues": {
@@ -260,6 +298,17 @@
           "confirm_undo": {
             "title": "Let appliance manage time schedules",
             "description": "You turned off a switch which causes Home Assistant to manage time schedules directly instead of letting the Remeha appliance manage that. Click submit to revert this, or reboot Home Assistant to ignore this issue."
+          }
+        }
+      }
+    },
+    "invalid_zone_schedule": {
+      "title": "Invalid zone schedule",
+      "fix_flow": {
+        "step": {
+          "confirm_overwrite": {
+            "title": "Overwrite faulty schedule",
+            "description": "> [!WARNING]\n> A zone schedule failed to parse. To fix this issue, overwrite the faulty zone schedule with a default schedule that only uses the anti-frost/eco preset, depending on the zone type.\n\n> If you suspect this is a bug rather than a faulty zone schema, please report an issue [here]({issue_tracker_url})."
           }
         }
       }
