@@ -1,6 +1,7 @@
 """Helper methods for entity-related functionality."""
 
 from collections.abc import Iterable
+from typing import overload
 
 from homeassistant.components.climate.const import DOMAIN as ClimatePlatform
 from homeassistant.components.switch.const import DOMAIN as SwitchPlatform
@@ -126,12 +127,22 @@ def get_own_entity_by_unique_id(
     return None
 
 
+@overload
 def get_climate_entity_id(hass: HomeAssistant, zone: ClimateZone) -> str:
+    pass
+
+
+@overload
+def get_climate_entity_id(hass: HomeAssistant, zone: int) -> str:
+    pass
+
+
+def get_climate_entity_id(hass: HomeAssistant, zone: ClimateZone | int) -> str:
     """Get the `entity_id` of the given climate zone.
 
     Args:
         hass (HomeAssistant): The HA instance.
-        zone (ClimateZone): The zone to retrieve the entity id of.
+        zone (ClimateZone | int): The zone or zone id to retrieve the entity id of.
 
     Returns:
         The `entity_id`.
@@ -141,7 +152,8 @@ def get_climate_entity_id(hass: HomeAssistant, zone: ClimateZone) -> str:
 
     """
 
-    unique_id = generate_unique_id(zone.id)
+    zone_id = zone.id if isinstance(zone, ClimateZone) else zone
+    unique_id = generate_unique_id(zone_id)
     entity_id = get_own_entity_by_unique_id(hass, ClimatePlatform, unique_id)
     if entity_id is not None:
         return entity_id
