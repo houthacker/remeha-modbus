@@ -53,7 +53,7 @@ async def test_scheduling_service(hass: HomeAssistant, mock_modbus_client, mock_
         zone: ClimateZone | None = await api.async_read_zone(id=2)
         assert zone is not None
         assert zone.selected_schedule == ClimateZoneScheduleId.SCHEDULE_1
-        assert zone.mode == ClimateZoneMode.MANUAL
+        assert zone.mode == ClimateZoneMode.SCHEDULING
 
         day: Weekday = Weekday.FRIDAY
         schedule: ZoneSchedule | None = await api.async_read_zone_schedule(

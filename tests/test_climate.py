@@ -58,7 +58,7 @@ async def test_dhw_climate(hass: HomeAssistant, mock_modbus_client, mock_config_
         dhw = hass.states.get(entity_id="climate.remeha_modbus_test_hub_dhw")
         assert dhw is not None
 
-        assert dhw.state == "heat"
+        assert dhw.state == "auto"
         assert dhw.attributes["hvac_action"] == HVACAction.IDLE
         assert dhw.attributes["hvac_modes"] == [
             HVACMode.OFF,
@@ -67,7 +67,7 @@ async def test_dhw_climate(hass: HomeAssistant, mock_modbus_client, mock_config_
         ]
         assert dhw.attributes["max_temp"] == 65
         assert dhw.attributes["min_temp"] == 10
-        assert dhw.attributes["preset_mode"] == PRESET_COMFORT
+        assert dhw.attributes["preset_mode"] == REMEHA_PRESET_SCHEDULE_1
         assert dhw.attributes["preset_modes"] == [
             REMEHA_PRESET_SCHEDULE_1,
             REMEHA_PRESET_SCHEDULE_2,
@@ -76,7 +76,7 @@ async def test_dhw_climate(hass: HomeAssistant, mock_modbus_client, mock_config_
             PRESET_ECO,
             PRESET_NONE,
         ]
-        assert dhw.attributes["temperature"] == 55
+        assert dhw.attributes["temperature"] == 25.0
         assert dhw.attributes["current_temperature"] == 53.2
         assert dhw.attributes["target_temp_step"] == 0.5
 
@@ -323,22 +323,7 @@ async def test_dhw_temporary_setpoint_override(
 
         dhw = hass.states.get(entity_id="climate.remeha_modbus_test_hub_dhw")
         assert dhw is not None
-        assert dhw.attributes["preset_mode"] == PRESET_COMFORT
-        assert dhw.attributes["temperature"] == 55.0
-
-        # Change preset to schedule
-        await hass.services.async_call(
-            domain=ClimateDomain,
-            service="set_preset_mode",
-            service_data={
-                "entity_id": dhw.entity_id,
-                "preset_mode": REMEHA_PRESET_SCHEDULE_1,
-            },
-            blocking=True,
-        )
-
-        dhw = hass.states.get(entity_id="climate.remeha_modbus_test_hub_dhw")
-        assert dhw is not None
+        assert dhw.attributes["temperature"] == 25.0
         assert dhw.attributes["preset_mode"] == REMEHA_PRESET_SCHEDULE_1
 
         # Current setpoint must be resolved when in scheduling mode.

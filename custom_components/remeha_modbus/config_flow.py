@@ -80,7 +80,7 @@ def _auto_scheduling_schema(current: ConfigEntry | None = None) -> vol.Schema:
                 {
                     "select": {
                         "mode": "dropdown",
-                        "translation_key": "select_default_auto_schedule_id",
+                        "translation_key": "schedule_id",
                         "options": [
                             REMEHA_PRESET_SCHEDULE_1,
                             REMEHA_PRESET_SCHEDULE_2,

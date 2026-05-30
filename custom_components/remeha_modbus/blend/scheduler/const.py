@@ -6,7 +6,10 @@ from typing import Any, Final, Literal, NotRequired, Required, TypedDict
 from homeassistant.const import STATE_OFF, STATE_ON, STATE_UNAVAILABLE, STATE_UNKNOWN
 from pydantic.dataclasses import dataclass
 
-from custom_components.remeha_modbus.const import DOMAIN, Weekday, ZoneScheduleUID
+from custom_components.remeha_modbus.const import (
+    DOMAIN,
+    ZoneScheduleUID,
+)
 
 SchedulerDomain: Final[str] = "scheduler"
 """The name of the scheduler integration."""
@@ -28,23 +31,6 @@ class ServiceOperation(StrEnum):
     """The schedule does not exist in the service, so it must be added."""
     EDIT = "edit"
     """The schedule already exists in the service, so it must be edited."""
-
-
-WEEKDAY_TO_SHORT_DESC: Final[
-    dict[Weekday, Literal["mon", "tue", "wed", "thu", "fri", "sat", "sun"]]
-] = {
-    Weekday.MONDAY: "mon",
-    Weekday.TUESDAY: "tue",
-    Weekday.WEDNESDAY: "wed",
-    Weekday.THURSDAY: "thu",
-    Weekday.FRIDAY: "fri",
-    Weekday.SATURDAY: "sat",
-    Weekday.SUNDAY: "sun",
-}
-
-SHORT_DESC_TO_WEEKDAY: Final[
-    dict[Literal["mon", "tue", "wed", "thu", "fri", "sat", "sun"], Weekday]
-] = {WEEKDAY_TO_SHORT_DESC[day]: day for day in Weekday}
 
 
 @dataclass(frozen=True, slots=True)

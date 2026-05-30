@@ -129,7 +129,8 @@ async def test_climate_zone_set_current_setpoint(mock_modbus_client):
     zone.dhw_reduced_setpoint = -1
     zone.temporary_setpoint = -1
 
-    # Validate setpoint for CH zone
+    # Validate setpoint for CH zone in MANUAL mode
+    zone.mode = ClimateZoneMode.MANUAL
     zone.type = ClimateZoneType.OTHER
     zone.function = ClimateZoneFunction.MIXING_CIRCUIT
 

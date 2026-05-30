@@ -1,6 +1,39 @@
 # Keep service names in sync with their respective name definitions in the const.py file.
 bootstrap_blenders:
 
+create_default_zone_schema:
+  target:
+    entity:
+      domain: climate
+      supported_features:
+        - climate.ClimateEntityFeature.PRESET_MODE
+  fields:
+    schedule_id:
+      required: true
+      example: "schedule_1"
+      default: "schedule_1"
+      selector:
+        select:
+          translation_key: "schedule_id"
+          options:
+            - "schedule_1"
+            - "schedule_2"
+            - "schedule_3"
+    weekday:
+      required: true
+      example: "mon"
+      selector:
+        select:
+          translation_key: "weekday"
+          options:
+            - "mon"
+            - "tue"
+            - "wed"
+            - "thu"
+            - "fri"
+            - "sat"
+            - "sun"
+
 dhw_auto_schedule:
 
 force_system_rediscovery:
