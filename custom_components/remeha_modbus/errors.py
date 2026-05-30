@@ -3,6 +3,8 @@
 from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 from pymodbus import ModbusException
 
+from custom_components.remeha_modbus.const import ClimateZoneScheduleId
+
 
 class RemehaModbusError(HomeAssistantError):
     """Base error for remeha_modbus integration."""
@@ -54,3 +56,35 @@ class DiscoveryTableCorruptedError(ModbusException):
     This happens for example if the number of devices is 0 or None.
     This can be fixed by calling the `force_system_rediscovery` service.
     """
+
+
+class InvalidZoneSchedule(Exception):
+    """API exception to indicate that an invalid zone schedule was read from modbus.
+
+    This exception is raised when the encoded zone schedule bytes are
+    read from modbus successfully, but parsing them into a ZoneSchedule failed.
+    """
+
+    def __init__(self, *args: object, zone: int, schedule_id: ClimateZoneScheduleId) -> None:
+        """Create a new InvalidZoneSchedule.
+
+        Args:
+            *args (object): A tuple of arguments given to the `Exception` constructor.
+            zone (int): The index of the zone that was attempted to read.
+            schedule_id (str): The name of the schedule that was attempted to read.
+
+        """
+        super().__init__(*args)
+
+        self._zone = zone
+        self._schedule_id = schedule_id
+
+    @property
+    def zone(self) -> int:
+        """The index of the zone that was attempted to read."""
+        return self._zone
+
+    @property
+    def schedule_id(self) -> ClimateZoneScheduleId:
+        """The name of the schedule that was attempted to read."""
+        return self._schedule_id
