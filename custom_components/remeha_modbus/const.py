@@ -26,6 +26,7 @@ from pydantic.dataclasses import dataclass
 from custom_components.remeha_modbus.helpers import config_validation as remeha_cv
 
 DOMAIN: Final[str] = "remeha_modbus"
+ISSUE_TRACKER_URL: Final[str] = "https://github.com/houthacker/remeha-modbus/issues"
 
 # Versioning for the config flow.
 HA_CONFIG_VERSION = 1

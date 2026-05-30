@@ -308,7 +308,7 @@
         "step": {
           "confirm_overwrite": {
             "title": "Overwrite faulty schedule",
-            "description": "To fix this issue, overwrite the faulty zone schedule with a default schedule that only uses the anti-frost/eco preset, depending on the zone type."
+            "description": "> [!WARNING]\n> A zone schedule failed to parse. To fix this issue, overwrite the faulty zone schedule with a default schedule that only uses the anti-frost/eco preset, depending on the zone type.\n\n> If you suspect this is a bug rather than a faulty zone schema, please report an issue [here]({issue_tracker_url})."
           }
         }
       }

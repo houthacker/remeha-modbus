@@ -307,7 +307,7 @@
         "step": {
           "confirm_overwrite": {
             "title": "Overschrijf klokprogramma",
-            "description": "Los dit probleem op door het ongeldige klokprogramma te overschrijven met een standaard programma dat enkel de modus antivries/eco gebruikt, afhankelijk van het zone type."
+            "description": "> [!WARNING]\n> Fout tijdens het parsen van een klokprogramma. Los dit probleem op door het ongeldige klokprogramma te overschrijven met een standaard programma dat enkel de modus antivries/eco gebruikt, afhankelijk van het zone type.\n\n> Vermoed je dat dit een bug is i.p.v. een invalide klokprogramma? Meldt dit dan [hier]({issue_tracker_url})"
           }
         }
       }
