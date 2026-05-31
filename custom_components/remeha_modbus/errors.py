@@ -65,19 +65,23 @@ class InvalidZoneSchedule(Exception):
     read from modbus successfully, but parsing them into a ZoneSchedule failed.
     """
 
-    def __init__(self, *args: object, zone: int, schedule_id: ClimateZoneScheduleId) -> None:
+    def __init__(
+        self, *args: object, zone: int, schedule_id: ClimateZoneScheduleId, is_dhw: bool
+    ) -> None:
         """Create a new InvalidZoneSchedule.
 
         Args:
             *args (object): A tuple of arguments given to the `Exception` constructor.
             zone (int): The index of the zone that was attempted to read.
             schedule_id (str): The name of the schedule that was attempted to read.
+            is_dhw (bool): Whether the related zone is a DHW zone.
 
         """
         super().__init__(*args)
 
         self._zone = zone
         self._schedule_id = schedule_id
+        self._is_dhw = is_dhw
 
     @property
     def zone(self) -> int:
@@ -88,3 +92,9 @@ class InvalidZoneSchedule(Exception):
     def schedule_id(self) -> ClimateZoneScheduleId:
         """The name of the schedule that was attempted to read."""
         return self._schedule_id
+
+    @property
+    def is_dhw(self) -> bool:
+        """Whether the related climate zone is a DHW zone."""
+
+        return self._is_dhw

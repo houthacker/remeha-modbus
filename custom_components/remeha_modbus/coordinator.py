@@ -217,7 +217,11 @@ class RemehaUpdateCoordinator(DataUpdateCoordinator):
             ir.async_create_issue(
                 hass=self.hass,
                 domain=DOMAIN,
-                data={"zone_id": ex.zone, "schedule_id": ex.schedule_id.name.lower()},
+                data={
+                    "zone_id": ex.zone,
+                    "schedule_id": ex.schedule_id.name.lower(),
+                    "is_dhw": ex.is_dhw,
+                },
                 issue_domain=DOMAIN,
                 issue_id=ISSUE_INVALID_ZONE_SCHEDULE,
                 is_fixable=True,

@@ -20,6 +20,32 @@ from .schedule import Timeslot, TimeslotSetpointType, ZoneSchedule, get_current_
 _LOGGER = logging.getLogger(__name__)
 
 
+def is_domestic_hot_water(type: ClimateZoneType, function: ClimateZoneFunction) -> bool:
+    """Return whether the given type and function resolve to a DHW zone type."""
+
+    return type == ClimateZoneType.DHW or (
+        type == ClimateZoneType.OTHER
+        and function
+        in [
+            ClimateZoneFunction.DHW_BIC,
+            ClimateZoneFunction.DHW_COMMERCIAL_TANK,
+            ClimateZoneFunction.DHW_LAYERED,
+            ClimateZoneFunction.DHW_PRIMARY,
+            ClimateZoneFunction.DHW_TANK,
+            ClimateZoneFunction.ELECTRICAL_DHW_TANK,
+        ]
+    )
+
+
+def is_central_heating(type: ClimateZoneType, function: ClimateZoneFunction) -> bool:
+    """Return whether the given type and function resolve to a CH zone type."""
+
+    return type in [
+        ClimateZoneType.CH_ONLY,
+        ClimateZoneType.CH_AND_COOLING,
+    ] or (type == ClimateZoneType.OTHER and function == ClimateZoneFunction.MIXING_CIRCUIT)
+
+
 @dataclass(eq=False)
 class ClimateZone:
     """Defines a climate zone following the GTW-08 parameter list.
@@ -245,29 +271,12 @@ class ClimateZone:
     def is_central_heating(self) -> bool:
         """Determine if this zone is a CH (central heating) zone."""
 
-        return self.type in [
-            ClimateZoneType.CH_ONLY,
-            ClimateZoneType.CH_AND_COOLING,
-        ] or (
-            self.type == ClimateZoneType.OTHER
-            and self.function == ClimateZoneFunction.MIXING_CIRCUIT
-        )
+        return is_central_heating(self.type, self.function)
 
     def is_domestic_hot_water(self) -> bool:
         """Determine if this zone is a DHW (domestic hot water) zone."""
 
-        return self.type == ClimateZoneType.DHW or (
-            self.type == ClimateZoneType.OTHER
-            and self.function
-            in [
-                ClimateZoneFunction.DHW_BIC,
-                ClimateZoneFunction.DHW_COMMERCIAL_TANK,
-                ClimateZoneFunction.DHW_LAYERED,
-                ClimateZoneFunction.DHW_PRIMARY,
-                ClimateZoneFunction.DHW_TANK,
-                ClimateZoneFunction.ELECTRICAL_DHW_TANK,
-            ]
-        )
+        return is_domestic_hot_water(self.type, self.function)
 
     def __eq__(self, other) -> bool:
         """Compare this `ClimateZone` with another for equality.
