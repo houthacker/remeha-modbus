@@ -5,11 +5,12 @@
   <img alt="Remeha logo" src="./custom_components/remeha_modbus/brand/logo.png">
 </picture>
 
+![GitHub License](https://img.shields.io/github/license/houthacker/remeha-modbus)
 [![Hassfest](https://github.com/houthacker/remeha-modbus/actions/workflows/hassfest.yaml/badge.svg)](https://github.com/houthacker/remeha-modbus/actions/workflows/hassfest.yaml)
 [![Validate HACS](https://github.com/houthacker/remeha-modbus/actions/workflows/hacs.yaml/badge.svg)](https://github.com/houthacker/remeha-modbus/actions/workflows/hacs.yaml)
 [![pytest](https://github.com/houthacker/remeha-modbus/actions/workflows/pytest.yaml/badge.svg)](https://github.com/houthacker/remeha-modbus/actions/workflows/pytest.yaml)
 [![badge](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/houthacker/ff0da84bf72a3d20fb68db8cb9d3e38e/raw/coverage_badge.json)](https://github.com/houthacker/remeha-modbus/actions/workflows/coverage.yaml)
-[![GitHub tag (latest by date)](https://img.shields.io/github/v/tag/houthacker/remeha-modbus)](https://github.com/houthacker/remeha-modbus/releases/latest)
+[![GitHub Release](https://img.shields.io/github/v/release/houthacker/remeha-modbus)](https://github.com/houthacker/remeha-modbus/releases/latest)
 
 This integration allows you to manage your Remeha heating/cooling appliance locally from Home Assistant.
 
@@ -120,7 +121,7 @@ This might be undesirable, because:
   _and_ the `scheduler-component` will attempt to control the heat pump state.
   To prevent that, the affected climate zone is put in eco mode once this entity is switched off.
 - It prevents the heat pump from heating/cooling efficiently because it doesn't know what preset
-  changes are coming up. This might lead to more energy usage.
+  changes are coming up. This might lead to higher energy usage.
 
 To ensure that you have been warned about this, a persistent notification is triggered as well.
 
@@ -160,8 +161,10 @@ To force your appliance to reset the discovery table, execute this service. This
 must be reloaded after executing this service.
 
 > [!CAUTION]
-> Run this service at your own risk. Executing it may mess up your existing Remeha devices and entities
-> if devices have been added or (re)moved.
+> Run this service at your own risk. Executing it may mess up your pre-existing Remeha devices and entities
+> if devices are added or (re)moved because of the rediscovery.
+
+> Forcing rediscovery does not change your physical appliance settings.
 
 ### read_registers
 
@@ -230,10 +233,11 @@ Showing current temperature, target temperature and heating status.
 If you enable the `switch.enable_schedule_sync` switch, the DHW time schedules are synchronized between your Remeha appliance
 and the [scheduler](https://github.com/nielsfaber/scheduler-card) integration.
 
-**Note**: If you edit a time schedule entry in Home Assistant, it takes between 10 and 30 minutes for it to show up in
-the Remeha Home app.
-This is because the Remeha Home app doesn't update the schedules that frequently from external sources like modbus.
-Schedule edits from the Remeha Home app show up within one minute in Home Assistant however.
+> [!NOTE]
+> If you edit a time schedule entry in Home Assistant, it takes between 10 and 30 minutes for it to show up in
+> the Remeha Home app.
+> This is because the Remeha Home app doesn't update the schedules that frequently from external sources like modbus.
+> Schedule edits from the Remeha Home app show up within one minute in Home Assistant however.
 
 See also the [heatpump managed schedules](#switchheatpump_managed_schedules) entity.
 
