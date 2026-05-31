@@ -33,6 +33,7 @@ from custom_components.remeha_modbus.api.climate_zone import (
     ClimateZoneMode,
     ClimateZoneScheduleId,
     ClimateZoneType,
+    is_domestic_hot_water,
 )
 from custom_components.remeha_modbus.const import (
     MODBUS_DEVICE_ADDRESS,
@@ -482,24 +483,20 @@ class RemehaApi:
         """Read the schedules for all weekdays.
 
         Raises:
-            `InvalidZoneSchedule` if an error occurs when parsing the zone schedule.
+            `ValueError` if an error occurs when parsing the zone schedule.
 
         """
 
-        # TODO Create tests
-        try:
-            return (
-                {
-                    day: await self.async_read_zone_schedule(
-                        zone=zone, schedule_id=schedule_id, day=day
-                    )
-                    for day in Weekday
-                }
-                if zone_mode is ClimateZoneMode.SCHEDULING and schedule_id is not None
-                else {}
-            )
-        except ValueError as e:
-            raise InvalidZoneSchedule(zone=zone, schedule_id=schedule_id) from e
+        return (
+            {
+                day: await self.async_read_zone_schedule(
+                    zone=zone, schedule_id=schedule_id, day=day
+                )
+                for day in Weekday
+            }
+            if zone_mode is ClimateZoneMode.SCHEDULING and schedule_id is not None
+            else {}
+        )
 
     def get_zone_register_offset(self, zone: ClimateZone | int) -> int:
         """Get the offset in registers for the given `ClimateZone | int`."""
@@ -976,15 +973,25 @@ class RemehaApi:
         )
 
         # Read zone schedules.
-        # This raises an InvalidZoneSchedule error if reading a zone schedule fails,
-        # allowing the calling code to issue a repair.
-        current_schedule: dict[Weekday, ZoneSchedule | None] = (
-            await self._async_read_schedules(
-                zone=id, zone_mode=zone_mode, schedule_id=ClimateZoneScheduleId(selected_schedule)
+        current_schedule: dict[Weekday, ZoneSchedule | None] = {}
+        try:
+            current_schedule: dict[Weekday, ZoneSchedule | None] = (
+                await self._async_read_schedules(
+                    zone=id,
+                    zone_mode=zone_mode,
+                    schedule_id=ClimateZoneScheduleId(selected_schedule),
+                )
+                if zone_mode is ClimateZoneMode.SCHEDULING and selected_schedule is not None
+                else {}
             )
-            if zone_mode is ClimateZoneMode.SCHEDULING and selected_schedule is not None
-            else {}
-        )
+        except ValueError as e:
+            raise InvalidZoneSchedule(
+                zone=id,
+                schedule_id=ClimateZoneScheduleId(selected_schedule),
+                is_dhw=is_domestic_hot_water(
+                    ClimateZoneType(zone_type), ClimateZoneFunction(zone_function)
+                ),
+            ) from e
 
         return ClimateZone(
             id=id,
@@ -1154,17 +1161,23 @@ class RemehaApi:
         )
 
         # Read zone schedules.
-        # This raises an InvalidZoneSchedule error if reading a zone schedule fails,
-        # allowing the calling code to issue a repair.
-        current_schedule: dict[Weekday, ZoneSchedule | None] = (
-            await self._async_read_schedules(
-                zone=zone.id,
-                zone_mode=zone_mode,
-                schedule_id=ClimateZoneScheduleId(selected_schedule),
+        current_schedule: dict[Weekday, ZoneSchedule | None] = {}
+        try:
+            current_schedule: dict[Weekday, ZoneSchedule | None] = (
+                await self._async_read_schedules(
+                    zone=zone.id,
+                    zone_mode=zone_mode,
+                    schedule_id=ClimateZoneScheduleId(selected_schedule),
+                )
+                if zone_mode is ClimateZoneMode.SCHEDULING and selected_schedule is not None
+                else {}
             )
-            if zone_mode is ClimateZoneMode.SCHEDULING and selected_schedule is not None
-            else {}
-        )
+        except ValueError as e:
+            raise InvalidZoneSchedule(
+                zone=zone.id,
+                schedule_id=ClimateZoneScheduleId(selected_schedule),
+                is_dhw=is_domestic_hot_water(zone.type, zone.function),
+            ) from e
 
         # Merge old and new zone.
         return ClimateZone(

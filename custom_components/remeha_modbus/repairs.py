@@ -1,7 +1,7 @@
 """Repairs for Remeha Modbus."""
 
 import logging
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any, cast
 
 import voluptuous as vol
 from homeassistant.components.climate.const import DOMAIN as ClimateDomain
@@ -14,16 +14,19 @@ from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers import issue_registry as ir
 
+from custom_components.remeha_modbus.api.schedule import ZoneSchedule
 from custom_components.remeha_modbus.const import (
     DOMAIN,
     ISSUE_DISCOVERY_TABLE_CORRUPTED,
     ISSUE_HEATPUMP_MANAGED_SCHEDULES_OFF,
     ISSUE_INVALID_ZONE_SCHEDULE,
-    SERVICE_CREATE_DEFAULT_ZONESCHEMA,
     SERVICE_FORCE_SYSTEM_REDISCOVERY,
-    SHORT_DESC_TO_WEEKDAY,
+    ClimateZoneScheduleId,
+    Weekday,
 )
-from custom_components.remeha_modbus.helpers.entities import get_climate_entity_id
+
+if TYPE_CHECKING:
+    from custom_components.remeha_modbus.coordinator import RemehaUpdateCoordinator
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -80,20 +83,27 @@ class InvalidZoneScheduleFixFlow(RepairsFlow):
                 )
             else:
                 zone_id = issue.data["zone_id"]
-                assert isinstance(zone_id, int)
+                assert isinstance(zone_id, int)  # TODO exception
 
-                climate_entity_id = get_climate_entity_id(hass=self.hass, zone=zone_id)
+                issue_schedule_id = issue.data.get("schedule_id")
+                assert isinstance(issue_schedule_id, str)
+                schedule_id = ClimateZoneScheduleId[issue_schedule_id.upper()]
 
-                for short_day in SHORT_DESC_TO_WEEKDAY:
-                    await self.hass.services.async_call(
-                        domain=DOMAIN,
-                        service=SERVICE_CREATE_DEFAULT_ZONESCHEMA,
-                        service_data={
-                            "schedule_id": issue.data["schedule_id"],
-                            "weekday": short_day,
-                        },
-                        target={"entity_id": climate_entity_id},
+                is_dhw = issue.data.get("is_dhw")
+                assert isinstance(is_dhw, bool)
+
+                config_entry = next(iter(self.hass.config_entries.async_entries(DOMAIN)))
+                coordinator: RemehaUpdateCoordinator = config_entry.runtime_data["coordinator"]
+
+                # Don't use an HA service here, because that would require an entity_id.
+                # If this issue occurs during the first data fetch, no entities are available yet.
+                for day in Weekday:
+                    schedule = ZoneSchedule.create_default(
+                        id=schedule_id, zone_id=zone_id, day=day, is_dhw=is_dhw
                     )
+                    await coordinator.async_write_schedule(schedule)
+
+                return self.async_create_entry(title="", data={})
 
         return self.async_show_form(step_id="confirm_overwrite", data_schema=vol.Schema({}))
 
