@@ -18,8 +18,6 @@ from homeassistant.components.sensor import (
 )
 from homeassistant.core import Event, EventStateChangedData
 from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.selector import selector
-from homeassistant.helpers.typing import VolDictType
 from pydantic import Field, model_validator
 from pydantic.dataclasses import dataclass
 
@@ -489,15 +487,11 @@ SERVICE_BOOTSTRAP_BLENDERS: Final[str] = "bootstrap_blenders"
 SERVICE_READ_REGISTERS: Final[str] = "read_registers"
 SERVICE_AUTO_SCHEDULE: Final[str] = "dhw_auto_schedule"
 SERVICE_FORCE_SYSTEM_REDISCOVERY: Final[str] = "force_system_rediscovery"
-SERVICE_CREATE_DEFAULT_ZONESCHEMA: Final[str] = "create_default_zone_schema"
 
 ### Service fields
 READ_REGISTERS_START_REGISTER: Final[str] = "start_register"
 READ_REGISTERS_REGISTER_COUNT: Final[str] = "register_count"
 READ_REGISTERS_STRUCT_FORMAT: Final[str] = "struct_format"
-
-CREATE_DEFAULT_ZONESCHEMA_SCHEDULE_ID: Final[str] = "schedule_id"
-CREATE_DEFAULT_ZONESCHEMA_WEEKDAY: Final[str] = "weekday"
 
 ### Service schemes
 READ_REGISTERS_SERVICE_SCHEMA: vol.Schema = vol.Schema(
@@ -507,27 +501,6 @@ READ_REGISTERS_SERVICE_SCHEMA: vol.Schema = vol.Schema(
         vol.Required(READ_REGISTERS_STRUCT_FORMAT, default="=H"): remeha_cv.struct_format,
     }
 )
-
-CREATE_DEFAULT_ZONESCHEMA_SCHEMA: VolDictType = {
-    vol.Required(CREATE_DEFAULT_ZONESCHEMA_SCHEDULE_ID): selector(
-        {
-            "select": {
-                "mode": "dropdown",
-                "translation_key": "schedule_id",
-                "options": [e.name.lower() for e in ClimateZoneScheduleId],
-            }
-        }
-    ),
-    vol.Required(CREATE_DEFAULT_ZONESCHEMA_WEEKDAY): selector(
-        {
-            "select": {
-                "mode": "dropdown",
-                "translation_key": "weekday",
-                "options": list(WEEKDAY_TO_SHORT_DESC.values()),
-            }
-        }
-    ),
-}
 
 
 AUTO_SCHEDULE_DEFAULT_ID: Final[ClimateZoneScheduleId] = ClimateZoneScheduleId.SCHEDULE_1
