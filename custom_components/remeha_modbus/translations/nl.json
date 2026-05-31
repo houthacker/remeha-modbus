@@ -262,12 +262,6 @@
     "service_error_missing_state": {
       "message": "Kan nieuw toegevoegde entity {entity_id} niet verwerken: nieuwe state niet beschikbaar."
     },
-    "service_error_create_default_zone_schema": {
-      "message": "Kan standaard klokprogramma niet maken: schrijven naar modbus is mislukt."
-    },
-    "service_error_create_default_zone_schema_invalid_field": {
-      "message": "Kan standaard klokprogramma niet maken: ongeldige waarde voor veld {field_name}."
-    },
     "update_failed_discovery_table_corrupted": {
       "message": "Modbus discovery table is corrupt. Ga naar het repairs dashboard om dit op te lossen."
     },

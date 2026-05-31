@@ -3,7 +3,6 @@
 import logging
 from typing import TYPE_CHECKING, cast
 
-from homeassistant.components.climate.const import DOMAIN as ClimateDomain
 from homeassistant.components.weather import SERVICE_GET_FORECASTS
 from homeassistant.components.weather.const import ATTR_WEATHER_TEMPERATURE_UNIT
 from homeassistant.components.weather.const import DOMAIN as WeatherDomain
@@ -11,20 +10,14 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import UnitOfTemperature
 from homeassistant.core import HomeAssistant, ServiceCall, ServiceResponse, State, SupportsResponse
 from homeassistant.helpers import issue_registry as ir
-from homeassistant.helpers import service
 from pymodbus import ModbusException
 
-from custom_components.remeha_modbus.api.schedule import ZoneSchedule
 from custom_components.remeha_modbus.blend.scheduler.blender import (
     EventDispatcher as SchedulerEventDispatcher,
 )
 from custom_components.remeha_modbus.blend.scheduler.blender import SchedulerBlender
-from custom_components.remeha_modbus.climate import RemehaClimateEntity, RemehaDhwEntity
 from custom_components.remeha_modbus.const import (
     CONFIG_AUTO_SCHEDULE,
-    CREATE_DEFAULT_ZONESCHEMA_SCHEDULE_ID,
-    CREATE_DEFAULT_ZONESCHEMA_SCHEMA,
-    CREATE_DEFAULT_ZONESCHEMA_WEEKDAY,
     DOMAIN,
     ISSUE_RESTART_REQUIRED_REDISCOVERY,
     READ_REGISTERS_REGISTER_COUNT,
@@ -33,13 +26,9 @@ from custom_components.remeha_modbus.const import (
     READ_REGISTERS_STRUCT_FORMAT,
     SERVICE_AUTO_SCHEDULE,
     SERVICE_BOOTSTRAP_BLENDERS,
-    SERVICE_CREATE_DEFAULT_ZONESCHEMA,
     SERVICE_FORCE_SYSTEM_REDISCOVERY,
     SERVICE_READ_REGISTERS,
-    SHORT_DESC_TO_WEEKDAY,
     WEATHER_ENTITY_ID,
-    ClimateZoneScheduleId,
-    Weekday,
 )
 from custom_components.remeha_modbus.errors import (
     MissingExternalComponent,
@@ -156,54 +145,6 @@ def register_services(  # noqa: C901
             raise RemehaServiceError(
                 translation_domain=DOMAIN, translation_key="service_error_force_system_rediscovery"
             ) from e
-
-    async def create_default_zone_schema(entity: RemehaClimateEntity, call: ServiceCall) -> None:
-
-        if cast(str, call.data[CREATE_DEFAULT_ZONESCHEMA_SCHEDULE_ID]).upper() not in [
-            e.name for e in ClimateZoneScheduleId
-        ]:
-            raise RemehaIncorrectServiceCall(
-                translation_domain=DOMAIN,
-                translation_key="service_error_create_default_zone_schema_invalid_field",
-                translation_placeholders={"field_name": CREATE_DEFAULT_ZONESCHEMA_SCHEDULE_ID},
-            )
-
-        if call.data[CREATE_DEFAULT_ZONESCHEMA_WEEKDAY] not in SHORT_DESC_TO_WEEKDAY:
-            raise RemehaIncorrectServiceCall(
-                translation_domain=DOMAIN,
-                translation_key="service_error_create_default_zone_schema_invalid_field",
-                translation_placeholders={"field_name": CREATE_DEFAULT_ZONESCHEMA_WEEKDAY},
-            )
-
-        try:
-            schedule_id: ClimateZoneScheduleId = ClimateZoneScheduleId[
-                cast(str, call.data[CREATE_DEFAULT_ZONESCHEMA_SCHEDULE_ID]).upper()
-            ]
-            weeday: Weekday = SHORT_DESC_TO_WEEKDAY[call.data[CREATE_DEFAULT_ZONESCHEMA_WEEKDAY]]
-            zone_id = entity.climate_zone_id
-
-            schedule = ZoneSchedule.create_default(
-                id=schedule_id,
-                zone_id=zone_id,
-                day=weeday,
-                is_dhw=isinstance(entity, RemehaDhwEntity),
-            )
-
-            await coordinator.async_write_schedule(schedule=schedule)
-        except ModbusException as e:
-            raise RemehaServiceError(
-                translation_domain=DOMAIN,
-                translation_key="service_error_create_default_zone_schema",
-            ) from e
-
-    service.async_register_platform_entity_service(
-        hass=hass,
-        service_domain=DOMAIN,
-        service_name=SERVICE_CREATE_DEFAULT_ZONESCHEMA,
-        entity_domain=ClimateDomain,
-        func=create_default_zone_schema,
-        schema=CREATE_DEFAULT_ZONESCHEMA_SCHEMA,
-    )
 
     hass.services.async_register(
         domain=DOMAIN,

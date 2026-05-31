@@ -263,12 +263,6 @@
     "service_error_missing_state": {
       "message": "Cannot process newly added entity {entity_id}: new state is unavailable."
     },
-    "service_error_create_default_zone_schema": {
-      "message": "Cannot create default zone schema: modbus write failed."
-    },
-    "service_error_create_default_zone_schema_invalid_field": {
-      "message": "Cannot create default zone schema: invalid value for field {field_name}."
-    },
     "update_failed_discovery_table_corrupted": {
       "message": "Modbus discovery table corrupted. Please visit your repairs dashboard to fix this."
     },
