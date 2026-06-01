@@ -10,7 +10,6 @@ from homeassistant.const import ATTR_ENTITY_ID, SERVICE_TURN_OFF, STATE_OFF, STA
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResultType
 from homeassistant.helpers import issue_registry as ir
-from remeha_modbus.helpers.entities import get_climate_entity_id
 
 from custom_components.remeha_modbus.const import (
     DOMAIN,
@@ -22,6 +21,7 @@ from custom_components.remeha_modbus.const import (
     MetaRegisters,
     ZoneRegisters,
 )
+from custom_components.remeha_modbus.helpers.entities import get_climate_entity_id
 from tests.conftest import get_api, setup_platform
 from tests.util.repairs import get_repairs, process_repair_fix_flow, start_repair_fix_flow
 
