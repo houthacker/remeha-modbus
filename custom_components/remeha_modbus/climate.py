@@ -34,6 +34,7 @@ from custom_components.remeha_modbus.const import (
     HA_PRESET_ANTI_FROST,
     HA_PRESET_MANUAL,
     HA_SCHEDULE_TO_REMEHA_SCHEDULE,
+    REMEHA_PRESET_SCHEDULE_1,
     TEMPERATURE_STEP,
     ClimateZoneFunction,
     ClimateZoneHeatingMode,
@@ -298,7 +299,7 @@ class RemehaDhwEntity(RemehaClimateEntity):
     @property
     def preset_modes(self) -> list[str]:
         """Return the presets available for Remeha DHW climates."""
-        return [*CLIMATE_DEFAULT_PRESETS, *CLIMATE_DHW_EXTRA_PRESETS]
+        return [REMEHA_PRESET_SCHEDULE_1, *CLIMATE_DHW_EXTRA_PRESETS]
 
     async def async_set_hvac_mode(self, hvac_mode: HVACMode):
         """Set the new HVAC mode."""
@@ -359,7 +360,7 @@ class RemehaDhwEntity(RemehaClimateEntity):
             )
 
             zone.mode = zone_mode
-        elif preset_mode in CLIMATE_DEFAULT_PRESETS:
+        elif preset_mode == REMEHA_PRESET_SCHEDULE_1:
             # Scheduling: set active schedule first, then set mode to scheduling.
             # This prevents the user ending up with an invalid zone state if the latter fails.
             schedule_id: ClimateZoneScheduleId = HA_SCHEDULE_TO_REMEHA_SCHEDULE[preset_mode]
