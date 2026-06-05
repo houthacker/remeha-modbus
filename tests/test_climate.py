@@ -22,6 +22,7 @@ from custom_components.remeha_modbus.const import (
     REMEHA_PRESET_SCHEDULE_1,
     REMEHA_PRESET_SCHEDULE_2,
     REMEHA_PRESET_SCHEDULE_3,
+    REMEHA_PRESET_SCHEDULE_4,
     ClimateZoneMode,
 )
 
@@ -169,6 +170,7 @@ async def test_ch_climate(hass: HomeAssistant, mock_modbus_client, mock_config_e
             REMEHA_PRESET_SCHEDULE_1,
             REMEHA_PRESET_SCHEDULE_2,
             REMEHA_PRESET_SCHEDULE_3,
+            REMEHA_PRESET_SCHEDULE_4,
             ClimateZoneMode.MANUAL.name.lower(),
             ClimateZoneMode.ANTI_FROST.name.lower(),
         ]

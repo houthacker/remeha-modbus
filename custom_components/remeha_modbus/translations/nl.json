@@ -100,7 +100,8 @@
       "options": {
         "schedule_1": "Schema 1",
         "schedule_2": "Schema 2",
-        "schedule_3": "Schema 3"
+        "schedule_3": "Schema 3",
+        "schedule_4": "Koelschema"
       }
     },
     "weekday": {
@@ -124,13 +125,14 @@
         "state_attributes": {
           "preset_mode": {
             "state": {
+              "anti_frost": "Antivries",
+              "comfort": "Comfort",
+              "eco": "Eco",
+              "manual": "Handmatig",
               "schedule_1": "Schema 1",
               "schedule_2": "Schema 2",
               "schedule_3": "Schema 3",
-              "manual": "Handmatig",
-              "anti_frost": "Antivries",
-              "comfort": "Comfort",
-              "eco": "Eco"
+              "schedule_4": "Koelschema"
             }
           }
         }

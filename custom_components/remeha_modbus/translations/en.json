@@ -101,7 +101,8 @@
       "options": {
         "schedule_1": "Schedule 1",
         "schedule_2": "Schedule 2",
-        "schedule_3": "Schedule 3"
+        "schedule_3": "Schedule 3",
+        "schedule_4": "Cooling schedule"
       }
     },
     "weekday": {
@@ -131,7 +132,8 @@
               "manual": "Manual",
               "schedule_1": "Schedule 1",
               "schedule_2": "Schedule 2",
-              "schedule_3": "Schedule 3"
+              "schedule_3": "Schedule 3",
+              "schedule_4": "Cooling schedule"
             }
           }
         }

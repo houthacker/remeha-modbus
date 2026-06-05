@@ -440,6 +440,7 @@ class ClimateZoneScheduleId(Enum):
     SCHEDULE_1 = 0
     SCHEDULE_2 = 1
     SCHEDULE_3 = 2
+    SCHEDULE_4 = 3
 
 
 class ClimateZoneHeatingMode(Enum):
@@ -565,12 +566,15 @@ TEMPERATURE_STEP: float = 0.5
 REMEHA_PRESET_SCHEDULE_1: Final[str] = "schedule_1"
 REMEHA_PRESET_SCHEDULE_2: Final[str] = "schedule_2"
 REMEHA_PRESET_SCHEDULE_3: Final[str] = "schedule_3"
+REMEHA_PRESET_SCHEDULE_4: Final[str] = "schedule_4"
+
 HA_PRESET_MANUAL: Final[str] = "manual"
 HA_PRESET_ANTI_FROST: Final[str] = "anti_frost"
 CLIMATE_DEFAULT_PRESETS: Final[list[str]] = [
     REMEHA_PRESET_SCHEDULE_1,
     REMEHA_PRESET_SCHEDULE_2,
     REMEHA_PRESET_SCHEDULE_3,
+    REMEHA_PRESET_SCHEDULE_4,
 ]
 
 # Additional presets available on DHW zones
@@ -580,6 +584,7 @@ HA_SCHEDULE_TO_REMEHA_SCHEDULE: Final[dict[str, ClimateZoneScheduleId]] = {
     REMEHA_PRESET_SCHEDULE_1: ClimateZoneScheduleId.SCHEDULE_1,
     REMEHA_PRESET_SCHEDULE_2: ClimateZoneScheduleId.SCHEDULE_2,
     REMEHA_PRESET_SCHEDULE_3: ClimateZoneScheduleId.SCHEDULE_3,
+    REMEHA_PRESET_SCHEDULE_4: ClimateZoneScheduleId.SCHEDULE_4,
 }
 
 HA_CLIMATE_PRESET_TO_REMEHA_ZONE_MODE: Final[dict[str, ClimateZoneMode]] = {
