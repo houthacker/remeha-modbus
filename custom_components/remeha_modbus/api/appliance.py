@@ -4,6 +4,26 @@ from dataclasses import dataclass
 from enum import Enum
 
 
+class CoolingType(Enum):
+    """Defimes the type of cooling used by the appliance (if any)."""
+
+    OFF = 0
+    """Cooling is off."""
+
+    ACTIVE_COOLING = 1
+    """The appliance uses active cooling.
+
+    This type of cooling is used by all air-sourced heat pumps.
+    """
+
+    FREE_COOLING = 2
+    """The appliance uses free cooling.
+
+    This type of cooling is used by geothermal and water-source
+    heat pumps.
+    """
+
+
 class SeasonalMode(Enum):
     """Defines the current seasonal mode of the appliance."""
 
@@ -118,6 +138,12 @@ class Appliance:
     the other available api types, like appliance error status or burning hours counters.
     """
 
+    ch_enabled: bool
+    """Whether central heating demand processing is enabled."""
+
+    cooling_type: CoolingType
+    """The type of cooling."""
+
     current_error: int | None
     """The current error, encoded in two unsigned bytes. `None` means no error.
 
@@ -134,6 +160,9 @@ class Appliance:
 
     season_mode: SeasonalMode | None
     """The current seasonal mode of the appliance."""
+
+    summer_winter: float
+    """The upper limit for heating."""
 
     def error_as_str(self) -> str:
         """Return a user-friendly string representing the error."""

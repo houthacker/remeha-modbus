@@ -24,6 +24,7 @@ from custom_components.remeha_modbus.api.appliance import (
     Appliance,
     ApplianceErrorPriority,
     ApplianceStatus,
+    CoolingType,
     SeasonalMode,
 )
 from custom_components.remeha_modbus.api.climate_zone import (
@@ -331,12 +332,11 @@ class RemehaApi:
     async def async_is_cooling_forced(self) -> bool:
         """Return whether the appliance is in forced cooling mode."""
 
-        return cast(
-            bool,
+        return bool(
             from_registers(
                 registers=await self._async_read_registers(variable=MetaRegisters.COOLING_FORCED),
                 destination_variable=MetaRegisters.COOLING_FORCED,
-            ),
+            )
         )
 
     async def async_read_registers(
@@ -663,6 +663,21 @@ class RemehaApi:
 
         """
 
+        ch_enabled = bool(
+            from_registers(
+                registers=await self._async_read_registers(variable=MetaRegisters.CH_ENABLED),
+                destination_variable=MetaRegisters.CH_ENABLED,
+            )
+        )
+
+        cooling_enabled: int = cast(
+            int,
+            from_registers(
+                registers=await self._async_read_registers(variable=MetaRegisters.COOLING_ENABLED),
+                destination_variable=MetaRegisters.COOLING_ENABLED,
+            ),
+        )
+
         current_error = cast(
             int,
             from_registers(
@@ -713,11 +728,22 @@ class RemehaApi:
         )
         season_mode: SeasonalMode | None = SeasonalMode(sm_value) if sm_value is not None else None
 
+        summer_winter: float = cast(
+            float,
+            from_registers(
+                registers=await self._async_read_registers(variable=MetaRegisters.SUMMER_WINTER),
+                destination_variable=MetaRegisters.SUMMER_WINTER,
+            ),
+        )
+
         return Appliance(
+            ch_enabled=ch_enabled,
+            cooling_type=CoolingType(cooling_enabled),
             current_error=current_error,
             error_priority=error_priority,
             status=appliance_status,
             season_mode=season_mode,
+            summer_winter=summer_winter,
         )
 
     async def async_read_sensor_values(

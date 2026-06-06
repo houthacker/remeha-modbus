@@ -746,14 +746,6 @@ class MetaRegisters:
         start_address=200, name="Reset discovery table", data_type=DataType.UINT8
     )
 
-    OUTSIDE_TEMPERATURE: Final[ModbusVariableDescription] = ModbusVariableDescription(
-        start_address=384, name="varApTOutside", data_type=DataType.INT16, scale=0.01
-    )
-
-    SEASON_MODE: Final[ModbusVariableDescription] = ModbusVariableDescription(
-        start_address=385, name="varApSeasonMode", data_type=DataType.UINT8
-    )
-
     CURRENT_ERROR: Final[ModbusVariableDescription] = ModbusVariableDescription(
         start_address=277, name="applianceCurrentError", data_type=DataType.UINT16
     )
@@ -769,6 +761,28 @@ class MetaRegisters:
     APPLIANCE_STATUS_2: Final[ModbusVariableDescription] = ModbusVariableDescription(
         start_address=280, name="applilanceStatus2", data_type=DataType.UINT8
     )
+
+    OUTSIDE_TEMPERATURE: Final[ModbusVariableDescription] = ModbusVariableDescription(
+        start_address=384, name="varApTOutside", data_type=DataType.INT16, scale=0.01
+    )
+
+    SEASON_MODE: Final[ModbusVariableDescription] = ModbusVariableDescription(
+        start_address=385, name="varApSeasonMode", data_type=DataType.UINT8
+    )
+
+    SUMMER_WINTER: Final[ModbusVariableDescription] = ModbusVariableDescription(
+        start_address=386,
+        name="varApSummerWinter",
+        friendly_name="AP073",
+        data_type=DataType.UINT16,
+        scale=0.01,
+    )
+    """Upper limit for heating.
+
+    Factory default is 22°C. Above this temperature, the appliance
+    won't heat anymore. Setting it to 30.5°C will disable it and
+    cause the appliance to stay in winter mode.
+    """
 
     FLOW_TEMPERATURE: Final[ModbusVariableDescription] = ModbusVariableDescription(
         start_address=400, name="varApTFlow", data_type=DataType.INT16, scale=0.01
@@ -838,6 +852,17 @@ class MetaRegisters:
         start_address=460, name="varApActualProducerPower", data_type=DataType.UINT32, scale=0.01
     )
 
+    CH_ENABLED: Final[ModbusVariableDescription] = ModbusVariableDescription(
+        start_address=500, name="parApChEnabled", friendly_name="AP016", data_type=DataType.UINT8
+    )
+
+    COOLING_ENABLED: Final[ModbusVariableDescription] = ModbusVariableDescription(
+        start_address=502,
+        name="parApCoolingEnabled",
+        friendly_name="AP028",
+        data_type=DataType.UINT8,
+    )
+
     # This variable exists on the appliance level. In the Remeha Home app however, this variable
     # is configurable in two places: in the CH zone and at the system level. Change one, change
     # the other too.
@@ -845,7 +870,10 @@ class MetaRegisters:
     # * To force cooling, set HVACMode to COOL
     # * To let the system decide to cool or heat, set HVACMode to HEAT_COOL
     COOLING_FORCED: Final[ModbusVariableDescription] = ModbusVariableDescription(
-        start_address=503, name="parApCoolingForced", data_type=DataType.UINT8
+        start_address=503,
+        name="parApCoolingForced",
+        friendly_name="AP015",
+        data_type=DataType.UINT8,
     )
 
 
