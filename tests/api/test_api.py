@@ -12,6 +12,7 @@ from custom_components.remeha_modbus.api.appliance import (
     Appliance,
     ApplianceErrorPriority,
     ApplianceStatus,
+    CoolingType,
 )
 from custom_components.remeha_modbus.api.climate_zone import ClimateZone
 from custom_components.remeha_modbus.api.schedule import (
@@ -281,6 +282,9 @@ async def test_read_appliance(mock_modbus_client):
 
     assert appliance.current_error == int("0223", 16)  # H02.23 Flow rate error.
     assert appliance.error_priority == ApplianceErrorPriority.BLOCKING
+    assert appliance.ch_enabled
+    assert appliance.cooling_type is CoolingType.ACTIVE_COOLING
+    assert appliance.summer_winter == 22.0
 
     status: ApplianceStatus = appliance.status
     assert not status.flame_on
