@@ -931,6 +931,41 @@ class ZoneRegisters:
         data_type=DataType.UINT8,
         friendly_name="CP320",
     )
+    ROOM_COOLING_SETPOINT_1: Final[ModbusVariableDescription] = ModbusVariableDescription(
+        start_address=656,
+        name="parZoneRoomCoolingSetpoint1",
+        friendly_name="CP140",
+        data_type=DataType.UINT16,
+        scale=0.1,
+    )
+    ROOM_COOLING_SETPOINT_2: Final[ModbusVariableDescription] = ModbusVariableDescription(
+        start_address=657,
+        name="parZoneRoomCoolingSetpoint2",
+        friendly_name="CP141",
+        data_type=DataType.UINT16,
+        scale=0.1,
+    )
+    ROOM_COOLING_SETPOINT_3: Final[ModbusVariableDescription] = ModbusVariableDescription(
+        start_address=658,
+        name="parZoneRoomCoolingSetpoint3",
+        friendly_name="CP142",
+        data_type=DataType.UINT16,
+        scale=0.1,
+    )
+    ROOM_COOLING_SETPOINT_4: Final[ModbusVariableDescription] = ModbusVariableDescription(
+        start_address=659,
+        name="parZoneRoomCoolingSetpoint4",
+        friendly_name="CP143",
+        data_type=DataType.UINT16,
+        scale=0.1,
+    )
+    ROOM_COOLING_SETPOINT_5: Final[ModbusVariableDescription] = ModbusVariableDescription(
+        start_address=660,
+        name="parZoneRoomCoolingSetpoint5",
+        friendly_name="CP144",
+        data_type=DataType.UINT16,
+        scale=0.1,
+    )
     TEMPORARY_SETPOINT: Final[ModbusVariableDescription] = ModbusVariableDescription(
         start_address=663,
         name="parZoneTemporaryRoomSetpoint",
