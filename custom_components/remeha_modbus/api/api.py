@@ -329,17 +329,6 @@ class RemehaApi:
         async with self._lock:
             return self._client.connected
 
-    @property
-    async def async_is_cooling_forced(self) -> bool:
-        """Return whether the appliance is in forced cooling mode."""
-
-        return bool(
-            from_registers(
-                registers=await self._async_read_registers(variable=MetaRegisters.COOLING_FORCED),
-                destination_variable=MetaRegisters.COOLING_FORCED,
-            )
-        )
-
     async def async_read_registers(
         self, start_register: int, register_count: int = 1, struct_format: str | bytes = "=H"
     ) -> tuple[Any, ...]:
@@ -671,12 +660,19 @@ class RemehaApi:
             )
         )
 
-        cooling_enabled: int = cast(
+        cooling_type: int = cast(
             int,
             from_registers(
                 registers=await self._async_read_registers(variable=MetaRegisters.COOLING_ENABLED),
                 destination_variable=MetaRegisters.COOLING_ENABLED,
             ),
+        )
+
+        cooling_forced = bool(
+            from_registers(
+                registers=await self._async_read_registers(variable=MetaRegisters.COOLING_FORCED),
+                destination_variable=MetaRegisters.COOLING_FORCED,
+            )
         )
 
         current_error = cast(
@@ -739,7 +735,8 @@ class RemehaApi:
 
         return Appliance(
             ch_enabled=ch_enabled,
-            cooling_type=CoolingType(cooling_enabled),
+            cooling_type=CoolingType(cooling_type),
+            cooling_forced=cooling_forced,
             current_error=current_error,
             error_priority=error_priority,
             status=appliance_status,

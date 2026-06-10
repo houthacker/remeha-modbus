@@ -464,15 +464,17 @@ class RemehaChEntity(RemehaClimateEntity):
         """Return the current HVAC mode."""
 
         zone: ClimateZone = self._zone
-        cooling_forced: bool = self.coordinator.is_cooling_forced()
-
         match zone.mode:
             case ClimateZoneMode.SCHEDULING:
                 return HVACMode.AUTO
             case ClimateZoneMode.ANTI_FROST:
                 return HVACMode.OFF
             case ClimateZoneMode.MANUAL:
-                return HVACMode.COOL if cooling_forced else HVACMode.HEAT_COOL
+                return (
+                    HVACMode.COOL
+                    if self.coordinator.get_appliance().cooling_forced
+                    else HVACMode.HEAT_COOL
+                )
 
     @property
     def hvac_modes(self) -> list[HVACMode]:

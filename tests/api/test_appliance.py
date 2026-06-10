@@ -16,6 +16,7 @@ def test_error_as_str():
         Appliance(
             ch_enabled=True,
             cooling_type=CoolingType.ACTIVE_COOLING,
+            cooling_forced=False,
             current_error=None,
             error_priority=ApplianceErrorPriority.NO_ERROR,
             status=ApplianceStatus((1, 1)),
@@ -29,6 +30,7 @@ def test_error_as_str():
         Appliance(
             ch_enabled=True,
             cooling_type=CoolingType.ACTIVE_COOLING,
+            cooling_forced=False,
             current_error=int("0207", 16),
             error_priority=ApplianceErrorPriority.WARNING,
             status=ApplianceStatus((1, 1)),
@@ -42,6 +44,7 @@ def test_error_as_str():
         Appliance(
             ch_enabled=True,
             cooling_type=CoolingType.ACTIVE_COOLING,
+            cooling_forced=False,
             current_error=int("0207", 16),
             error_priority=ApplianceErrorPriority.BLOCKING,
             status=ApplianceStatus((1, 1)),
@@ -55,6 +58,7 @@ def test_error_as_str():
         Appliance(
             ch_enabled=True,
             cooling_type=CoolingType.ACTIVE_COOLING,
+            cooling_forced=False,
             current_error=int("0207", 16),
             error_priority=ApplianceErrorPriority.LOCKING,
             status=ApplianceStatus((1, 1)),

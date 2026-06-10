@@ -155,6 +155,9 @@ class Appliance:
     error_priority: ApplianceErrorPriority
     """Shows the current appliance error priority."""
 
+    cooling_forced: bool
+    """Whether the appliance is in forced cooling mode."""
+
     status: ApplianceStatus
     """Shows various status fields."""
 
@@ -163,6 +166,17 @@ class Appliance:
 
     summer_winter: float
     """The upper limit for heating."""
+
+    def is_cooling_required(self) -> bool:
+        """Whether the appliance cooling mode is required.
+
+        This can be forced (`cooling_forced == True`) or derived (`season_mode` is in a summer variant).
+        """
+
+        return self.cooling_forced or self.season_mode in [
+            SeasonalMode.SUMMER_NEUTRAL_BAND,
+            SeasonalMode.SUMMER,
+        ]
 
     def error_as_str(self) -> str:
         """Return a user-friendly string representing the error."""
