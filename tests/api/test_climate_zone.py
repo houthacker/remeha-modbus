@@ -1,6 +1,7 @@
 """Tests for ClimateZone."""
 
 import pytest
+from freezegun import freeze_time
 
 from custom_components.remeha_modbus.api import (
     DeviceBoardCategory,
@@ -71,6 +72,7 @@ def test_supported_climate_zone_functions():
     assert not ClimateZoneFunction.DIRECT.is_supported()
     assert not ClimateZoneFunction.SWIMMING_POOL.is_supported()
     assert not ClimateZoneFunction.HIGH_TEMPERATURE.is_supported()
+    # TODO supported FAN_CONVECTOR
     assert not ClimateZoneFunction.FAN_CONVECTOR.is_supported()
     assert not ClimateZoneFunction.DHW_TANK.is_supported()
     assert not ClimateZoneFunction.ELECTRICAL_DHW_TANK.is_supported()
@@ -85,7 +87,7 @@ def test_supported_climate_zone_functions():
 
 
 @pytest.mark.parametrize("mock_modbus_client", ["modbus_store.json"], indirect=True)
-async def test_climate_zone_get_current_setpoint(mock_modbus_client):
+async def test_climate_zone_dhw_get_current_setpoint(mock_modbus_client):
     """Test retrieval of the current setpoint of a climate zone."""
 
     api = get_api(mock_modbus_client=mock_modbus_client)
@@ -113,6 +115,44 @@ async def test_climate_zone_get_current_setpoint(mock_modbus_client):
     # Validate setpoint in unsupported type
     zone.type = ClimateZoneType.SWIMMING_POOL
     assert zone.current_setpoint == -1
+
+
+@pytest.mark.parametrize("mock_modbus_client", ["modbus_store_ch_scheduling.json"], indirect=True)
+async def test_climate_zone_ch_get_current_cooling_setpoint(mock_modbus_client):
+    """Test retrieval of the current setpoint of a CH climate zone."""
+
+    api = get_api(mock_modbus_client=mock_modbus_client)
+    zone: ClimateZone | None = await api.async_read_zone(id=1, appliance_requires_cooling=True)
+    assert zone is not None
+
+    assert not zone.is_domestic_hot_water()
+    assert zone.is_central_heating()
+
+    # Remeha uses schedule 4 for cooling, but doesn't expose it as selected.
+    # instead, schedule 1 is selected. RemehaApi maps this to schedule 4.
+    assert zone.selected_schedule is ClimateZoneScheduleId.SCHEDULE_4
+
+    # Validate the schedule for a monday (all days have the same schedule in the mock data)
+    # Mock data is encoded as follows:
+    # 00:00 - 07:00 SLEEP
+    # 07:00 - 15:00 AWAY
+    # 15:00 - 18:00 HOME
+    # 18:00 - 21:00 COMFORT
+    # 21:00 - 00:00 EVENING
+    with freeze_time("2026-06-01 00:00:00", tz_offset=-2):
+        assert zone.current_setpoint == 20.5
+
+    with freeze_time("2026-06-01 07:00:00", tz_offset=-2):
+        assert zone.current_setpoint == 21.5
+
+    with freeze_time("2026-06-01 15:00:00", tz_offset=-2):
+        assert zone.current_setpoint == 21.0
+
+    with freeze_time("2026-06-01 18:00:00", tz_offset=-2):
+        assert zone.current_setpoint == 20.0
+
+    with freeze_time("2026-06-01 21:00:00", tz_offset=-2):
+        assert zone.current_setpoint == 22.0
 
 
 @pytest.mark.parametrize("mock_modbus_client", ["modbus_store.json"], indirect=True)

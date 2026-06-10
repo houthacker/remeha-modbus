@@ -19,7 +19,7 @@ from custom_components.remeha_modbus.api import (
     DeviceInstance,
     RemehaApi,
 )
-from custom_components.remeha_modbus.api.appliance import Appliance
+from custom_components.remeha_modbus.api.appliance import Appliance, SeasonalMode
 from custom_components.remeha_modbus.api.climate_zone import ClimateZone, ZoneSchedule
 from custom_components.remeha_modbus.api.schedule import HourlyForecast, WeatherForecast
 from custom_components.remeha_modbus.api.store import RemehaModbusStorage, WaitingListEntry
@@ -174,10 +174,20 @@ class RemehaUpdateCoordinator(DataUpdateCoordinator):
             appliance: Appliance = await self._api.async_read_appliance()
             sensors = await self._api.async_read_sensor_values(list(REMEHA_SENSORS.keys()))
             if before_first_update:
-                zones = await self._api.async_read_zones()
+                # TODO move to Appliance
+                zones = await self._api.async_read_zones(
+                    is_cooling_forced
+                    or appliance.season_mode
+                    in [SeasonalMode.SUMMER_NEUTRAL_BAND, SeasonalMode.SUMMER]
+                )
             else:
                 zones = [
-                    await self._api.async_read_zone_update(zone)
+                    await self._api.async_read_zone_update(
+                        zone,
+                        is_cooling_forced
+                        or appliance.season_mode
+                        in [SeasonalMode.SUMMER_NEUTRAL_BAND, SeasonalMode.SUMMER],
+                    )
                     for zone in list(self.data["climates"].values())
                 ]
 
