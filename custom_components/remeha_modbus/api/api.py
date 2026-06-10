@@ -464,6 +464,24 @@ class RemehaApi:
             if response.isError():
                 raise ModbusException("Modbus device returned an error while writing registers.")
 
+    def _map_schedule_id(
+        self,
+        zone_mode: ClimateZoneMode,
+        zone_function: ClimateZoneFunction,
+        appliance_requires_cooling: bool,
+        selected_schedule: int | None,
+    ) -> ClimateZoneScheduleId | None:
+        """Map `selected_schedule` to the correct `ClimateZoneScheduleId`."""
+        return (
+            ClimateZoneScheduleId.SCHEDULE_4
+            if zone_mode is ClimateZoneMode.SCHEDULING
+            and is_cooling_available(ClimateZoneFunction(zone_function))
+            and appliance_requires_cooling
+            else ClimateZoneScheduleId(selected_schedule)
+            if selected_schedule is not None
+            else None
+        )
+
     async def _async_read_schedules(
         self,
         zone: int,
@@ -884,11 +902,13 @@ class RemehaApi:
             _LOGGER.info("Ignoring zone(zone_id=%d), because its type is NOT_PRESENT.", id)
             return None
 
-        zone_function = from_registers(
-            registers=await self._async_read_registers(
-                variable=ZoneRegisters.FUNCTION, offset=zone_register_offset
-            ),
-            destination_variable=ZoneRegisters.FUNCTION,
+        zone_function = ClimateZoneFunction(
+            from_registers(
+                registers=await self._async_read_registers(
+                    variable=ZoneRegisters.FUNCTION, offset=zone_register_offset
+                ),
+                destination_variable=ZoneRegisters.FUNCTION,
+            )
         )
         zone_short_name = cast(
             str,
@@ -1064,14 +1084,8 @@ class RemehaApi:
         )
 
         # Map schedule_1 to schedule_4 if required.
-        schedule_id = (
-            ClimateZoneScheduleId.SCHEDULE_4
-            if zone_mode is ClimateZoneMode.SCHEDULING
-            and appliance_requires_cooling
-            and is_cooling_available(ClimateZoneFunction(zone_function))
-            else ClimateZoneScheduleId(selected_schedule)
-            if selected_schedule is not None
-            else None
+        schedule_id = self._map_schedule_id(
+            zone_mode, zone_function, appliance_requires_cooling, selected_schedule
         )
 
         # Read zone schedules.
@@ -1090,15 +1104,13 @@ class RemehaApi:
             raise InvalidZoneSchedule(
                 zone=id,
                 schedule_id=cast(ClimateZoneScheduleId, schedule_id),
-                is_dhw=is_domestic_hot_water(
-                    ClimateZoneType(zone_type), ClimateZoneFunction(zone_function)
-                ),
+                is_dhw=is_domestic_hot_water(ClimateZoneType(zone_type), zone_function),
             ) from e
 
         return ClimateZone(
             id=id,
             type=ClimateZoneType(zone_type),
-            function=ClimateZoneFunction(zone_function),
+            function=zone_function,
             short_name=zone_short_name,
             owning_device=owning_device,
             mode=zone_mode,
@@ -1328,14 +1340,8 @@ class RemehaApi:
         )
 
         # Map schedule_1 to schedule_4 if required.
-        schedule_id = (
-            ClimateZoneScheduleId.SCHEDULE_4
-            if zone_mode is ClimateZoneMode.SCHEDULING
-            and appliance_requires_cooling
-            and is_cooling_available(ClimateZoneFunction(zone.function))
-            else ClimateZoneScheduleId(selected_schedule)
-            if selected_schedule is not None
-            else None
+        schedule_id = self._map_schedule_id(
+            zone_mode, zone.function, appliance_requires_cooling, selected_schedule
         )
 
         # Read zone schedules.
