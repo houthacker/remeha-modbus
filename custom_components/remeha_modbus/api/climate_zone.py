@@ -15,7 +15,13 @@ from custom_components.remeha_modbus.const import (
     Weekday,
 )
 
-from .schedule import Timeslot, TimeslotSetpointType, ZoneSchedule, get_current_timeslot
+from .schedule import (
+    Timeslot,
+    TimeslotSetpointType,
+    ZoneSchedule,
+    get_current_timeslot,
+    is_cooling_schedule,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -38,12 +44,29 @@ def is_domestic_hot_water(type: ClimateZoneType, function: ClimateZoneFunction) 
 
 
 def is_central_heating(type: ClimateZoneType, function: ClimateZoneFunction) -> bool:
-    """Return whether the given type and function resolve to a CH zone type."""
+    """Return whether the given type and function resolve to a CH zone type.
+
+    This method is meant to be used by the API, in situations where no `ClimateZone`
+    is available (yet).
+    """
 
     return type in [
         ClimateZoneType.CH_ONLY,
         ClimateZoneType.CH_AND_COOLING,
     ] or (type == ClimateZoneType.OTHER and function == ClimateZoneFunction.MIXING_CIRCUIT)
+
+
+def is_cooling_available(zone_function: ClimateZoneFunction) -> bool:
+    """Return whether the given zone function allows for cooling.
+
+    This method is meant to be used by the API, in situations where no `ClimateZone`
+    is available (yet).
+    """
+
+    return zone_function in [
+        ClimateZoneFunction.MIXING_CIRCUIT,
+        ClimateZoneFunction.FAN_CONVECTOR,
+    ]
 
 
 @dataclass(eq=False)
@@ -107,6 +130,21 @@ class ClimateZone:
     room_temperature: float | None
     """The current room temperature"""
 
+    room_cooling_setpoint_1: float | None
+    """Cooling setpoint in ECO mode"""
+
+    room_cooling_setpoint_2: float | None
+    """Cooling setpoint in COMFORT mode"""
+
+    room_cooling_setpoint_3: float | None
+    """Cooling setpoint in AWAY mode"""
+
+    room_cooling_setpoint_4: float | None
+    """Cooling setpoint in MORNING mode"""
+
+    room_cooling_setpoint_5: float | None
+    """Cooling setpoint in EVENING mode"""
+
     dhw_tank_temperature: float | None
     """The current DHW tank temperature"""
 
@@ -116,7 +154,50 @@ class ClimateZone:
     time_zone: tzinfo | None
     """The time zone of the related appliance"""
 
-    def _current_dhw_scheduling_setpoint(self) -> float:
+    def _get_cooling_scheduling_setpoint(self, setpoint_type: TimeslotSetpointType) -> float | None:
+        match setpoint_type:
+            case TimeslotSetpointType.ECO:
+                return self.room_cooling_setpoint_1
+            case TimeslotSetpointType.COMFORT:
+                return self.room_cooling_setpoint_2
+            case TimeslotSetpointType.AWAY:
+                return self.room_cooling_setpoint_3
+            case TimeslotSetpointType.MORNING:
+                return self.room_cooling_setpoint_4
+            case TimeslotSetpointType.EVENING:
+                return self.room_cooling_setpoint_5
+
+        _LOGGER.warning("Unknown setpoint type %s for climate zone %d", setpoint_type.name, self.id)
+        return -1
+
+    def _get_heating_scheduling_setpoint(self, setpoint_type: TimeslotSetpointType) -> float:
+        raise NotImplementedError
+
+    def _get_current_ch_scheduling_setpoint(self) -> float | None:
+        if self.temporary_setpoint_end_time is not None:
+            if (
+                self.temporary_setpoint_end_time is not None
+                and self.temporary_setpoint_end_time >= datetime.now(tz=self.time_zone)
+            ):
+                # A setpoint override is currently active.
+                return cast(float, self.temporary_setpoint)
+
+        current_timeslot: Timeslot | None = get_current_timeslot(
+            schedule=self.current_schedule, time_zone=self.time_zone
+        )
+
+        if current_timeslot is None:
+            _LOGGER.warning(
+                "Cannot determine current CH setpoint because current timeslot failed to resolve."
+            )
+            return -1
+
+        if is_cooling_schedule(self.current_schedule, self.time_zone):
+            return self._get_cooling_scheduling_setpoint(current_timeslot.setpoint_type)
+
+        return self._get_heating_scheduling_setpoint(current_timeslot.setpoint_type)
+
+    def _get_current_dhw_scheduling_setpoint(self) -> float | None:
         if self.temporary_setpoint_end_time is not None:
             if (
                 self.temporary_setpoint_end_time is not None
@@ -131,9 +212,9 @@ class ClimateZone:
         if current_timeslot is not None:
             match current_timeslot.setpoint_type:
                 case TimeslotSetpointType.ECO:
-                    return cast(float, self.dhw_reduced_setpoint)
+                    return self.dhw_reduced_setpoint
                 case TimeslotSetpointType.COMFORT:
-                    return cast(float, self.dhw_comfort_setpoint)
+                    return self.dhw_comfort_setpoint
 
         return -1
 
@@ -152,11 +233,7 @@ class ClimateZone:
         if self.is_central_heating():
             match self.mode:
                 case ClimateZoneMode.SCHEDULING:
-                    # TODO get setpoint from schedule
-                    _LOGGER.warning(
-                        "Current setpoint not supported for CH zones in SCHEDULING mode."
-                    )
-                    return -1
+                    return self._get_current_ch_scheduling_setpoint()
                 case ClimateZoneMode.MANUAL:
                     return self.room_setpoint
                 case ClimateZoneMode.ANTI_FROST:
@@ -164,7 +241,7 @@ class ClimateZone:
         if self.is_domestic_hot_water():
             match self.mode:
                 case ClimateZoneMode.SCHEDULING:
-                    return self._current_dhw_scheduling_setpoint()
+                    return self._get_current_dhw_scheduling_setpoint()
                 case ClimateZoneMode.MANUAL:
                     return self.dhw_comfort_setpoint
                 case ClimateZoneMode.ANTI_FROST:
@@ -267,6 +344,11 @@ class ClimateZone:
             return Limits.DHW_MIN_TEMP
 
         return max(Limits.CH_MIN_TEMP, Limits.DHW_MIN_TEMP)
+
+    def cooling_available(self) -> bool:
+        """Whether cooling is available for this type of climate zone."""
+
+        return is_cooling_available(self.function)
 
     def is_central_heating(self) -> bool:
         """Determine if this zone is a CH (central heating) zone."""

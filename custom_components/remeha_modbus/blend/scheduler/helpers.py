@@ -362,8 +362,8 @@ def get_updated_dhw_schedules(
         )
 
     updated_new_schedules: list[ZoneSchedule] = []
-    for key, old_zone in old.items():
-        new_zone: ClimateZone = new[key]
+    for old_zone_id, old_zone in old.items():
+        new_zone: ClimateZone = new[old_zone_id]
 
         # We only support DHW zone schedule synchronization at this time.
         if new_zone.is_domestic_hot_water():
@@ -371,8 +371,8 @@ def get_updated_dhw_schedules(
             if old_zone.selected_schedule is not None and new_zone.selected_schedule is not None:
                 updated_new_schedules += [
                     schedule
-                    for key, schedule in new_zone.current_schedule.items()
-                    if old_zone.current_schedule[key] != schedule and schedule is not None
+                    for weekday, schedule in new_zone.current_schedule.items()
+                    if old_zone.current_schedule.get(weekday) != schedule and schedule is not None
                 ]
             # or, the old zone didn't have a schedule yet and a new one was created.
             elif new_zone.selected_schedule is not None:

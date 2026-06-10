@@ -34,6 +34,7 @@ from custom_components.remeha_modbus.api.climate_zone import (
     ClimateZoneMode,
     ClimateZoneScheduleId,
     ClimateZoneType,
+    is_cooling_available,
     is_domestic_hot_water,
 )
 from custom_components.remeha_modbus.const import (
@@ -773,16 +774,20 @@ class RemehaApi:
             )
         )
 
-    async def async_read_zones(self) -> list[ClimateZone]:
+    async def async_read_zones(self, appliance_requires_cooling: bool = False) -> list[ClimateZone]:
         """Retrieve the available zones of the modbus device.
 
         This method returns the all zones having a supported `ClimateZoneFunction`.
         Whether a zone function is supported can be queried using `ClimateZoneFunction.is_supported()`
 
-        Returns
+        Args:
+            appliance_requires_cooling (bool): If the appliance requires cooling. This is true when
+            the appliance either is in forced cooling mode or the seasonal mode is `summer`.
+
+        Returns:
             `list[ClimateZone]`: A list of all discovered zones.
 
-        Raises
+        Raises:
             `DiscoveryTableCorruptedError`: If the modbus discovery table has been corrupted.
             `InvalidZoneSchedule`: If the climate zone is in scheduling mode but reading the schedule fails.
             `ModbusException`: If the list of zones cannot be obtained.
@@ -797,7 +802,8 @@ class RemehaApi:
         return [
             zone
             for zone in [
-                await self.async_read_zone(zone_id) for zone_id in range(1, number_of_zones + 1)
+                await self.async_read_zone(zone_id, appliance_requires_cooling)
+                for zone_id in range(1, number_of_zones + 1)
             ]
             if zone is not None
         ]
@@ -821,7 +827,9 @@ class RemehaApi:
             ),
         )
 
-    async def async_read_zone(self, id: int) -> ClimateZone | None:
+    async def async_read_zone(
+        self, id: int, appliance_requires_cooling: bool = False
+    ) -> ClimateZone | None:
         """Read a single climate zone from the modbus interface.
 
         This reads the registers as described in the table below. Only the base zone registers
@@ -835,6 +843,11 @@ class RemehaApi:
         |       642     | `parZoneFriendlyNameShort`        | Zone short name.                                      |   `STRING`    | `str`                     |
         |       646     | `instance`                        | Device instance owning the zone.                      |   `UINT8`     | `int`                     |
         |       649     | `parZoneMode`                     | Mode zone working.                                    |   `ENUM8`     | `ClimateZoneMode`         |
+        |       656     | `parZoneCoolingSetpoint1`         | Zone cooling setpoint in ECO mode.                    |   `UINT16`    | `float`                   |
+        |       657     | `parZoneCoolingSetpoint2`         | Zone cooling setpoint in COMFORT mode.                |   `UINT16`    | `float`                   |
+        |       658     | `parZoneCoolingSetpoint3`         | Zone cooling setpoint in AWAY mode.                   |   `UINT16`    | `float`                   |
+        |       659     | `parZoneCoolingSetpoint4`         | Zone cooling setpoint in MORNING mode.                |   `UINT16`    | `float`                   |
+        |       660     | `parZoneCoolingSetpoint5`         | Zone cooling setpoint in EVENING mode.                |   `UINT16`    | `float`                   |
         |       664     | `parZoneRoomManualSetpoint`       | Manually set wished room temperature of the zone.     |   `UINT16`    | `float`                   |
         |       665     | `parZoneDhwComfortSetpoint`       | Wished comfort domestic hot water temperature.        |   `UINT16`    | `float`                   |
         |       666     | `parZoneDhwReducedSetpoint`       | Wished reduced domestic hot water temperature.        |   `UINT16`    | `float`                   |
@@ -847,6 +860,8 @@ class RemehaApi:
 
         Args:
             id (int): The one-based zone id.
+            appliance_requires_cooling (bool): If the appliance requires cooling. This is true when
+                the appliance either is in forced cooling mode or the seasonal mode is `summer`.
 
         Returns:
             `ClimateZone`: The requested zone, or `None` if `zone.type == ClimateZoneType.NOT_PRESENT`.
@@ -959,12 +974,15 @@ class RemehaApi:
                 destination_variable=ZoneRegisters.END_TIME_MODE_CHANGE,
             ),
         )
-        selected_schedule = from_registers(
-            registers=await self._async_read_registers(
-                variable=ZoneRegisters.SELECTED_TIME_PROGRAM,
-                offset=zone_register_offset,
+        selected_schedule = cast(
+            int | None,
+            from_registers(
+                registers=await self._async_read_registers(
+                    variable=ZoneRegisters.SELECTED_TIME_PROGRAM,
+                    offset=zone_register_offset,
+                ),
+                destination_variable=ZoneRegisters.SELECTED_TIME_PROGRAM,
             ),
-            destination_variable=ZoneRegisters.SELECTED_TIME_PROGRAM,
         )
         room_temperature = cast(
             float | None,
@@ -974,6 +992,56 @@ class RemehaApi:
                     offset=zone_register_offset,
                 ),
                 destination_variable=ZoneRegisters.CURRENT_ROOM_TEMPERATURE,
+            ),
+        )
+        room_cooling_setpoint_1 = cast(
+            float | None,
+            from_registers(
+                registers=await self._async_read_registers(
+                    variable=ZoneRegisters.ROOM_COOLING_SETPOINT_1,
+                    offset=zone_register_offset,
+                ),
+                destination_variable=ZoneRegisters.ROOM_COOLING_SETPOINT_1,
+            ),
+        )
+        room_cooling_setpoint_2 = cast(
+            float | None,
+            from_registers(
+                registers=await self._async_read_registers(
+                    variable=ZoneRegisters.ROOM_COOLING_SETPOINT_2,
+                    offset=zone_register_offset,
+                ),
+                destination_variable=ZoneRegisters.ROOM_COOLING_SETPOINT_2,
+            ),
+        )
+        room_cooling_setpoint_3 = cast(
+            float | None,
+            from_registers(
+                registers=await self._async_read_registers(
+                    variable=ZoneRegisters.ROOM_COOLING_SETPOINT_3,
+                    offset=zone_register_offset,
+                ),
+                destination_variable=ZoneRegisters.ROOM_COOLING_SETPOINT_3,
+            ),
+        )
+        room_cooling_setpoint_4 = cast(
+            float | None,
+            from_registers(
+                registers=await self._async_read_registers(
+                    variable=ZoneRegisters.ROOM_COOLING_SETPOINT_4,
+                    offset=zone_register_offset,
+                ),
+                destination_variable=ZoneRegisters.ROOM_COOLING_SETPOINT_4,
+            ),
+        )
+        room_cooling_setpoint_5 = cast(
+            float | None,
+            from_registers(
+                registers=await self._async_read_registers(
+                    variable=ZoneRegisters.ROOM_COOLING_SETPOINT_5,
+                    offset=zone_register_offset,
+                ),
+                destination_variable=ZoneRegisters.ROOM_COOLING_SETPOINT_5,
             ),
         )
         heating_mode = from_registers(
@@ -998,22 +1066,33 @@ class RemehaApi:
             ),
         )
 
+        # Map schedule_1 to schedule_4 if required.
+        schedule_id = (
+            ClimateZoneScheduleId.SCHEDULE_4
+            if zone_mode is ClimateZoneMode.SCHEDULING
+            and appliance_requires_cooling
+            and is_cooling_available(ClimateZoneFunction(zone_function))
+            else ClimateZoneScheduleId(selected_schedule)
+            if selected_schedule is not None
+            else None
+        )
+
         # Read zone schedules.
         current_schedule: dict[Weekday, ZoneSchedule | None] = {}
         try:
-            current_schedule: dict[Weekday, ZoneSchedule | None] = (
+            current_schedule = (
                 await self._async_read_schedules(
                     zone=id,
                     zone_mode=zone_mode,
-                    schedule_id=ClimateZoneScheduleId(selected_schedule),
+                    schedule_id=schedule_id,
                 )
-                if zone_mode is ClimateZoneMode.SCHEDULING and selected_schedule is not None
+                if zone_mode is ClimateZoneMode.SCHEDULING and schedule_id is not None
                 else {}
             )
         except ValueError as e:
             raise InvalidZoneSchedule(
                 zone=id,
-                schedule_id=ClimateZoneScheduleId(selected_schedule),
+                schedule_id=cast(ClimateZoneScheduleId, schedule_id),
                 is_dhw=is_domestic_hot_water(
                     ClimateZoneType(zone_type), ClimateZoneFunction(zone_function)
                 ),
@@ -1027,9 +1106,7 @@ class RemehaApi:
             owning_device=owning_device,
             mode=zone_mode,
             temporary_setpoint=temporary_setpoint,
-            selected_schedule=(
-                None if selected_schedule is None else ClimateZoneScheduleId(selected_schedule)
-            ),
+            selected_schedule=schedule_id,
             heating_mode=None if heating_mode is None else ClimateZoneHeatingMode(heating_mode),
             room_setpoint=room_setpoint,
             dhw_comfort_setpoint=dhw_comfort_setpoint,
@@ -1041,13 +1118,20 @@ class RemehaApi:
                 else None
             ),
             room_temperature=room_temperature,
+            room_cooling_setpoint_1=room_cooling_setpoint_1,
+            room_cooling_setpoint_2=room_cooling_setpoint_2,
+            room_cooling_setpoint_3=room_cooling_setpoint_3,
+            room_cooling_setpoint_4=room_cooling_setpoint_4,
+            room_cooling_setpoint_5=room_cooling_setpoint_5,
             pump_running=bool(pump_running),
             dhw_tank_temperature=dhw_tank_temperature,
             time_zone=self._time_zone,
             current_schedule=current_schedule,
         )
 
-    async def async_read_zone_update(self, zone: ClimateZone) -> ClimateZone:
+    async def async_read_zone_update(
+        self, zone: ClimateZone, appliance_requires_cooling: bool = False
+    ) -> ClimateZone:
         """Retrieve updates for a single ClimateZone.
 
         In attempt to reduce the amount of calls over the network, this only reads updatable fields from modbus and
@@ -1058,6 +1142,11 @@ class RemehaApi:
         | Base address  | Variable name                     | Description                                           | Modbus type   | HA type                   |
         |---------------|-----------------------------------|-------------------------------------------------------|---------------|---------------------------|
         |       649     | `parZoneMode`                     | Mode zone working.                                    |   `ENUM8`     | `ClimateZoneMode`         |
+        |       656     | `parZoneCoolingSetpoint1`         | Zone cooling setpoint in ECO mode.                    |   `UINT16`    | `float`                   |
+        |       657     | `parZoneCoolingSetpoint2`         | Zone cooling setpoint in COMFORT mode.                |   `UINT16`    | `float`                   |
+        |       658     | `parZoneCoolingSetpoint3`         | Zone cooling setpoint in AWAY mode.                   |   `UINT16`    | `float`                   |
+        |       659     | `parZoneCoolingSetpoint4`         | Zone cooling setpoint in MORNING mode.                |   `UINT16`    | `float`                   |
+        |       660     | `parZoneCoolingSetpoint5`         | Zone cooling setpoint in EVENING mode.                |   `UINT16`    | `float`                   |
         |       664     | `parZoneRoomManualSetpoint`       | Manually set wished room temperature of the zone.     |   `UINT16`    | `float`                   |
         |       665     | `parZoneDhwComfortSetpoint`       | Wished comfort domestic hot water temperature.        |   `UINT16`    | `float`                   |
         |       666     | `parZoneDhwReducedSetpoint`       | Wished reduced domestic hot water temperature.        |   `UINT16`    | `float`                   |
@@ -1071,6 +1160,8 @@ class RemehaApi:
 
         Args:
             zone (ClimateZone): The zone to update.
+            appliance_requires_cooling (bool): If the appliance requires cooling. This is true when
+                the appliance either is in forced cooling mode or the seasonal mode is `summer`.
 
         Returns:
             `ClimateZone`: The updated zone.
@@ -1147,12 +1238,15 @@ class RemehaApi:
                 destination_variable=ZoneRegisters.END_TIME_MODE_CHANGE,
             ),
         )
-        selected_schedule = from_registers(
-            registers=await self._async_read_registers(
-                variable=ZoneRegisters.SELECTED_TIME_PROGRAM,
-                offset=zone_register_offset,
+        selected_schedule = cast(
+            int | None,
+            from_registers(
+                registers=await self._async_read_registers(
+                    variable=ZoneRegisters.SELECTED_TIME_PROGRAM,
+                    offset=zone_register_offset,
+                ),
+                destination_variable=ZoneRegisters.SELECTED_TIME_PROGRAM,
             ),
-            destination_variable=ZoneRegisters.SELECTED_TIME_PROGRAM,
         )
         room_temperature = cast(
             float | None,
@@ -1162,6 +1256,56 @@ class RemehaApi:
                     offset=zone_register_offset,
                 ),
                 destination_variable=ZoneRegisters.CURRENT_ROOM_TEMPERATURE,
+            ),
+        )
+        room_cooling_setpoint_1 = cast(
+            float | None,
+            from_registers(
+                registers=await self._async_read_registers(
+                    variable=ZoneRegisters.ROOM_COOLING_SETPOINT_1,
+                    offset=zone_register_offset,
+                ),
+                destination_variable=ZoneRegisters.ROOM_COOLING_SETPOINT_1,
+            ),
+        )
+        room_cooling_setpoint_2 = cast(
+            float | None,
+            from_registers(
+                registers=await self._async_read_registers(
+                    variable=ZoneRegisters.ROOM_COOLING_SETPOINT_2,
+                    offset=zone_register_offset,
+                ),
+                destination_variable=ZoneRegisters.ROOM_COOLING_SETPOINT_2,
+            ),
+        )
+        room_cooling_setpoint_3 = cast(
+            float | None,
+            from_registers(
+                registers=await self._async_read_registers(
+                    variable=ZoneRegisters.ROOM_COOLING_SETPOINT_3,
+                    offset=zone_register_offset,
+                ),
+                destination_variable=ZoneRegisters.ROOM_COOLING_SETPOINT_3,
+            ),
+        )
+        room_cooling_setpoint_4 = cast(
+            float | None,
+            from_registers(
+                registers=await self._async_read_registers(
+                    variable=ZoneRegisters.ROOM_COOLING_SETPOINT_4,
+                    offset=zone_register_offset,
+                ),
+                destination_variable=ZoneRegisters.ROOM_COOLING_SETPOINT_4,
+            ),
+        )
+        room_cooling_setpoint_5 = cast(
+            float | None,
+            from_registers(
+                registers=await self._async_read_registers(
+                    variable=ZoneRegisters.ROOM_COOLING_SETPOINT_5,
+                    offset=zone_register_offset,
+                ),
+                destination_variable=ZoneRegisters.ROOM_COOLING_SETPOINT_5,
             ),
         )
         heating_mode = from_registers(
@@ -1186,23 +1330,34 @@ class RemehaApi:
             ),
         )
 
+        # Map schedule_1 to schedule_4 if required.
+        schedule_id = (
+            ClimateZoneScheduleId.SCHEDULE_4
+            if zone_mode is ClimateZoneMode.SCHEDULING
+            and appliance_requires_cooling
+            and is_cooling_available(ClimateZoneFunction(zone.function))
+            else ClimateZoneScheduleId(selected_schedule)
+            if selected_schedule is not None
+            else None
+        )
+
         # Read zone schedules.
         current_schedule: dict[Weekday, ZoneSchedule | None] = {}
         try:
-            current_schedule: dict[Weekday, ZoneSchedule | None] = (
+            current_schedule = (
                 await self._async_read_schedules(
                     zone=zone.id,
                     zone_mode=zone_mode,
-                    schedule_id=ClimateZoneScheduleId(selected_schedule),
+                    schedule_id=schedule_id,
                 )
-                if zone_mode is ClimateZoneMode.SCHEDULING and selected_schedule is not None
+                if zone_mode is ClimateZoneMode.SCHEDULING and schedule_id is not None
                 else {}
             )
         except ValueError as e:
             raise InvalidZoneSchedule(
                 zone=zone.id,
-                schedule_id=ClimateZoneScheduleId(selected_schedule),
-                is_dhw=is_domestic_hot_water(zone.type, zone.function),
+                schedule_id=cast(ClimateZoneScheduleId, schedule_id),
+                is_dhw=zone.is_domestic_hot_water(),
             ) from e
 
         # Merge old and new zone.
@@ -1214,11 +1369,14 @@ class RemehaApi:
             owning_device=zone.owning_device,
             mode=zone_mode,
             temporary_setpoint=temporary_setpoint,
-            selected_schedule=(
-                None if selected_schedule is None else ClimateZoneScheduleId(selected_schedule)
-            ),
+            selected_schedule=schedule_id,
             heating_mode=(None if heating_mode is None else ClimateZoneHeatingMode(heating_mode)),
             room_setpoint=room_setpoint,
+            room_cooling_setpoint_1=room_cooling_setpoint_1,
+            room_cooling_setpoint_2=room_cooling_setpoint_2,
+            room_cooling_setpoint_3=room_cooling_setpoint_3,
+            room_cooling_setpoint_4=room_cooling_setpoint_4,
+            room_cooling_setpoint_5=room_cooling_setpoint_5,
             dhw_comfort_setpoint=dhw_comfort_setpoint,
             dhw_reduced_setpoint=dhw_reduced_setpoint,
             dhw_calorifier_hysteresis=dhw_calorifier_hysteresis,
@@ -1314,6 +1472,15 @@ class RemehaApi:
                 )
 
             temp = TimeOfDay.to_bytes(value)
+
+        # Map selected schedule 4 to schedule 1, since Remeha's modbus interface does not select schedule 4.
+        # In fact, trying to write schedule 4 as the selected schedule causes a modbus error 03 - illegal value.
+        if (
+            variable == ZoneRegisters.SELECTED_TIME_PROGRAM
+            and isinstance(temp, ClimateZoneScheduleId)
+            and temp is ClimateZoneScheduleId.SCHEDULE_4
+        ):
+            temp = ClimateZoneScheduleId.SCHEDULE_1
 
         if isinstance(temp, Enum):
             temp = temp.value

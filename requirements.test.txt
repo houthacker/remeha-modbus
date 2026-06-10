@@ -6,6 +6,7 @@ async-upnp-client
 av
 colorlog
 ffmpeg
+freezegun~=1.5.5
 go2rtc-client
 ha-ffmpeg
 hassil
