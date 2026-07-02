@@ -98,9 +98,9 @@
   "selector": {
     "schedule_id": {
       "options": {
-        "schedule_1": "Schema 1",
-        "schedule_2": "Schema 2",
-        "schedule_3": "Schema 3",
+        "schedule_1": "Programma 1",
+        "schedule_2": "Programma 2",
+        "schedule_3": "Programma 3",
         "schedule_4": "Koelschema"
       }
     },
@@ -129,9 +129,9 @@
               "comfort": "Comfort",
               "eco": "Eco",
               "manual": "Handmatig",
-              "schedule_1": "Schema 1",
-              "schedule_2": "Schema 2",
-              "schedule_3": "Schema 3",
+              "schedule_1": "Programma 1",
+              "schedule_2": "Programma 2",
+              "schedule_3": "Programma 3",
               "schedule_4": "Koelschema"
             }
           }
