@@ -318,8 +318,18 @@ class RemehaConfigFlow(ConfigFlow, domain=DOMAIN):
             data_schema=vol.Schema(
                 {
                     vol.Required(CONF_NAME): cv.string,
-                    vol.Required(CONF_TYPE): vol.In(
-                        [CONNECTION_TCP, CONNECTION_UDP, CONNECTION_RTU_OVER_TCP, CONNECTION_SERIAL]
+                    vol.Required(CONF_TYPE): selector(
+                        {
+                            "select": {
+                                "translation_key": "modbus_type",
+                                "options": [
+                                    CONNECTION_TCP,
+                                    CONNECTION_UDP,
+                                    CONNECTION_RTU_OVER_TCP,
+                                    CONNECTION_SERIAL,
+                                ],
+                            }
+                        }
                     ),
                     vol.Required(MODBUS_DEVICE_ADDRESS, default=100): cv.positive_int,
                     vol.Optional(CONFIG_AUTO_SCHEDULE, default=False): cv.boolean,
@@ -449,8 +459,18 @@ class RemehaConfigFlow(ConfigFlow, domain=DOMAIN):
             step_id="reconfigure",
             data_schema=vol.Schema(
                 {
-                    vol.Required(CONF_TYPE, default=reconf_entry.data[CONF_TYPE]): vol.In(
-                        [CONNECTION_TCP, CONNECTION_UDP, CONNECTION_RTU_OVER_TCP, CONNECTION_SERIAL]
+                    vol.Required(CONF_TYPE, default=reconf_entry.data[CONF_TYPE]): selector(
+                        {
+                            "select": {
+                                "translation_key": "modbus_type",
+                                "options": [
+                                    CONNECTION_TCP,
+                                    CONNECTION_UDP,
+                                    CONNECTION_RTU_OVER_TCP,
+                                    CONNECTION_SERIAL,
+                                ],
+                            }
+                        }
                     ),
                     vol.Required(
                         MODBUS_DEVICE_ADDRESS, default=reconf_entry.data[MODBUS_DEVICE_ADDRESS]
