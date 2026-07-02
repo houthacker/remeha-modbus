@@ -19,7 +19,19 @@
           "name": "De unieke naam van de modbus hub.",
           "type": "Het type modbus verbinding.",
           "slave": "Het GTW-08 modbus adres.",
-          "auto_schedule": "Configureer geautomatiseerde DHW planning."
+          "auto_schedule": "Configureer automatische DHW planning."
+        }
+      },
+      "reconfigure": {
+        "data": {
+          "slave": "Modbus adres",
+          "type": "Type verbinding",
+          "auto_schedule": "DHW planning"
+        },
+        "data_description": {
+          "slave": "Hetr GTW-08 modbus adres.",
+          "type": "Het type modbus verbinding.",
+          "auto_schedule": "Configureer automatische DHW planning."
         }
       },
       "auto_scheduling": {
@@ -113,6 +125,14 @@
         "fri": "vrijdag",
         "sat": "zaterdag",
         "sun": "zondag"
+      }
+    },
+    "modbus_type": {
+      "options": {
+        "tcp": "TCP",
+        "udp": "UDP",
+        "rtuovertcp": "RTU over TCP",
+        "serial": "Serial"
       }
     },
     "modbus_register": {},

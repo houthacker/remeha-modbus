@@ -50,6 +50,18 @@
           "auto_schedule": "Set up automatic DHW scheduling"
         }
       },
+      "reconfigure": {
+        "data": {
+          "slave": "Modbus address",
+          "type": "Connection type",
+          "auto_schedule": "DHW scheduling"
+        },
+        "data_description": {
+          "slave": "The GTW-08 modbus address",
+          "type": "The type of modbus connection.",
+          "auto_schedule": "Set up automatic DHW scheduling"
+        }
+      },
       "auto_scheduling": {
         "title": "Auto scheduling configuration",
         "description": "Select a weather entity and provide PV system configuration.",
@@ -114,6 +126,14 @@
         "fri": "Friday",
         "sat": "Saturday",
         "sun": "Sunday"
+      }
+    },
+    "modbus_type": {
+      "options": {
+        "tcp": "TCP",
+        "udp": "UDP",
+        "rtuovertcp": "RTU over TCP",
+        "serial": "Serial"
       }
     },
     "modbus_register": {},
