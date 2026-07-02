@@ -34,6 +34,63 @@ async def async_setup_entry(
             RemehaBinarySensorEntity(
                 coordinator=coordinator,
                 parent_device_id=parent_device_id,
+                name="unmixed_circuits_released",
+                device_class=None,
+                state_func=lambda: (
+                    coordinator.get_appliance().demand_status.unmixed_circuits_released
+                ),
+            ),
+            RemehaBinarySensorEntity(
+                coordinator=coordinator,
+                parent_device_id=parent_device_id,
+                name="mixed_circuits_released",
+                device_class=None,
+                state_func=lambda: (
+                    coordinator.get_appliance().demand_status.mixed_circuits_released
+                ),
+            ),
+            RemehaBinarySensorEntity(
+                coordinator=coordinator,
+                parent_device_id=parent_device_id,
+                name="valves_open_or_pump_running_safety",
+                device_class=None,
+                state_func=lambda: (
+                    coordinator.get_appliance().demand_status.valves_open_or_pump_running_safety
+                ),
+            ),
+            RemehaBinarySensorEntity(
+                coordinator=coordinator,
+                parent_device_id=parent_device_id,
+                name="manual_heat_demand_active",
+                device_class=None,
+                state_func=lambda: (
+                    coordinator.get_appliance().demand_status.manual_heat_demand_active
+                ),
+            ),
+            RemehaBinarySensorEntity(
+                coordinator=coordinator,
+                parent_device_id=parent_device_id,
+                name="cooling_allowed",
+                device_class=None,
+                state_func=lambda: coordinator.get_appliance().demand_status.cooling_allowed,
+            ),
+            RemehaBinarySensorEntity(
+                coordinator=coordinator,
+                parent_device_id=parent_device_id,
+                name="dhw_circuits_released",
+                device_class=None,
+                state_func=lambda: coordinator.get_appliance().demand_status.dhw_circuits_released,
+            ),
+            RemehaBinarySensorEntity(
+                coordinator=coordinator,
+                parent_device_id=parent_device_id,
+                name="burner_unit_active",
+                device_class=None,
+                state_func=lambda: coordinator.get_appliance().demand_status.burner_unit_active,
+            ),
+            RemehaBinarySensorEntity(
+                coordinator=coordinator,
+                parent_device_id=parent_device_id,
                 name="flame_on",
                 device_class=None,
                 state_func=lambda: coordinator.get_appliance().status.flame_on,

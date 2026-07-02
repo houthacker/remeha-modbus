@@ -66,6 +66,47 @@ class ApplianceErrorPriority(Enum):
     """This error type has low priority. No action required."""
 
 
+class ApplianceDemandStatus:
+    """The appliance demand status shows boolean fields from register 275."""
+
+    unmixed_circuits_released: bool
+    """Whether unmixed circuits are released."""
+
+    mixed_circuits_released: bool
+    """Whether mixed circuits are released."""
+
+    valves_open_or_pump_running_safety: bool
+    """Whether all valves are open / pump is running for safety."""
+
+    manual_heat_demand_active: bool
+    """Whether manual heat demand is active."""
+
+    cooling_allowed: bool
+    """Whether cooling is allowed."""
+
+    dhw_circuits_released: bool
+    """Whether DHW circuits are released."""
+
+    burner_unit_active: bool
+    """Whether the burner/generator unit is active."""
+
+    def __init__(self, value: int | None):
+        """Create a new ApplianceDemandStatus instance using register 275."""
+
+        def _get_bit(index: int, val: int) -> bool:
+            return (val >> index) & 1 == 1
+
+        status: int = 0 if value is None else value
+
+        self.unmixed_circuits_released = _get_bit(0, status)
+        self.mixed_circuits_released = _get_bit(1, status)
+        self.valves_open_or_pump_running_safety = _get_bit(2, status)
+        self.manual_heat_demand_active = _get_bit(3, status)
+        self.cooling_allowed = _get_bit(4, status)
+        self.dhw_circuits_released = _get_bit(5, status)
+        self.burner_unit_active = _get_bit(6, status)
+
+
 class ApplianceStatus:
     """The appliance status shows various boolean status fields about the applliance."""
 
@@ -177,6 +218,9 @@ class Appliance:
 
     error_priority: ApplianceErrorPriority
     """Shows the current appliance error priority."""
+
+    demand_status: ApplianceDemandStatus
+    """Shows appliance demand / release fields from register 275."""
 
     cooling_forced: bool
     """Whether the appliance is in forced cooling mode."""
