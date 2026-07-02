@@ -22,6 +22,7 @@ from pymodbus.pdu import ModbusPDU
 
 from custom_components.remeha_modbus.api.appliance import (
     Appliance,
+    ApplianceDemandStatus,
     ApplianceErrorPriority,
     ApplianceStatus,
     CoolingType,
@@ -809,6 +810,16 @@ class RemehaApi:
             )
         )
 
+        raw_demand_status = cast(
+            int | None,
+            from_registers(
+                registers=await self._async_read_registers(
+                    variable=MetaRegisters.APPLIANCE_DEMAND_STATUS
+                ),
+                destination_variable=MetaRegisters.APPLIANCE_DEMAND_STATUS,
+            ),
+        )
+
         return Appliance(
             silent_mode=SilentMode(silent_mode),
             silent_mode_start_time=SteppedTimeOfDay.from_steps(silent_mode_start_time_steps),
@@ -818,6 +829,7 @@ class RemehaApi:
             cooling_forced=cooling_forced,
             current_error=current_error,
             error_priority=error_priority,
+            demand_status=ApplianceDemandStatus(raw_demand_status),
             status=appliance_status,
             season_mode=season_mode,
             summer_winter=summer_winter,
