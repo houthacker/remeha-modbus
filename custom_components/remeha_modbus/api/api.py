@@ -34,7 +34,6 @@ from custom_components.remeha_modbus.api.climate_zone import (
     ClimateZoneMode,
     ClimateZoneScheduleId,
     ClimateZoneType,
-    is_cooling_available,
     is_domestic_hot_water,
 )
 from custom_components.remeha_modbus.const import (
@@ -464,18 +463,23 @@ class RemehaApi:
             if response.isError():
                 raise ModbusException("Modbus device returned an error while writing registers.")
 
-    def _map_schedule_id(
+    def _map_selected_schedule(
         self,
         zone_mode: ClimateZoneMode,
         zone_function: ClimateZoneFunction,
         appliance_requires_cooling: bool,
         selected_schedule: int | None,
     ) -> ClimateZoneScheduleId | None:
-        """Map `selected_schedule` to the correct `ClimateZoneScheduleId`."""
+        """Map `selected_schedule` to the correct `ClimateZoneScheduleId`.
+
+        Remeha uses `SCHEDULE_4` for cooling schedules but writing that to modbus
+        causes an exception. Instead, Remeha uses `SCHEDULE_1` in this case and
+        the cooling schedule usage must be derived from the appliance/zone state.
+        """
         return (
             ClimateZoneScheduleId.SCHEDULE_4
             if zone_mode is ClimateZoneMode.SCHEDULING
-            and is_cooling_available(ClimateZoneFunction(zone_function))
+            and zone_function.has_cooling_capability()
             and appliance_requires_cooling
             else ClimateZoneScheduleId(selected_schedule)
             if selected_schedule is not None
@@ -789,15 +793,14 @@ class RemehaApi:
             )
         )
 
-    async def async_read_zones(self, appliance_requires_cooling: bool = False) -> list[ClimateZone]:
+    async def async_read_zones(self, appliance: Appliance) -> list[ClimateZone]:
         """Retrieve the available zones of the modbus device.
 
         This method returns the all zones having a supported `ClimateZoneFunction`.
         Whether a zone function is supported can be queried using `ClimateZoneFunction.is_supported()`
 
         Args:
-            appliance_requires_cooling (bool): If the appliance requires cooling. This is true when
-            the appliance either is in forced cooling mode or the seasonal mode is `summer`.
+            appliance (Appliance): The appliance to which the zones belong.
 
         Returns:
             `list[ClimateZone]`: A list of all discovered zones.
@@ -817,7 +820,7 @@ class RemehaApi:
         return [
             zone
             for zone in [
-                await self.async_read_zone(zone_id, appliance_requires_cooling)
+                await self.async_read_zone(zone_id, appliance)
                 for zone_id in range(1, number_of_zones + 1)
             ]
             if zone is not None
@@ -842,9 +845,7 @@ class RemehaApi:
             ),
         )
 
-    async def async_read_zone(
-        self, id: int, appliance_requires_cooling: bool = False
-    ) -> ClimateZone | None:
+    async def async_read_zone(self, id: int, appliance: Appliance) -> ClimateZone | None:
         """Read a single climate zone from the modbus interface.
 
         This reads the registers as described in the table below. Only the base zone registers
@@ -875,8 +876,7 @@ class RemehaApi:
 
         Args:
             id (int): The one-based zone id.
-            appliance_requires_cooling (bool): If the appliance requires cooling. This is true when
-                the appliance either is in forced cooling mode or the seasonal mode is `summer`.
+            appliance (Appliance): The appliance to which the zone belongs.
 
         Returns:
             `ClimateZone`: The requested zone, or `None` if `zone.type == ClimateZoneType.NOT_PRESENT`.
@@ -1084,7 +1084,8 @@ class RemehaApi:
         )
 
         # Map schedule_1 to schedule_4 if required.
-        schedule_id = self._map_schedule_id(
+        appliance_requires_cooling = appliance.is_cooling_required()
+        schedule_id = self._map_selected_schedule(
             zone_mode, zone_function, appliance_requires_cooling, selected_schedule
         )
 
@@ -1136,11 +1137,10 @@ class RemehaApi:
             dhw_tank_temperature=dhw_tank_temperature,
             time_zone=self._time_zone,
             current_schedule=current_schedule,
+            appliance_requires_cooling=appliance_requires_cooling,
         )
 
-    async def async_read_zone_update(
-        self, zone: ClimateZone, appliance_requires_cooling: bool = False
-    ) -> ClimateZone:
+    async def async_read_zone_update(self, zone: ClimateZone, appliance: Appliance) -> ClimateZone:
         """Retrieve updates for a single ClimateZone.
 
         In attempt to reduce the amount of calls over the network, this only reads updatable fields from modbus and
@@ -1169,8 +1169,7 @@ class RemehaApi:
 
         Args:
             zone (ClimateZone): The zone to update.
-            appliance_requires_cooling (bool): If the appliance requires cooling. This is true when
-                the appliance either is in forced cooling mode or the seasonal mode is `summer`.
+            appliance (Appliance): The appliance to which this zone belongs.
 
         Returns:
             `ClimateZone`: The updated zone.
@@ -1340,7 +1339,8 @@ class RemehaApi:
         )
 
         # Map schedule_1 to schedule_4 if required.
-        schedule_id = self._map_schedule_id(
+        appliance_requires_cooling = appliance.is_cooling_required()
+        schedule_id = self._map_selected_schedule(
             zone_mode, zone.function, appliance_requires_cooling, selected_schedule
         )
 
@@ -1393,6 +1393,7 @@ class RemehaApi:
             dhw_tank_temperature=dhw_tank_temperature,
             time_zone=self._time_zone,
             current_schedule=current_schedule,
+            appliance_requires_cooling=appliance_requires_cooling,
         )
 
     async def async_read_zone_schedule(

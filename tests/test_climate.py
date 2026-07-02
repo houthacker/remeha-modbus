@@ -167,9 +167,6 @@ async def test_ch_climate(hass: HomeAssistant, mock_modbus_client, mock_config_e
         assert circa1.attributes["min_temp"] == 6
         assert circa1.attributes["preset_mode"] == ClimateZoneMode.MANUAL.name.lower()
         assert circa1.attributes["preset_modes"] == [
-            REMEHA_PRESET_SCHEDULE_1,
-            REMEHA_PRESET_SCHEDULE_2,
-            REMEHA_PRESET_SCHEDULE_3,
             REMEHA_PRESET_SCHEDULE_4,
             ClimateZoneMode.MANUAL.name.lower(),
             ClimateZoneMode.ANTI_FROST.name.lower(),
@@ -234,7 +231,7 @@ async def test_ch_climate(hass: HomeAssistant, mock_modbus_client, mock_config_e
         circa1 = hass.states.get(entity_id="climate.remeha_modbus_test_hub_circa1")
         assert circa1 is not None
         assert circa1.state == "auto"
-        assert circa1.attributes["preset_mode"] == REMEHA_PRESET_SCHEDULE_1
+        assert circa1.attributes["preset_mode"] == REMEHA_PRESET_SCHEDULE_4
 
         # Setting HVAC mode influences preset mode
         await hass.services.async_call(
@@ -258,13 +255,13 @@ async def test_ch_climate(hass: HomeAssistant, mock_modbus_client, mock_config_e
             service="set_preset_mode",
             service_data={
                 "entity_id": circa1.entity_id,
-                "preset_mode": REMEHA_PRESET_SCHEDULE_1,
+                "preset_mode": REMEHA_PRESET_SCHEDULE_4,
             },
             blocking=True,
         )
         circa1 = hass.states.get(entity_id="climate.remeha_modbus_test_hub_circa1")
         assert circa1 is not None
-        assert circa1.attributes["preset_mode"] == REMEHA_PRESET_SCHEDULE_1
+        assert circa1.attributes["preset_mode"] == REMEHA_PRESET_SCHEDULE_4
 
 
 @pytest.mark.parametrize("mock_modbus_client", ["modbus_store.json"], indirect=True)
@@ -293,7 +290,7 @@ async def test_ch_temporary_setpoint_override(
             service="set_preset_mode",
             service_data={
                 "entity_id": circa1.entity_id,
-                "preset_mode": REMEHA_PRESET_SCHEDULE_1,
+                "preset_mode": REMEHA_PRESET_SCHEDULE_4,
             },
             blocking=True,
         )
@@ -301,7 +298,7 @@ async def test_ch_temporary_setpoint_override(
         # When in scheduling mode, reading the current setpoint is not yet supported.
         circa1 = hass.states.get(entity_id="climate.remeha_modbus_test_hub_circa1")
         assert circa1 is not None
-        assert circa1.attributes["preset_mode"] == REMEHA_PRESET_SCHEDULE_1
+        assert circa1.attributes["preset_mode"] == REMEHA_PRESET_SCHEDULE_4
         assert circa1.attributes["temperature"] == -1
 
 
@@ -348,7 +345,7 @@ async def test_dhw_temporary_setpoint_override(
         assert dhw.attributes["temperature"] == new_setpoint
 
         # And temporary override end time must be set.
-        zone = await api.async_read_zone(id=2)
+        zone = await api.async_read_zone(id=2, appliance=await api.async_read_appliance())
         assert zone is not None
         assert zone.temporary_setpoint_end_time is not None
         assert zone.is_domestic_hot_water()

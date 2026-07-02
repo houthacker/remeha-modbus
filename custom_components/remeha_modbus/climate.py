@@ -27,14 +27,17 @@ from homeassistant.util import dt
 from custom_components.remeha_modbus.api import DeviceInstance, RemehaApi
 from custom_components.remeha_modbus.api.climate_zone import ClimateZone
 from custom_components.remeha_modbus.const import (
-    CLIMATE_DEFAULT_PRESETS,
     CLIMATE_DHW_EXTRA_PRESETS,
+    CLIMATE_SCHEDULING_PRESETS,
     DOMAIN,
     HA_CLIMATE_PRESET_TO_REMEHA_ZONE_MODE,
     HA_PRESET_ANTI_FROST,
     HA_PRESET_MANUAL,
     HA_SCHEDULE_TO_REMEHA_SCHEDULE,
     REMEHA_PRESET_SCHEDULE_1,
+    REMEHA_PRESET_SCHEDULE_2,
+    REMEHA_PRESET_SCHEDULE_3,
+    REMEHA_PRESET_SCHEDULE_4,
     TEMPERATURE_STEP,
     ClimateZoneFunction,
     ClimateZoneHeatingMode,
@@ -286,7 +289,7 @@ class RemehaDhwEntity(RemehaClimateEntity):
         zone: ClimateZone = self._zone
         match zone.mode:
             case ClimateZoneMode.SCHEDULING:
-                return self.preset_modes[cast(ClimateZoneScheduleId, zone.selected_schedule).value]
+                return REMEHA_PRESET_SCHEDULE_1
             case ClimateZoneMode.MANUAL | ClimateZoneMode.ANTI_FROST:
                 return CLIMATE_DHW_EXTRA_PRESETS[zone.mode.value - 1]
             case _:
@@ -406,7 +409,7 @@ class RemehaDhwEntity(RemehaClimateEntity):
                 value=target_temperature,
                 offset=zone_offset,
             )
-        elif self.preset_mode in CLIMATE_DEFAULT_PRESETS:
+        elif self.preset_mode in CLIMATE_SCHEDULING_PRESETS:
             # We're in scheduling mode, so temporarily override the setpoint.
             zone.temporary_setpoint_end_time = await self._temporary_setpoint_override(
                 target_temperature=target_temperature
@@ -487,15 +490,24 @@ class RemehaChEntity(RemehaClimateEntity):
 
         zone: ClimateZone = self._zone
         if zone.mode == ClimateZoneMode.SCHEDULING:
-            return self.preset_modes[cast(ClimateZoneScheduleId, zone.selected_schedule).value]
+            return CLIMATE_SCHEDULING_PRESETS[
+                cast(ClimateZoneScheduleId, zone.selected_schedule).value
+            ]
 
         return zone.mode.name.lower()
 
     @property
     def preset_modes(self) -> list[str]:
         """Return the presets available for Remeha DHW climates."""
+
+        scheduling_presets = (
+            [REMEHA_PRESET_SCHEDULE_4]
+            if self._zone.appliance_requires_cooling
+            else [REMEHA_PRESET_SCHEDULE_1, REMEHA_PRESET_SCHEDULE_2, REMEHA_PRESET_SCHEDULE_3]
+        )
+
         return [
-            *CLIMATE_DEFAULT_PRESETS,
+            *scheduling_presets,
             ClimateZoneMode.MANUAL.name.lower(),
             ClimateZoneMode.ANTI_FROST.name.lower(),
         ]
@@ -510,6 +522,17 @@ class RemehaChEntity(RemehaClimateEntity):
         zone: ClimateZone = self._zone
         zone_offset: int = self.api.get_zone_register_offset(zone)
         if hvac_mode == HVACMode.AUTO:
+            if (
+                zone.appliance_requires_cooling
+                and zone.selected_schedule != ClimateZoneScheduleId.SCHEDULE_4
+            ):
+                await self.api.async_write_variable(
+                    variable=ZoneRegisters.SELECTED_TIME_PROGRAM,
+                    value=ClimateZoneScheduleId.SCHEDULE_1,
+                    offset=zone_offset,
+                )
+                zone.selected_schedule = ClimateZoneScheduleId.SCHEDULE_4
+
             await self.api.async_write_variable(
                 variable=ZoneRegisters.MODE,
                 value=ClimateZoneMode.SCHEDULING,
@@ -561,7 +584,7 @@ class RemehaChEntity(RemehaClimateEntity):
                 variable=ZoneRegisters.MODE, value=zone_mode, offset=zone_offset
             )
             zone.mode = zone_mode
-        elif preset_mode in CLIMATE_DEFAULT_PRESETS:
+        elif preset_mode in CLIMATE_SCHEDULING_PRESETS:
             # Scheduling: set active schedule first, then set mode to scheduling.
             # This prevents the user ending up with an invalid zone state if the latter fails.
             schedule_id: ClimateZoneScheduleId = HA_SCHEDULE_TO_REMEHA_SCHEDULE[preset_mode]
@@ -577,7 +600,7 @@ class RemehaChEntity(RemehaClimateEntity):
                 offset=zone_offset,
             )
             zone.mode = ClimateZoneMode.SCHEDULING
-            zone.selected_schedule = ClimateZoneScheduleId(schedule_id)
+            zone.selected_schedule = schedule_id
         else:
             # Unknown preset mode
             raise InvalidClimateContext(

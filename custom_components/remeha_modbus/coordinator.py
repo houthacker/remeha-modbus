@@ -173,10 +173,10 @@ class RemehaUpdateCoordinator(DataUpdateCoordinator):
             appliance: Appliance = await self._api.async_read_appliance()
             sensors = await self._api.async_read_sensor_values(list(REMEHA_SENSORS.keys()))
             if before_first_update:
-                zones = await self._api.async_read_zones(appliance.is_cooling_required())
+                zones = await self._api.async_read_zones(appliance)
             else:
                 zones = [
-                    await self._api.async_read_zone_update(zone, appliance.is_cooling_required())
+                    await self._api.async_read_zone_update(zone, appliance)
                     for zone in list(self.data["climates"].values())
                 ]
 

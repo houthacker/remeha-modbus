@@ -187,7 +187,7 @@ async def test_generate_dhw_time_schedule(json_fixture, mock_modbus_client):
         new=lambda *args, **kwargs: api,
     ):
         appliance = await api.async_read_appliance()
-        zone = await api.async_read_zone(id=2)
+        zone = await api.async_read_zone(id=2, appliance=appliance)
         assert zone is not None
 
         schedule: ZoneSchedule = ZoneSchedule.generate(
@@ -260,7 +260,7 @@ async def test_generate_dhw_time_schedule_without_solar_yield(json_fixture, mock
         new=lambda *args, **kwargs: api,
     ):
         appliance = await api.async_read_appliance()
-        zone = await api.async_read_zone(id=2)
+        zone = await api.async_read_zone(id=2, appliance=appliance)
         assert zone is not None
 
         schedule: ZoneSchedule = ZoneSchedule.generate(

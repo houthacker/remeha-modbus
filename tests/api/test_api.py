@@ -134,7 +134,9 @@ async def test_read_zone(mock_modbus_client):
     """Read a single zone."""
 
     api = get_api(mock_modbus_client=mock_modbus_client)
-    zone: ClimateZone | None = await api.async_read_zone(id=1)
+    zone: ClimateZone | None = await api.async_read_zone(
+        id=1, appliance=await api.async_read_appliance()
+    )
 
     assert zone is not None
     assert zone.current_setpoint == 20.0
@@ -164,7 +166,7 @@ async def test_read_not_present_zone(mock_modbus_client):
     """Read a zone that is of ZoneType.NOT_PRESENT."""
     api = get_api(mock_modbus_client=mock_modbus_client)
 
-    assert await api.async_read_zone(id=3) is None
+    assert await api.async_read_zone(id=3, appliance=await api.async_read_appliance()) is None
 
 
 @pytest.mark.parametrize("mock_modbus_client", ["modbus_store.json"], indirect=True)
@@ -172,9 +174,10 @@ async def test_read_zone_update(mock_modbus_client):
     """Read a zone update from the modbus device."""
 
     api = get_api(mock_modbus_client=mock_modbus_client)
+    appliance = await api.async_read_appliance()
 
     # Read a single zone
-    zone: ClimateZone | None = await api.async_read_zone(1)
+    zone: ClimateZone | None = await api.async_read_zone(1, appliance)
     assert zone is not None
     assert zone.is_central_heating()
     assert zone.mode == ClimateZoneMode.MANUAL
@@ -189,7 +192,7 @@ async def test_read_zone_update(mock_modbus_client):
     )
 
     # Retrieve the updated value
-    updated_zone: ClimateZone = await api.async_read_zone_update(zone)
+    updated_zone: ClimateZone = await api.async_read_zone_update(zone, appliance)
 
     # Zone identity must be equal to the original zone
     assert updated_zone == zone
@@ -211,7 +214,7 @@ async def test_read_zones(mock_modbus_client):
     """Read all zones through the modbus interface."""
 
     api = get_api(mock_modbus_client=mock_modbus_client)
-    zones: list[ClimateZone] = await api.async_read_zones()
+    zones: list[ClimateZone] = await api.async_read_zones(await api.async_read_appliance())
 
     assert len(zones) == 2
 
@@ -230,7 +233,7 @@ async def test_read_zones_fallback(mock_modbus_client):
 
         # Validate zones
         with pytest.raises(expected_exception=DiscoveryTableCorruptedError):
-            await api.async_read_zones()
+            await api.async_read_zones(await api.async_read_appliance())
 
 
 @pytest.mark.parametrize("mock_modbus_client", ["modbus_store.json"], indirect=True)
@@ -238,10 +241,11 @@ async def test_write_variable(mock_modbus_client):
     """Test that the API can write a single register."""
 
     api = get_api(mock_modbus_client=mock_modbus_client)
+    appliance = await api.async_read_appliance()
     await api.async_write_variable(ZoneRegisters.ROOM_MANUAL_SETPOINT, 20.5)
 
     # Retrieve a single zone
-    zone: ClimateZone | None = await api.async_read_zone(1)
+    zone: ClimateZone | None = await api.async_read_zone(1, appliance)
     assert zone is not None
 
     # None
@@ -251,7 +255,7 @@ async def test_write_variable(mock_modbus_client):
         offset=api.get_zone_register_offset(zone),
     )
 
-    update = await api.async_read_zone_update(zone=zone)
+    update = await api.async_read_zone_update(zone=zone, appliance=appliance)
     assert update.heating_mode is None
 
     # Enum
@@ -261,7 +265,7 @@ async def test_write_variable(mock_modbus_client):
         offset=api.get_zone_register_offset(zone),
     )
 
-    update = await api.async_read_zone_update(zone=zone)
+    update = await api.async_read_zone_update(zone=zone, appliance=appliance)
     assert update.heating_mode is ClimateZoneHeatingMode.HEATING
 
     # Try to write a datetime to a variable type which cannot handle it.

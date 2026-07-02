@@ -422,6 +422,13 @@ class ClimateZoneFunction(Enum):
             ClimateZoneFunction.DHW_PRIMARY,
         ]
 
+    def has_cooling_capability(self) -> bool:
+        """Return whether this `ClimateZoneFunction` supports cooling."""
+        return self in [
+            ClimateZoneFunction.MIXING_CIRCUIT,
+            ClimateZoneFunction.FAN_CONVECTOR,
+        ]
+
 
 class ClimateZoneMode(Enum):
     """Enumerates the modes a zone can be in."""
@@ -570,7 +577,7 @@ REMEHA_PRESET_SCHEDULE_4: Final[str] = "schedule_4"
 
 HA_PRESET_MANUAL: Final[str] = "manual"
 HA_PRESET_ANTI_FROST: Final[str] = "anti_frost"
-CLIMATE_DEFAULT_PRESETS: Final[list[str]] = [
+CLIMATE_SCHEDULING_PRESETS: Final[list[str]] = [
     REMEHA_PRESET_SCHEDULE_1,
     REMEHA_PRESET_SCHEDULE_2,
     REMEHA_PRESET_SCHEDULE_3,
