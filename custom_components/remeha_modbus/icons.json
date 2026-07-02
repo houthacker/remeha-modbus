@@ -10,7 +10,8 @@
               "schedule_3": "mdi:sun-thermometer-outline",
               "schedule_4": "mdi:snowflake-thermometer",
               "manual": "mdi:gesture-tap",
-              "anti_frost": "mdi:snowflake-melt"
+              "anti_frost": "mdi:snowflake-melt",
+              "none": "mdi:thermometer-off"
             }
           }
         }
