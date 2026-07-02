@@ -56,19 +56,6 @@ def is_central_heating(type: ClimateZoneType, function: ClimateZoneFunction) -> 
     ] or (type == ClimateZoneType.OTHER and function == ClimateZoneFunction.MIXING_CIRCUIT)
 
 
-def is_cooling_available(zone_function: ClimateZoneFunction) -> bool:
-    """Return whether the given zone function allows for cooling.
-
-    This method is meant to be used by the API, in situations where no `ClimateZone`
-    is available (yet).
-    """
-
-    return zone_function in [
-        ClimateZoneFunction.MIXING_CIRCUIT,
-        ClimateZoneFunction.FAN_CONVECTOR,
-    ]
-
-
 @dataclass(eq=False)
 class ClimateZone:
     """Defines a climate zone following the GTW-08 parameter list.
@@ -153,6 +140,9 @@ class ClimateZone:
 
     time_zone: tzinfo | None
     """The time zone of the related appliance"""
+
+    appliance_requires_cooling: bool = False
+    """Whether the related appliance requires cooling"""
 
     def _get_cooling_scheduling_setpoint(self, setpoint_type: TimeslotSetpointType) -> float | None:
         match setpoint_type:
@@ -345,10 +335,10 @@ class ClimateZone:
 
         return max(Limits.CH_MIN_TEMP, Limits.DHW_MIN_TEMP)
 
-    def cooling_available(self) -> bool:
-        """Whether cooling is available for this type of climate zone."""
+    def has_cooling_capability(self) -> bool:
+        """Whether this type of climate zone is capable of cooling."""
 
-        return is_cooling_available(self.function)
+        return self.function.has_cooling_capability()
 
     def is_central_heating(self) -> bool:
         """Determine if this zone is a CH (central heating) zone."""

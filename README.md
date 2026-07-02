@@ -99,9 +99,9 @@ This integration is known to be working with the tested devices, but since the m
 
 The following proxies are known to be working with this integration. Other gateways or proxies probably work as well, but haven't been tested.
 
-| Device type                              | URL                                                                     |
-| ---------------------------------------- | ----------------------------------------------------------------------- |
-| Waveshare RS232/485 to WiFi and Ethernet | https://www.waveshare.com/product/rs232-485-to-wifi-eth-b.htm?sku=25222 |
+| Device type                              | URL                                                                     | Notes |
+| ---------------------------------------- | ----------------------------------------------------------------------- | - |
+| Waveshare RS232/485 to WiFi and Ethernet | https://www.waveshare.com/product/rs232-485-to-wifi-eth-b.htm?sku=25222 | When setting a static ip, the device is only reachable in the same subnet since no default gateway can be set. |
 
 ## Entities
 

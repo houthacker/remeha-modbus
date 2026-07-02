@@ -193,7 +193,9 @@ async def test_get_updated_dhw_schedules(mock_modbus_client):
 
     api = get_api(mock_modbus_client=mock_modbus_client)
     climates = [
-        climate for climate in await api.async_read_zones() if climate.is_domestic_hot_water()
+        climate
+        for climate in await api.async_read_zones(await api.async_read_appliance())
+        if climate.is_domestic_hot_water()
     ]
 
     # Same climates have no updates

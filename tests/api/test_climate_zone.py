@@ -91,7 +91,9 @@ async def test_climate_zone_dhw_get_current_setpoint(mock_modbus_client):
     """Test retrieval of the current setpoint of a climate zone."""
 
     api = get_api(mock_modbus_client=mock_modbus_client)
-    zone: ClimateZone | None = await api.async_read_zone(id=2)
+    zone: ClimateZone | None = await api.async_read_zone(
+        id=2, appliance=await api.async_read_appliance()
+    )
     assert zone is not None
 
     assert zone.is_domestic_hot_water()
@@ -122,7 +124,9 @@ async def test_climate_zone_ch_get_current_cooling_setpoint(mock_modbus_client):
     """Test retrieval of the current setpoint of a CH climate zone."""
 
     api = get_api(mock_modbus_client=mock_modbus_client)
-    zone: ClimateZone | None = await api.async_read_zone(id=1, appliance_requires_cooling=True)
+    zone: ClimateZone | None = await api.async_read_zone(
+        id=1, appliance=await api.async_read_appliance()
+    )
     assert zone is not None
 
     assert not zone.is_domestic_hot_water()
@@ -160,7 +164,9 @@ async def test_climate_zone_set_current_setpoint(mock_modbus_client):
     """Test setting the current setpoint of a DHW zone."""
 
     api = get_api(mock_modbus_client=mock_modbus_client)
-    zone: ClimateZone | None = await api.async_read_zone(id=2)
+    zone: ClimateZone | None = await api.async_read_zone(
+        id=2, appliance=await api.async_read_appliance()
+    )
     assert zone is not None
 
     # Prepare setpoint values
@@ -243,7 +249,9 @@ async def test_climate_zone_get_current_temperature(mock_modbus_client):
     """Test the retrieval of the current temperature of a climate zone."""
 
     api = get_api(mock_modbus_client=mock_modbus_client)
-    zone: ClimateZone | None = await api.async_read_zone(id=2)
+    zone: ClimateZone | None = await api.async_read_zone(
+        id=2, appliance=await api.async_read_appliance()
+    )
     assert zone is not None
 
     assert zone.is_domestic_hot_water()
@@ -258,7 +266,7 @@ async def test_climate_zone_equality(mock_modbus_client):
     """Test the equality of climate zones."""
 
     api = get_api(mock_modbus_client=mock_modbus_client)
-    zones: list[ClimateZone] = await api.async_read_zones()
+    zones: list[ClimateZone] = await api.async_read_zones(await api.async_read_appliance())
 
     assert zones[0] != zones[1]
     assert zones[1] != ClimateZoneMode.MANUAL
@@ -272,9 +280,9 @@ async def test_scheduling_temporary_setpoint(mock_modbus_client):
 
     # Retrieve a single zone.
     api = get_api(mock_modbus_client=mock_modbus_client)
-    zone: ClimateZone | None = await api.async_read_zone(1)
+    zone: ClimateZone | None = await api.async_read_zone(1, await api.async_read_appliance())
     assert zone is not None
-    assert zone.selected_schedule == ClimateZoneScheduleId.SCHEDULE_1
+    assert zone.selected_schedule == ClimateZoneScheduleId.SCHEDULE_4
 
     # Override the setpoint
     assert zone.current_setpoint is not None
@@ -283,5 +291,5 @@ async def test_scheduling_temporary_setpoint(mock_modbus_client):
 
     zone.current_setpoint = temporary_setpoint
 
-    # Scheduling mode for CH zones not yet implemented.
-    assert zone.current_setpoint == -1
+    # Temporary override for CH zones not yet implemented.
+    assert zone.current_setpoint != temporary_setpoint

@@ -50,7 +50,9 @@ async def test_scheduling_service(hass: HomeAssistant, mock_modbus_client, mock_
         # Check that the schedule has been created but not activated.
         # For auto scheduling, we use SCHEDULE_1.
         # Using the test data, a schedule will be created for Weekday.FRIDAY.
-        zone: ClimateZone | None = await api.async_read_zone(id=2)
+        zone: ClimateZone | None = await api.async_read_zone(
+            id=2, appliance=await api.async_read_appliance()
+        )
         assert zone is not None
         assert zone.selected_schedule == ClimateZoneScheduleId.SCHEDULE_1
         assert zone.mode == ClimateZoneMode.SCHEDULING
