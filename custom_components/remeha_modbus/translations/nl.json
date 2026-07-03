@@ -183,6 +183,102 @@
       "silent_mode_end_time": {
         "name": "Eindtijd stille modus"
       }
+    },
+    "sensor": {
+      "season_mode": {
+        "name": "Seizoen",
+        "state": {
+          "winter": "Winter",
+          "frost_protection": "Vorstbeveiliging",
+          "transition_season": "Overgangsseizoen",
+          "summer": "Zomer"
+        }
+      },
+      "status": {
+        "name": "Status",
+        "state": {
+          "standby": "Stand-by",
+          "heat_demand": "Warmtevraag",
+          "generator_start": "Generator start",
+          "generator_heating": "Generator verwarming",
+          "generator_dhw": "Generator warm water",
+          "generator_stop": "Generator stop",
+          "pump_post_run": "Pompnalooptijd",
+          "cooling": "Koelen",
+          "controlled_shutdown": "Gecontroleerde uitschakeling",
+          "start_prevention": "Startpreventie",
+          "locking_mode": "Vergrendelingsmodus",
+          "load_test_min": "Belastingtest min.",
+          "load_test_heating_max": "Belastingtest verwarming max.",
+          "load_test_dhw_max": "Belastingtest warm water max.",
+          "manual_heat_demand": "Handmatige warmtevraag",
+          "frost_protection": "Vorstbeveiliging",
+          "venting": "Ontluchten",
+          "control_unit_cooling": "Regeleenheid koelen",
+          "resetting": "Bezig met resetten",
+          "automatic_filling": "Automatisch vullen",
+          "stopped": "Gestopt",
+          "calibration": "Kalibratie",
+          "factory_test": "Fabriekstest",
+          "hydraulic_balancing": "Hydraulisch inregelen",
+          "device_mode": "Apparaatmodus",
+          "unknown": "Onbekend"
+        }
+      },
+      "substatus": {
+        "name": "Substatus",
+        "state": {
+          "standby": "Stand-by",
+          "pause_time": "Pauzetijd / kortcyclusbeveiliging",
+          "close_hydraulic_valve": "Hydraulische klep sluiten",
+          "stop_pump": "Pomp stoppen",
+          "wait_start_release": "Wachten op startvrijgave",
+          "generator_starting": "Generator start",
+          "internal_setpoint": "Intern setpoint",
+          "limited_internal_setpoint": "Begrensd intern setpoint",
+          "power_controlled": "Vermogensgeregeld",
+          "pump_post_run": "Pompnalooptijd",
+          "start_pump": "Pomp starten",
+          "start_pause_time": "Pauzetijd starten",
+          "compressor_unloaded": "Compressor ontlast",
+          "hp_tmax_backup_on": "WP Tmax bijverwarming aan",
+          "outside_temp_limit_hp_off": "Buitentemperatuurgrens WP uit",
+          "hp_stop_by_hybrid": "WP-stop door hybride",
+          "defrost_with_heat_pump": "Ontdooien met warmtepomp",
+          "defrost_with_backup": "Ontdooien met bijverwarming",
+          "defrost_hp_and_backup": "Ontdooien WP + bijverwarming",
+          "hp_flow_above_tmax": "WP aanvoer boven Tmax",
+          "hp_off_high_humidity": "WP uit door hoge luchtvochtigheid",
+          "hp_off_flow": "WP uit door debiet",
+          "generator_unloaded": "Generator ontlast",
+          "hp_unloaded_cooling": "WP ontlast (koelen)",
+          "hp_stop_outside_temp": "WP stop (buitentemperatuur)",
+          "hp_off_flow_tmax": "WP uit (aanvoer Tmax)",
+          "bl_backup_off": "Blokkering: bijverwarming uit",
+          "bl_heat_pump_off": "Blokkering: warmtepomp uit",
+          "bl_hp_and_backup_off": "Blokkering: WP en bijverwarming uit",
+          "low_tariff": "Laagtarief",
+          "pv_with_heat_pump": "PV met warmtepomp",
+          "pv_hp_and_backup": "PV: WP en bijverwarming",
+          "smart_grid": "Smart grid",
+          "wait_water_pressure": "Wachten op waterdruk",
+          "no_generator_available": "Geen generator beschikbaar",
+          "free_cooling_pump_off": "Vrije koeling, pomp uit",
+          "free_cooling_pump_on": "Vrije koeling, pomp aan",
+          "blocking_active": "Blokkering actief",
+          "warming_up": "Opwarmen",
+          "curative_defrost": "Curatief ontdooien",
+          "preventive_defrost": "Preventief ontdooien",
+          "init_completed": "Initialisatie voltooid",
+          "init_csu": "Initialisatie CSU",
+          "init_identification": "Initialisatie identificatie",
+          "init_blocking_parameters": "Initialisatie blokkeerparameters",
+          "init_safety_unit": "Initialisatie veiligheidsunit",
+          "init_blocking": "Initialisatie blokkering",
+          "unknown": "Onbekend",
+          "safety_shutdown": "Veiligheidsuitschakeling / reset-wachttijd"
+        }
+      }
     }
   },
   "services": {
