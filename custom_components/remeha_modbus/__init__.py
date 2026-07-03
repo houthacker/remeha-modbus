@@ -32,6 +32,7 @@ from custom_components.remeha_modbus.services import register_services
 PLATFORMS: list[Platform] = [
     Platform.CLIMATE,
     Platform.NUMBER,
+    Platform.SELECT,
     Platform.SENSOR,
     Platform.BINARY_SENSOR,
     Platform.SWITCH,
