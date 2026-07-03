@@ -190,6 +190,10 @@ class Appliance:
     summer_winter: float
     """The upper limit for heating."""
 
+    neutral_band_summer_winter: float = 0.0
+    """Temperature band below the summer/winter limit within which the appliance
+    neither heats nor cools (parameter AP075)."""
+
     def is_cooling_required(self) -> bool:
         """Whether the appliance cooling mode is required.
 

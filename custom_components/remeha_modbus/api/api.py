@@ -784,6 +784,16 @@ class RemehaApi:
             ),
         )
 
+        neutral_band_summer_winter: float = cast(
+            float,
+            from_registers(
+                registers=await self._async_read_registers(
+                    variable=MetaRegisters.NEUTRAL_BAND_SUMMER_WINTER
+                ),
+                destination_variable=MetaRegisters.NEUTRAL_BAND_SUMMER_WINTER,
+            ),
+        )
+
         return Appliance(
             silent_mode=SilentMode(silent_mode),
             silent_mode_start_time=SteppedTimeOfDay.from_steps(silent_mode_start_time_steps),
@@ -796,6 +806,7 @@ class RemehaApi:
             status=appliance_status,
             season_mode=season_mode,
             summer_winter=summer_winter,
+            neutral_band_summer_winter=neutral_band_summer_winter,
         )
 
     async def async_read_sensor_values(

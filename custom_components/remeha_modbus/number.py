@@ -41,6 +41,11 @@ async def async_setup_entry(
                 api=api, coordinator=coordinator, parent_device_id=mainboards[0].id
             )
         )
+        entities.append(
+            RemehaNeutralBandNumber(
+                api=api, coordinator=coordinator, parent_device_id=mainboards[0].id
+            )
+        )
 
     climates: list[ClimateZone] = coordinator.get_climates(lambda c: c.is_domestic_hot_water())
     if climates:
@@ -168,6 +173,78 @@ class RemehaSummerWinterNumber(CoordinatorEntity[RemehaUpdateCoordinator], Numbe
 
         # Update the value so users don't have to wait until the next sync.
         self.coordinator.get_appliance().summer_winter = value
+        self.async_write_ha_state()
+
+    @property
+    def device_info(self) -> DeviceInfo | None:
+        """Return information about the device this instance belongs to.
+
+        Returns
+            `DeviceInfo | None`: The device info, or `None` if this instance is not owned by any device.
+
+        """
+
+        if self._parent_device_id is None:
+            return None
+
+        device_instance: DeviceInstance | None = self.coordinator.get_device(
+            id=self._parent_device_id
+        )
+        return (
+            DeviceInfo(
+                identifiers={(DOMAIN, str(device_instance.article_number))},
+                hw_version=f"HW{device_instance.hw_version[0]:02d}.{device_instance.hw_version[1]:02d}",
+                manufacturer="Remeha",
+                model=str(device_instance.board_category),
+                sw_version=f"SW{device_instance.sw_version[0]:02d}.{device_instance.sw_version[1]:02d}",
+            )
+            if device_instance is not None
+            else None
+        )
+
+
+class RemehaNeutralBandNumber(CoordinatorEntity[RemehaUpdateCoordinator], NumberEntity):
+    """Number entity for the neutral band below the summer/winter limit (parameter AP075).
+
+    Within this band the appliance neither heats nor cools (transition season).
+    """
+
+    _attr_has_entity_name = True
+    _attr_device_class = NumberDeviceClass.TEMPERATURE
+    _attr_native_min_value = 0.0
+    _attr_native_max_value = 20.0
+    _attr_native_step = 0.5
+    _attr_native_unit_of_measurement = "°C"
+    _attr_should_poll = False
+    _attr_translation_key = DOMAIN
+
+    def __init__(
+        self, api: RemehaApi, coordinator: RemehaUpdateCoordinator, parent_device_id: int | None
+    ):
+        """Create a new neutral-band entity."""
+
+        super().__init__(coordinator)
+
+        self._api: RemehaApi = api
+        self._parent_device_id = parent_device_id
+        self._attr_unique_id = "neutral_band_summer_winter"
+        self._attr_name = "neutral_band_summer_winter"
+
+    @property
+    def native_value(self) -> float:
+        """Return the current neutral band."""
+
+        return cast(float, self.coordinator.get_appliance().neutral_band_summer_winter)
+
+    async def async_set_native_value(self, value: float) -> None:
+        """Update the neutral band."""
+
+        await self._api.async_write_variable(
+            variable=MetaRegisters.NEUTRAL_BAND_SUMMER_WINTER, value=value
+        )
+
+        # Update the value so users don't have to wait until the next sync.
+        self.coordinator.get_appliance().neutral_band_summer_winter = value
         self.async_write_ha_state()
 
     @property

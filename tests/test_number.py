@@ -21,8 +21,8 @@ async def test_climates(hass: HomeAssistant, mock_modbus_client, mock_config_ent
         await setup_platform(hass=hass, config_entry=mock_config_entry)
         await hass.async_block_till_done()
 
-        # One DhwHysteresisEntity + one appliance-level RemehaSummerWinterNumber.
-        assert len(hass.states.async_all(domain_filter="number")) == 2
+        # DhwHysteresisEntity + RemehaSummerWinterNumber + RemehaNeutralBandNumber.
+        assert len(hass.states.async_all(domain_filter="number")) == 3
 
 
 @pytest.mark.parametrize("mock_modbus_client", ["modbus_store.json"], indirect=True)
@@ -90,6 +90,34 @@ async def test_summer_winter(hass: HomeAssistant, mock_modbus_client, mock_confi
         summer_winter = hass.states.get(summer_winter.entity_id)
         assert summer_winter is not None
         assert summer_winter.state == "25.0"
+
+
+@pytest.mark.parametrize("mock_modbus_client", ["modbus_store.json"], indirect=True)
+async def test_neutral_band(hass: HomeAssistant, mock_modbus_client, mock_config_entry):
+    """Test the appliance neutral-band number entity (AP075)."""
+
+    api = get_api(mock_modbus_client=mock_modbus_client)
+    with patch(
+        "custom_components.remeha_modbus.api.RemehaApi.create",
+        new=lambda *args, **kwargs: api,
+    ):
+        await setup_platform(hass=hass, config_entry=mock_config_entry)
+        await hass.async_block_till_done()
+
+        neutral_band = hass.states.get("number.remeha_modbus_test_hub_neutral_band_summer_winter")
+        assert neutral_band is not None
+        assert neutral_band.state == "4.0"
+
+        await hass.services.async_call(
+            domain=NumberDomain,
+            service="set_value",
+            service_data={"entity_id": neutral_band.entity_id, "value": 5.0},
+            blocking=True,
+        )
+
+        neutral_band = hass.states.get(neutral_band.entity_id)
+        assert neutral_band is not None
+        assert neutral_band.state == "5.0"
 
 
 @pytest.mark.parametrize("mock_modbus_client", ["modbus_store_no_dhw_climate.json"], indirect=True)
