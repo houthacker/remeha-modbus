@@ -167,6 +167,21 @@ class Appliance:
     summer_winter: float
     """The upper limit for heating."""
 
+    transition_season: float = 0.0
+    """The transition-season temperature band below the summer/winter limit (AP075)."""
+
+    forced_summer: bool = False
+    """Whether forced summer mode is active (AP074)."""
+
+    quiet_mode_level: int = 0
+    """Heat pump quiet mode level: 0 = off, 1 = level 1, 2 = level 2 (HP058)."""
+
+    quiet_mode_start: int = 0
+    """Start of the heat pump quiet period, in 10-minute units from midnight (HP094)."""
+
+    quiet_mode_end: int = 0
+    """End of the heat pump quiet period, in 10-minute units from midnight (HP095)."""
+
     def is_cooling_required(self) -> bool:
         """Whether the appliance cooling mode is required.
 

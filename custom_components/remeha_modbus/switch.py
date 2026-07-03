@@ -18,6 +18,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.restore_state import RestoreEntity
 from propcache.api import cached_property
 
+from custom_components.remeha_modbus.api import DeviceInstance, RemehaApi
 from custom_components.remeha_modbus.blend.scheduler.helpers import scheduler_is_installed
 from custom_components.remeha_modbus.const import (
     DOMAIN,
@@ -25,8 +26,10 @@ from custom_components.remeha_modbus.const import (
     ISSUE_HEATPUMP_MANAGED_SCHEDULES_LEARN_MORE_URL,
     ISSUE_HEATPUMP_MANAGED_SCHEDULES_OFF,
     SWITCH_SCHEDULE_SYNC,
+    MetaRegisters,
 )
 from custom_components.remeha_modbus.coordinator import RemehaUpdateCoordinator
+from custom_components.remeha_modbus.entity import RemehaApplianceEntity
 from custom_components.remeha_modbus.helpers.entities import get_climate_entity_id
 
 _LOGGER = logging.getLogger(__name__)
@@ -35,12 +38,20 @@ _LOGGER = logging.getLogger(__name__)
 async def async_setup_entry(
     hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
 ) -> None:
-    """Create the sensor entities based on the given config entry."""
+    """Create the switch entities based on the given config entry."""
+
+    api: RemehaApi = entry.runtime_data["api"]
+    coordinator: RemehaUpdateCoordinator = entry.runtime_data["coordinator"]
+    mainboards: list[DeviceInstance] = coordinator.get_devices(lambda device: device.is_mainboard())
+    parent_device_id: int | None = mainboards[0].id if mainboards else None
 
     async_add_entities(
         [
             RemehaScheduleSynchronizationSwitch(SWITCH_SCHEDULE_SYNC, entry),
             RemehaHeatpumpManagedSchedulesSwitch(HEATPUMP_MANAGED_SCHEDULES, entry),
+            RemehaForcedSummerSwitch(
+                api=api, coordinator=coordinator, parent_device_id=parent_device_id
+            ),
         ]
     )
 
@@ -192,3 +203,48 @@ class RemehaHeatpumpManagedSchedulesSwitch(RemehaModbusSwitch):
             severity=ir.IssueSeverity.WARNING,
             translation_key="heatpump_managed_schedules_turned_off",
         )
+
+
+class RemehaForcedSummerSwitch(RemehaApplianceEntity, SwitchEntity):
+    """Switch that forces summer mode (parameter AP074).
+
+    When on, heating is switched off regardless of the outside temperature while
+    domestic hot water production stays active.
+    """
+
+    _attr_device_class = SwitchDeviceClass.SWITCH
+
+    def __init__(
+        self, api: RemehaApi, coordinator: RemehaUpdateCoordinator, parent_device_id: int | None
+    ):
+        """Create the forced-summer switch."""
+
+        super().__init__(
+            api=api,
+            coordinator=coordinator,
+            parent_device_id=parent_device_id,
+            name="forced_summer",
+        )
+
+    @property
+    def is_on(self) -> bool:
+        """Return whether forced summer mode is active."""
+
+        return self._appliance.forced_summer
+
+    async def async_turn_on(self, **kwargs: Any) -> None:
+        """Enable forced summer mode."""
+
+        await self._async_set_forced_summer(enabled=True)
+
+    async def async_turn_off(self, **kwargs: Any) -> None:
+        """Disable forced summer mode."""
+
+        await self._async_set_forced_summer(enabled=False)
+
+    async def _async_set_forced_summer(self, enabled: bool) -> None:
+        await self._api.async_write_variable(variable=MetaRegisters.FORCED_SUMMER, value=enabled)
+
+        # Reflect the change immediately, until the next coordinator refresh.
+        self._appliance.forced_summer = enabled
+        self.async_write_ha_state()

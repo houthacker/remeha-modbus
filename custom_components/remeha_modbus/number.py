@@ -12,8 +12,15 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from custom_components.remeha_modbus.api import DeviceInstance, RemehaApi
 from custom_components.remeha_modbus.api.climate_zone import ClimateZone
-from custom_components.remeha_modbus.const import DOMAIN, TEMPERATURE_STEP, Limits, ZoneRegisters
+from custom_components.remeha_modbus.const import (
+    DOMAIN,
+    TEMPERATURE_STEP,
+    Limits,
+    MetaRegisters,
+    ZoneRegisters,
+)
 from custom_components.remeha_modbus.coordinator import RemehaUpdateCoordinator
+from custom_components.remeha_modbus.entity import RemehaApplianceEntity
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -26,16 +33,26 @@ async def async_setup_entry(
     api: RemehaApi = entry.runtime_data["api"]
     coordinator: RemehaUpdateCoordinator = entry.runtime_data["coordinator"]
 
+    entities: list[NumberEntity] = []
+
+    mainboards: list[DeviceInstance] = coordinator.get_devices(lambda device: device.is_mainboard())
+    if mainboards:
+        entities.append(
+            RemehaTransitionSeasonNumber(
+                api=api, coordinator=coordinator, parent_device_id=mainboards[0].id
+            )
+        )
+
     climates: list[ClimateZone] = coordinator.get_climates(lambda c: c.is_domestic_hot_water())
     if climates:
-        async_add_entities(
-            [
-                DhwHysteresisEntity(api=api, coordinator=coordinator, zone_id=climate.id)
-                for climate in climates
-            ]
+        entities.extend(
+            DhwHysteresisEntity(api=api, coordinator=coordinator, zone_id=climate.id)
+            for climate in climates
         )
     else:
         _LOGGER.debug("No DHW climates found so not adding any DhwHysteresis entities.")
+
+    async_add_entities(entities)
 
 
 class DhwHysteresisEntity(CoordinatorEntity[RemehaUpdateCoordinator], NumberEntity):
@@ -110,3 +127,43 @@ class DhwHysteresisEntity(CoordinatorEntity[RemehaUpdateCoordinator], NumberEnti
             if device_instance is not None
             else None
         )
+
+
+class RemehaTransitionSeasonNumber(RemehaApplianceEntity, NumberEntity):
+    """Transition-season temperature band (parameter AP075).
+
+    Within this band below the summer/winter limit the appliance neither heats nor cools.
+    """
+
+    _attr_device_class = NumberDeviceClass.TEMPERATURE
+    _attr_native_min_value = 0.0
+    _attr_native_max_value = 20.0
+    _attr_native_step = 0.5
+    _attr_native_unit_of_measurement = "°C"
+
+    def __init__(
+        self, api: RemehaApi, coordinator: RemehaUpdateCoordinator, parent_device_id: int | None
+    ):
+        """Create a new transition-season entity."""
+
+        super().__init__(
+            api=api,
+            coordinator=coordinator,
+            parent_device_id=parent_device_id,
+            name="transition_season",
+        )
+
+    @property
+    def native_value(self) -> float:
+        """Return the current transition-season band."""
+
+        return cast(float, self._appliance.transition_season)
+
+    async def async_set_native_value(self, value: float) -> None:
+        """Update the transition-season band."""
+
+        await self._api.async_write_variable(variable=MetaRegisters.TRANSITION_SEASON, value=value)
+
+        # Reflect the change immediately, until the next coordinator refresh.
+        self._appliance.transition_season = value
+        self.async_write_ha_state()

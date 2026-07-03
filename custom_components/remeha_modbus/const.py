@@ -791,6 +791,48 @@ class MetaRegisters:
     cause the appliance to stay in winter mode.
     """
 
+    TRANSITION_SEASON: Final[ModbusVariableDescription] = ModbusVariableDescription(
+        start_address=387,
+        name="varApTransitionSeason",
+        friendly_name="AP075",
+        data_type=DataType.UINT16,
+        scale=0.01,
+    )
+    """Temperature band below the summer/winter limit within which the appliance
+    neither heats nor cools (transition season)."""
+
+    FORCED_SUMMER: Final[ModbusVariableDescription] = ModbusVariableDescription(
+        start_address=389,
+        name="varApForcedSummer",
+        friendly_name="AP074",
+        data_type=DataType.UINT8,
+    )
+    """Whether forced summer mode is active. Heating is switched off, DHW stays active."""
+
+    QUIET_MODE_LEVEL: Final[ModbusVariableDescription] = ModbusVariableDescription(
+        start_address=490,
+        name="varHpQuietModeLevel",
+        friendly_name="HP058",
+        data_type=DataType.UINT8,
+    )
+    """Heat pump quiet mode level (0 = off, 1 = level 1, 2 = level 2)."""
+
+    QUIET_MODE_START: Final[ModbusVariableDescription] = ModbusVariableDescription(
+        start_address=491,
+        name="varHpQuietModeStart",
+        friendly_name="HP094",
+        data_type=DataType.UINT8,
+    )
+    """Start of the heat pump quiet period, in 10-minute units from midnight."""
+
+    QUIET_MODE_END: Final[ModbusVariableDescription] = ModbusVariableDescription(
+        start_address=492,
+        name="varHpQuietModeEnd",
+        friendly_name="HP095",
+        data_type=DataType.UINT8,
+    )
+    """End of the heat pump quiet period, in 10-minute units from midnight."""
+
     FLOW_TEMPERATURE: Final[ModbusVariableDescription] = ModbusVariableDescription(
         start_address=400, name="varApTFlow", data_type=DataType.INT16, scale=0.01
     )

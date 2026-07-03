@@ -755,6 +755,47 @@ class RemehaApi:
             ),
         )
 
+        transition_season: float = cast(
+            float,
+            from_registers(
+                registers=await self._async_read_registers(
+                    variable=MetaRegisters.TRANSITION_SEASON
+                ),
+                destination_variable=MetaRegisters.TRANSITION_SEASON,
+            ),
+        )
+
+        forced_summer = bool(
+            from_registers(
+                registers=await self._async_read_registers(variable=MetaRegisters.FORCED_SUMMER),
+                destination_variable=MetaRegisters.FORCED_SUMMER,
+            )
+        )
+
+        quiet_mode_level = cast(
+            int,
+            from_registers(
+                registers=await self._async_read_registers(variable=MetaRegisters.QUIET_MODE_LEVEL),
+                destination_variable=MetaRegisters.QUIET_MODE_LEVEL,
+            ),
+        )
+
+        quiet_mode_start = cast(
+            int,
+            from_registers(
+                registers=await self._async_read_registers(variable=MetaRegisters.QUIET_MODE_START),
+                destination_variable=MetaRegisters.QUIET_MODE_START,
+            ),
+        )
+
+        quiet_mode_end = cast(
+            int,
+            from_registers(
+                registers=await self._async_read_registers(variable=MetaRegisters.QUIET_MODE_END),
+                destination_variable=MetaRegisters.QUIET_MODE_END,
+            ),
+        )
+
         return Appliance(
             ch_enabled=ch_enabled,
             cooling_type=CoolingType(cooling_type),
@@ -764,6 +805,11 @@ class RemehaApi:
             status=appliance_status,
             season_mode=season_mode,
             summer_winter=summer_winter,
+            transition_season=transition_season,
+            forced_summer=forced_summer,
+            quiet_mode_level=quiet_mode_level,
+            quiet_mode_start=quiet_mode_start,
+            quiet_mode_end=quiet_mode_end,
         )
 
     async def async_read_sensor_values(
