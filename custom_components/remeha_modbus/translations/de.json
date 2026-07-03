@@ -1,0 +1,100 @@
+{
+  "entity": {
+    "sensor": {
+      "season_mode": {
+        "name": "Jahreszeit",
+        "state": {
+          "winter": "Winter",
+          "frost_protection": "Frostschutz",
+          "transition_season": "Übergangszeit",
+          "summer": "Sommer"
+        }
+      },
+      "status": {
+        "name": "Status",
+        "state": {
+          "standby": "Standby",
+          "heat_demand": "Wärmeanforderung",
+          "generator_start": "Erzeugerstart",
+          "generator_heating": "Erzeuger Heizung",
+          "generator_dhw": "Erzeuger Trinkwarmwasser",
+          "generator_stop": "Erzeugerstopp",
+          "pump_post_run": "Pumpennachlauf",
+          "cooling": "Kühlbetrieb",
+          "controlled_shutdown": "Regelabschaltung",
+          "start_prevention": "Startverhinderung",
+          "locking_mode": "Verriegelungsmodus",
+          "load_test_min": "Lasttest min.",
+          "load_test_heating_max": "Lasttest Heizung max.",
+          "load_test_dhw_max": "Lasttest Trinkwarmwasser max.",
+          "manual_heat_demand": "Manuelle Wärmeanforderung",
+          "frost_protection": "Frostschutz",
+          "venting": "Entlüftung",
+          "control_unit_cooling": "Regelungseinheit kühlen",
+          "resetting": "Zurücksetzen läuft",
+          "automatic_filling": "Automatische Befüllung",
+          "stopped": "Angehalten",
+          "calibration": "Kalibrierung",
+          "factory_test": "Werkstest",
+          "hydraulic_balancing": "Hydraulischer Abgleich",
+          "device_mode": "Gerätemodus",
+          "unknown": "Unbekannt"
+        }
+      },
+      "substatus": {
+        "name": "Substatus",
+        "state": {
+          "standby": "Standby",
+          "pause_time": "Pausenzeit / Kurzzyklus-Sicherung",
+          "close_hydraulic_valve": "Hydraulikventil schließen",
+          "stop_pump": "Pumpe stoppen",
+          "wait_start_release": "Warte auf Startfreigabe",
+          "generator_starting": "Erzeuger startet",
+          "internal_setpoint": "Interner Sollwert",
+          "limited_internal_setpoint": "Begrenzter interner Sollwert",
+          "power_controlled": "Leistungsgeregelt",
+          "pump_post_run": "Pumpennachlauf",
+          "start_pump": "Pumpe starten",
+          "start_pause_time": "Pausenzeit starten",
+          "compressor_unloaded": "Verdichter entlastet",
+          "hp_tmax_backup_on": "WP Tmax Zusatz ein",
+          "outside_temp_limit_hp_off": "Außentemperaturgrenze WP aus",
+          "hp_stop_by_hybrid": "WP-Stopp durch Hybrid",
+          "defrost_with_heat_pump": "Abtauen mit Wärmepumpe",
+          "defrost_with_backup": "Abtauen mit Zusatzerzeuger",
+          "defrost_hp_and_backup": "Abtauen WP + Zusatzerzeuger",
+          "hp_flow_above_tmax": "WP Vorlauf über Tmax",
+          "hp_off_high_humidity": "WP aus wegen hoher Feuchte",
+          "hp_off_flow": "WP aus wegen Durchfluss",
+          "generator_unloaded": "Erzeuger entlastet",
+          "hp_unloaded_cooling": "WP entlastet Kühlung",
+          "hp_stop_outside_temp": "WP Stopp Außentemperatur",
+          "hp_off_flow_tmax": "WP aus Vorlauf Tmax",
+          "bl_backup_off": "BL Zusatzerzeuger aus",
+          "bl_heat_pump_off": "BL Wärmepumpe aus",
+          "bl_hp_and_backup_off": "BL WP und Zusatzerzeuger aus",
+          "low_tariff": "Niedertarif",
+          "pv_with_heat_pump": "PV mit Wärmepumpe",
+          "pv_hp_and_backup": "PV WP und Zusatzerzeuger",
+          "smart_grid": "Smart Grid",
+          "wait_water_pressure": "Warte auf Wasserdruck",
+          "no_generator_available": "Kein Erzeuger verfügbar",
+          "free_cooling_pump_off": "Freie Kühlung Pumpe aus",
+          "free_cooling_pump_on": "Freie Kühlung Pumpe ein",
+          "blocking_active": "Sperrung aktiv",
+          "warming_up": "Aufwärmen",
+          "curative_defrost": "Kurative Abtauung",
+          "preventive_defrost": "Präventive Abtauung",
+          "init_completed": "Initialisierung abgeschlossen",
+          "init_csu": "Initialisierung CSU",
+          "init_identification": "Initialisierung Identifikation",
+          "init_blocking_parameters": "Initialisierung Sperrparameter",
+          "init_safety_unit": "Initialisierung Sicherheitseinrichtung",
+          "init_blocking": "Initialisierung Sperrung",
+          "unknown": "Substatus unbekannt",
+          "safety_shutdown": "Sicherheitsabschaltung / Rücksetzwartezeit"
+        }
+      }
+    }
+  }
+}

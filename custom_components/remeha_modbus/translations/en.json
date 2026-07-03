@@ -184,6 +184,102 @@
       "silent_mode_end_time": {
         "name": "Silent mode end time"
       }
+    },
+    "sensor": {
+      "season_mode": {
+        "name": "Season",
+        "state": {
+          "winter": "Winter",
+          "frost_protection": "Frost protection",
+          "transition_season": "Transition season",
+          "summer": "Summer"
+        }
+      },
+      "status": {
+        "name": "Status",
+        "state": {
+          "standby": "Standby",
+          "heat_demand": "Heat demand",
+          "generator_start": "Generator start",
+          "generator_heating": "Generator heating",
+          "generator_dhw": "Generator DHW",
+          "generator_stop": "Generator stop",
+          "pump_post_run": "Pump post-run",
+          "cooling": "Cooling",
+          "controlled_shutdown": "Controlled shutdown",
+          "start_prevention": "Start prevention",
+          "locking_mode": "Locking mode",
+          "load_test_min": "Load test min.",
+          "load_test_heating_max": "Load test heating max.",
+          "load_test_dhw_max": "Load test DHW max.",
+          "manual_heat_demand": "Manual heat demand",
+          "frost_protection": "Frost protection",
+          "venting": "Venting",
+          "control_unit_cooling": "Control unit cooling",
+          "resetting": "Resetting",
+          "automatic_filling": "Automatic filling",
+          "stopped": "Stopped",
+          "calibration": "Calibration",
+          "factory_test": "Factory test",
+          "hydraulic_balancing": "Hydraulic balancing",
+          "device_mode": "Device mode",
+          "unknown": "Unknown"
+        }
+      },
+      "substatus": {
+        "name": "Substatus",
+        "state": {
+          "standby": "Standby",
+          "pause_time": "Pause time / short-cycle protection",
+          "close_hydraulic_valve": "Closing hydraulic valve",
+          "stop_pump": "Stopping pump",
+          "wait_start_release": "Waiting for start release",
+          "generator_starting": "Generator starting",
+          "internal_setpoint": "Internal setpoint",
+          "limited_internal_setpoint": "Limited internal setpoint",
+          "power_controlled": "Power controlled",
+          "pump_post_run": "Pump post-run",
+          "start_pump": "Starting pump",
+          "start_pause_time": "Starting pause time",
+          "compressor_unloaded": "Compressor unloaded",
+          "hp_tmax_backup_on": "HP Tmax backup on",
+          "outside_temp_limit_hp_off": "Outside temperature limit HP off",
+          "hp_stop_by_hybrid": "HP stop by hybrid",
+          "defrost_with_heat_pump": "Defrost with heat pump",
+          "defrost_with_backup": "Defrost with backup generator",
+          "defrost_hp_and_backup": "Defrost HP + backup",
+          "hp_flow_above_tmax": "HP flow above Tmax",
+          "hp_off_high_humidity": "HP off due to high humidity",
+          "hp_off_flow": "HP off due to flow",
+          "generator_unloaded": "Generator unloaded",
+          "hp_unloaded_cooling": "HP unloaded (cooling)",
+          "hp_stop_outside_temp": "HP stop (outside temperature)",
+          "hp_off_flow_tmax": "HP off (flow Tmax)",
+          "bl_backup_off": "Blocking: backup generator off",
+          "bl_heat_pump_off": "Blocking: heat pump off",
+          "bl_hp_and_backup_off": "Blocking: HP and backup off",
+          "low_tariff": "Low tariff",
+          "pv_with_heat_pump": "PV with heat pump",
+          "pv_hp_and_backup": "PV: HP and backup",
+          "smart_grid": "Smart grid",
+          "wait_water_pressure": "Waiting for water pressure",
+          "no_generator_available": "No generator available",
+          "free_cooling_pump_off": "Free cooling, pump off",
+          "free_cooling_pump_on": "Free cooling, pump on",
+          "blocking_active": "Blocking active",
+          "warming_up": "Warming up",
+          "curative_defrost": "Curative defrost",
+          "preventive_defrost": "Preventive defrost",
+          "init_completed": "Initialization completed",
+          "init_csu": "Initialization CSU",
+          "init_identification": "Initialization identification",
+          "init_blocking_parameters": "Initialization blocking parameters",
+          "init_safety_unit": "Initialization safety unit",
+          "init_blocking": "Initialization blocking",
+          "unknown": "Unknown",
+          "safety_shutdown": "Safety shutdown / reset wait time"
+        }
+      }
     }
   },
   "services": {

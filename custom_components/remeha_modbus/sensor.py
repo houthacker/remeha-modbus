@@ -16,11 +16,8 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from custom_components.remeha_modbus.api import DeviceInstance
 from custom_components.remeha_modbus.const import (
     DOMAIN,
-    REMEHA_SEASON_MODE_TEXT,
+    REMEHA_ENUM_SENSOR_OPTIONS,
     REMEHA_SENSORS,
-    REMEHA_STATUS_TEXT,
-    REMEHA_SUBSTATUS_TEXT,
-    MetaRegisters,
     ModbusVariableDescription,
 )
 from custom_components.remeha_modbus.coordinator import RemehaUpdateCoordinator
@@ -81,6 +78,11 @@ class RemehaSensorEntity(CoordinatorEntity[RemehaUpdateCoordinator], SensorEntit
         self._attr_device_class = description.device_class
         self._attr_native_unit_of_measurement = description.native_unit_of_measurement
         self._attr_state_class = description.state_class
+        self._attr_options = description.options
+
+        # ENUM sensors use their own translation key so their state values can be translated.
+        if description.translation_key is not None:
+            self._attr_translation_key = description.translation_key
 
     @property
     def native_value(self):
@@ -93,14 +95,10 @@ class RemehaSensorEntity(CoordinatorEntity[RemehaUpdateCoordinator], SensorEntit
         if value is None:
             return None
 
-        if self._variable == MetaRegisters.SEASON_MODE_TEXT:
-            return REMEHA_SEASON_MODE_TEXT.get(int(value), f"Unbekannt ({value})")
-
-        if self._variable == MetaRegisters.STATUS_TEXT:
-            return REMEHA_STATUS_TEXT.get(int(value), f"Unbekannt ({value})")
-
-        if self._variable == MetaRegisters.SUBSTATUS_TEXT:
-            return REMEHA_SUBSTATUS_TEXT.get(int(value), f"Unbekannt ({value})")
+        # For ENUM sensors, map the raw register value to a (translatable) option key.
+        options = REMEHA_ENUM_SENSOR_OPTIONS.get(self._variable)
+        if options is not None:
+            return options.get(int(value))
 
         return value
 
