@@ -783,10 +783,6 @@ class MetaRegisters:
         start_address=385, name="varApSeasonMode", data_type=DataType.UINT8
     )
 
-    SEASON_MODE_TEXT: Final[ModbusVariableDescription] = ModbusVariableDescription(
-        start_address=385, name="varApSeasonModeText", data_type=DataType.UINT8
-    )
-
     APPLIANCE_DEMAND_STATUS: Final[ModbusVariableDescription] = ModbusVariableDescription(
         start_address=275, name="applianceDemandStatus", data_type=DataType.UINT8
     )
@@ -853,14 +849,6 @@ class MetaRegisters:
 
     SUBSTATUS: Final[ModbusVariableDescription] = ModbusVariableDescription(
         start_address=412, name="varApSubStatus", data_type=DataType.UINT8
-    )
-
-    STATUS_TEXT: Final[ModbusVariableDescription] = ModbusVariableDescription(
-        start_address=411, name="varApStatusText", data_type=DataType.UINT8
-    )
-
-    SUBSTATUS_TEXT: Final[ModbusVariableDescription] = ModbusVariableDescription(
-        start_address=412, name="varApSubStatusText", data_type=DataType.UINT8
     )
 
     POWER_ACTUAL: Final[ModbusVariableDescription] = ModbusVariableDescription(
@@ -1207,92 +1195,100 @@ WEEKDAY_TO_MODBUS_VARIABLE: Final[dict[Weekday, ModbusVariableDescription]] = {
     Weekday.SUNDAY: ZoneRegisters.TIME_PROGRAM_SUNDAY,
 }
 
-REMEHA_SEASON_MODE_TEXT: Final[dict[int, str]] = {
-    0: "Winter",
-    1: "Frostschutz",
-    2: "Übergangszeit",
-    3: "Sommer",
+# Option keys for the ENUM status sensors. The human-readable values are provided
+# as translations (see the `entity.sensor` section in the translation files).
+SEASON_MODE_OPTIONS: Final[dict[int, str]] = {
+    0: "winter",
+    1: "frost_protection",
+    2: "transition_season",
+    3: "summer",
 }
 
-REMEHA_STATUS_TEXT: Final[dict[int, str]] = {
-    0: "Standby",
-    1: "Wärmeanforderung",
-    2: "Erzeugerstart",
-    3: "Erzeuger Heizung",
-    4: "Erzeuger Trinkwarmwasser",
-    5: "Erzeugerstopp",
-    6: "Pumpennachlauf",
-    7: "Kühlbetrieb",
-    8: "Regelabschaltung",
-    9: "Startverhinderung",
-    10: "Verriegelungsmodus",
-    11: "Lasttest min.",
-    12: "Lasttest Heizung max.",
-    13: "Lasttest Trinkwarmwasser max.",
-    15: "Manuelle Wärmeanforderung",
-    16: "Frostschutz",
-    17: "Entlüftung",
-    18: "Regelungseinheit kühlen",
-    19: "Zurücksetzen läuft",
-    20: "Automatische Befüllung",
-    21: "Angehalten",
-    22: "Kalibrierung",
-    23: "Werkstest",
-    24: "Hydraulischer Abgleich",
-    200: "Gerätemodus",
-    254: "Unbekannt",
+STATUS_OPTIONS: Final[dict[int, str]] = {
+    0: "standby",
+    1: "heat_demand",
+    2: "generator_start",
+    3: "generator_heating",
+    4: "generator_dhw",
+    5: "generator_stop",
+    6: "pump_post_run",
+    7: "cooling",
+    8: "controlled_shutdown",
+    9: "start_prevention",
+    10: "locking_mode",
+    11: "load_test_min",
+    12: "load_test_heating_max",
+    13: "load_test_dhw_max",
+    15: "manual_heat_demand",
+    16: "frost_protection",
+    17: "venting",
+    18: "control_unit_cooling",
+    19: "resetting",
+    20: "automatic_filling",
+    21: "stopped",
+    22: "calibration",
+    23: "factory_test",
+    24: "hydraulic_balancing",
+    200: "device_mode",
+    254: "unknown",
 }
 
-REMEHA_SUBSTATUS_TEXT: Final[dict[int, str]] = {
-    0: "Standby",
-    1: "Pausenzeit / Kurzzyklus-Sicherung",
-    2: "Hydraulikventil schließen",
-    3: "Pumpe stoppen",
-    4: "Warte auf Startfreigabe",
-    21: "Erzeuger startet",
-    30: "Interner Sollwert",
-    31: "Begrenzter interner Sollwert",
-    32: "Leistungsgeregelt",
-    60: "Pumpennachlauf",
-    61: "Pumpe starten",
-    63: "Pausenzeit starten",
-    65: "Verdichter entlastet",
-    66: "WP Tmax Zusatz ein",
-    67: "Außentemperaturgrenze WP aus",
-    68: "WP-Stopp durch Hybrid",
-    69: "Abtauen mit Wärmepumpe",
-    70: "Abtauen mit Zusatzerzeuger",
-    71: "Abtauen WP + Zusatzerzeuger",
-    73: "WP Vorlauf über Tmax",
-    75: "WP aus wegen hoher Feuchte",
-    76: "WP aus wegen Durchfluss",
-    79: "Erzeuger entlastet",
-    80: "WP entlastet Kühlung",
-    81: "WP Stopp Außentemperatur",
-    82: "WP aus Vorlauf Tmax",
-    88: "BL Zusatzerzeuger aus",
-    89: "BL Wärmepumpe aus",
-    90: "BL WP und Zusatzerzeuger aus",
-    91: "Niedertarif",
-    92: "PV mit Wärmepumpe",
-    93: "PV WP und Zusatzerzeuger",
-    94: "Smart Grid",
-    95: "Warte auf Wasserdruck",
-    96: "Kein Erzeuger verfügbar",
-    102: "Freie Kühlung Pumpe aus",
-    103: "Freie Kühlung Pumpe ein",
-    106: "Sperrung aktiv",
-    107: "Aufwärmen",
-    108: "Kurative Abtauung",
-    109: "Präventive Abtauung",
-    200: "Initialisierung abgeschlossen",
-    201: "Initialisierung CSU",
-    202: "Initialisierung Identifikation",
-    203: "Initialisierung Sperrparameter",
-    204: "Initialisierung Sicherheitseinrichtung",
-    205: "Initialisierung Sperrung",
-    254: "Substatus unbekannt",
-    255: "Sicherheitsabschaltung / Rücksetzwartezeit",
+SUBSTATUS_OPTIONS: Final[dict[int, str]] = {
+    0: "standby",
+    1: "pause_time",
+    2: "close_hydraulic_valve",
+    3: "stop_pump",
+    4: "wait_start_release",
+    21: "generator_starting",
+    30: "internal_setpoint",
+    31: "limited_internal_setpoint",
+    32: "power_controlled",
+    60: "pump_post_run",
+    61: "start_pump",
+    63: "start_pause_time",
+    65: "compressor_unloaded",
+    66: "hp_tmax_backup_on",
+    67: "outside_temp_limit_hp_off",
+    68: "hp_stop_by_hybrid",
+    69: "defrost_with_heat_pump",
+    70: "defrost_with_backup",
+    71: "defrost_hp_and_backup",
+    73: "hp_flow_above_tmax",
+    75: "hp_off_high_humidity",
+    76: "hp_off_flow",
+    79: "generator_unloaded",
+    80: "hp_unloaded_cooling",
+    81: "hp_stop_outside_temp",
+    82: "hp_off_flow_tmax",
+    88: "bl_backup_off",
+    89: "bl_heat_pump_off",
+    90: "bl_hp_and_backup_off",
+    91: "low_tariff",
+    92: "pv_with_heat_pump",
+    93: "pv_hp_and_backup",
+    94: "smart_grid",
+    95: "wait_water_pressure",
+    96: "no_generator_available",
+    102: "free_cooling_pump_off",
+    103: "free_cooling_pump_on",
+    106: "blocking_active",
+    107: "warming_up",
+    108: "curative_defrost",
+    109: "preventive_defrost",
+    200: "init_completed",
+    201: "init_csu",
+    202: "init_identification",
+    203: "init_blocking_parameters",
+    204: "init_safety_unit",
+    205: "init_blocking",
+    254: "unknown",
+    255: "safety_shutdown",
+}
+
+REMEHA_ENUM_SENSOR_OPTIONS: Final[dict[ModbusVariableDescription, dict[int, str]]] = {
+    MetaRegisters.SEASON_MODE: SEASON_MODE_OPTIONS,
+    MetaRegisters.STATUS: STATUS_OPTIONS,
+    MetaRegisters.SUBSTATUS: SUBSTATUS_OPTIONS,
 }
 
 REMEHA_SENSORS: Final[dict[ModbusVariableDescription, SensorEntityDescription]] = {
@@ -1312,10 +1308,9 @@ REMEHA_SENSORS: Final[dict[ModbusVariableDescription, SensorEntityDescription]] 
     MetaRegisters.SEASON_MODE: SensorEntityDescription(  # 385
         key=MetaRegisters.SEASON_MODE.name,
         name="season_mode",
-    ),
-    MetaRegisters.SEASON_MODE_TEXT: SensorEntityDescription(  # 385
-        key=MetaRegisters.SEASON_MODE_TEXT.name,
-        name="season_mode_text",
+        translation_key="season_mode",
+        device_class=SensorDeviceClass.ENUM,
+        options=list(SEASON_MODE_OPTIONS.values()),
     ),
     MetaRegisters.FLOW_TEMPERATURE: SensorEntityDescription(  # 400
         key=MetaRegisters.FLOW_TEMPERATURE.name,
@@ -1360,18 +1355,18 @@ REMEHA_SENSORS: Final[dict[ModbusVariableDescription, SensorEntityDescription]] 
         state_class=SensorStateClass.MEASUREMENT,
     ),
     MetaRegisters.STATUS: SensorEntityDescription(  # 411
-        key=MetaRegisters.STATUS.name, name="status"
-    ),
-    MetaRegisters.STATUS_TEXT: SensorEntityDescription(  # 411
-        key=MetaRegisters.STATUS_TEXT.name,
-        name="status_text",
+        key=MetaRegisters.STATUS.name,
+        name="status",
+        translation_key="status",
+        device_class=SensorDeviceClass.ENUM,
+        options=list(STATUS_OPTIONS.values()),
     ),
     MetaRegisters.SUBSTATUS: SensorEntityDescription(  # 412
-        key=MetaRegisters.SUBSTATUS.name, name="substatus"
-    ),
-    MetaRegisters.SUBSTATUS_TEXT: SensorEntityDescription(  # 412
-        key=MetaRegisters.SUBSTATUS_TEXT.name,
-        name="substatus_text",
+        key=MetaRegisters.SUBSTATUS.name,
+        name="substatus",
+        translation_key="substatus",
+        device_class=SensorDeviceClass.ENUM,
+        options=list(SUBSTATUS_OPTIONS.values()),
     ),
     MetaRegisters.POWER_ACTUAL: SensorEntityDescription(  # 413
         key=MetaRegisters.POWER_ACTUAL.name,

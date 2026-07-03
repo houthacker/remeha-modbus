@@ -82,7 +82,11 @@ class ApplianceDemandStatus:
     """Whether manual heat demand is active."""
 
     cooling_allowed: bool
-    """Whether cooling is allowed."""
+    """Whether cooling is allowed at the appliance level.
+
+    This refers to the appliance as a whole, not to an individual zone, so it may be
+    `True` while no zone that is able to cool exists.
+    """
 
     dhw_circuits_released: bool
     """Whether DHW circuits are released."""
