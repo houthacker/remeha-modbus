@@ -57,6 +57,9 @@ async def async_setup_entry(
             RemehaCoolingEnabledSwitch(
                 api=api, coordinator=coordinator, parent_device_id=parent_device_id
             ),
+            RemehaForceSummerSwitch(
+                api=api, coordinator=coordinator, parent_device_id=parent_device_id
+            ),
         ]
     )
 
@@ -346,4 +349,47 @@ class RemehaCoolingEnabledSwitch(RemehaApplianceSwitch):
         )
 
         self.coordinator.get_appliance().cooling_type = cooling_type
+        self.async_write_ha_state()
+
+
+class RemehaForceSummerSwitch(RemehaApplianceSwitch):
+    """Switch that forces summer mode (parameter AP074).
+
+    When on, heating is switched off regardless of the outside temperature while
+    domestic hot water production stays active.
+    """
+
+    def __init__(
+        self, api: RemehaApi, coordinator: RemehaUpdateCoordinator, parent_device_id: int | None
+    ):
+        """Create the force-summer switch."""
+
+        super().__init__(
+            api=api,
+            coordinator=coordinator,
+            parent_device_id=parent_device_id,
+            name="force_summer",
+        )
+
+    @property
+    def is_on(self) -> bool:
+        """Return whether forced summer mode is active."""
+
+        return self.coordinator.get_appliance().force_summer
+
+    async def async_turn_on(self, **kwargs: Any) -> None:
+        """Enable forced summer mode."""
+
+        await self._async_set_force_summer(enabled=True)
+
+    async def async_turn_off(self, **kwargs: Any) -> None:
+        """Disable forced summer mode."""
+
+        await self._async_set_force_summer(enabled=False)
+
+    async def _async_set_force_summer(self, enabled: bool) -> None:
+        await self._api.async_write_variable(variable=MetaRegisters.FORCE_SUMMER, value=enabled)
+
+        # Reflect the change immediately, until the next coordinator refresh.
+        self.coordinator.get_appliance().force_summer = enabled
         self.async_write_ha_state()

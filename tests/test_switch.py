@@ -58,3 +58,31 @@ async def test_appliance_switches(hass: HomeAssistant, mock_modbus_client, mock_
         ch_enabled = hass.states.get(ch_enabled.entity_id)
         assert ch_enabled is not None
         assert ch_enabled.state == "off"
+
+
+async def test_force_summer_switch(hass: HomeAssistant, mock_modbus_client, mock_config_entry):
+    """Test the appliance force-summer switch (AP074)."""
+
+    api = get_api(mock_modbus_client=mock_modbus_client)
+    with patch(
+        "custom_components.remeha_modbus.api.RemehaApi.create",
+        new=lambda *args, **kwargs: api,
+    ):
+        await setup_platform(hass=hass, config_entry=mock_config_entry)
+        await hass.async_block_till_done()
+
+        # register 389 is 0 in the fixture -> off
+        force_summer = hass.states.get("switch.remeha_modbus_test_hub_force_summer")
+        assert force_summer is not None
+        assert force_summer.state == "off"
+
+        await hass.services.async_call(
+            domain=SwitchDomain,
+            service="turn_on",
+            service_data={"entity_id": force_summer.entity_id},
+            blocking=True,
+        )
+
+        force_summer = hass.states.get(force_summer.entity_id)
+        assert force_summer is not None
+        assert force_summer.state == "on"
