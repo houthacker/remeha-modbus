@@ -109,7 +109,7 @@ class RemehaSilentModeEntity(RemehaSelectEntity):
             coordinator=coordinator,
             parent_device_id=parent_device_id,
             name="appliance_silent_mode",
-            options=[e.name for e in SilentMode],
+            options=[e.name.lower() for e in SilentMode],
         )
 
         self._attr_translation_key = "appliance_silent_mode"
@@ -118,7 +118,7 @@ class RemehaSilentModeEntity(RemehaSelectEntity):
     def current_option(self) -> str | None:
         """Return the currently selected option."""
 
-        return self.coordinator.get_appliance().silent_mode.name
+        return self.coordinator.get_appliance().silent_mode.name.lower()
 
     async def async_select_option(self, option: str) -> None:
         """Set the current option.
@@ -127,14 +127,14 @@ class RemehaSilentModeEntity(RemehaSelectEntity):
           RemehaModbusError if the option is invalid.
 
         """
-        if option not in self._attr_options or option not in [e.name for e in SilentMode]:
+        if option not in self._attr_options or option not in [e.name.lower() for e in SilentMode]:
             raise RemehaModbusError(
                 translation_domain=DOMAIN,
                 translation_key="invalid_select_option",
                 translation_placeholders={"option": option},
             )
 
-        selected_mode = SilentMode[option]
+        selected_mode = SilentMode[option.upper()]
         await self._api.async_write_variable(
             variable=MetaRegisters.SILENT_MODE, value=selected_mode
         )
