@@ -4,8 +4,21 @@ from dataclasses import dataclass
 from enum import Enum
 
 
+class SilentMode(Enum):
+    """Defines the silent mode of the appliance."""
+
+    OFF = 0
+    """Normal operation."""
+
+    LEVEL_1 = 1
+    """Silent mode."""
+
+    LEVEL_2 = 2
+    """Extra silent mode."""
+
+
 class CoolingType(Enum):
-    """Defimes the type of cooling used by the appliance (if any)."""
+    """Defines the type of cooling used by the appliance (if any)."""
 
     OFF = 0
     """Cooling is off."""
@@ -137,6 +150,9 @@ class Appliance:
     An `Appliance` stores information about the appliance that cannot be linked to any of
     the other available api types, like appliance error status or burning hours counters.
     """
+
+    silent_mode: SilentMode
+    """The silent mode level of the appliance."""
 
     ch_enabled: bool
     """Whether central heating demand processing is enabled."""

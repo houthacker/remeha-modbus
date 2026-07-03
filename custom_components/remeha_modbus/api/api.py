@@ -26,6 +26,7 @@ from custom_components.remeha_modbus.api.appliance import (
     ApplianceStatus,
     CoolingType,
     SeasonalMode,
+    SilentMode,
 )
 from custom_components.remeha_modbus.api.climate_zone import (
     ClimateZone,
@@ -675,6 +676,14 @@ class RemehaApi:
 
         """
 
+        silent_mode = cast(
+            int,
+            from_registers(
+                registers=await self._async_read_registers(variable=MetaRegisters.SILENT_MODE),
+                destination_variable=MetaRegisters.SILENT_MODE,
+            ),
+        )
+
         ch_enabled = bool(
             from_registers(
                 registers=await self._async_read_registers(variable=MetaRegisters.CH_ENABLED),
@@ -756,6 +765,7 @@ class RemehaApi:
         )
 
         return Appliance(
+            silent_mode=SilentMode(silent_mode),
             ch_enabled=ch_enabled,
             cooling_type=CoolingType(cooling_type),
             cooling_forced=cooling_forced,

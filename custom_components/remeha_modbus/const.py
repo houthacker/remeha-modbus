@@ -859,6 +859,10 @@ class MetaRegisters:
         start_address=460, name="varApActualProducerPower", data_type=DataType.UINT32, scale=0.01
     )
 
+    SILENT_MODE: Final[ModbusVariableDescription] = ModbusVariableDescription(
+        start_address=490, name="enabling_heat_pump_silent_mode", data_type=DataType.UINT8
+    )
+
     CH_ENABLED: Final[ModbusVariableDescription] = ModbusVariableDescription(
         start_address=500, name="parApChEnabled", friendly_name="AP016", data_type=DataType.UINT8
     )
