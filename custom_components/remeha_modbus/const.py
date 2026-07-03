@@ -791,6 +791,16 @@ class MetaRegisters:
     cause the appliance to stay in winter mode.
     """
 
+    NEUTRAL_BAND_SUMMER_WINTER: Final[ModbusVariableDescription] = ModbusVariableDescription(
+        start_address=387,
+        name="parApNeutralBandSummerWinter",
+        friendly_name="AP075",
+        data_type=DataType.UINT16,
+        scale=0.01,
+    )
+    """Temperature band below the summer/winter limit within which the appliance
+    neither heats nor cools (transition season)."""
+
     FLOW_TEMPERATURE: Final[ModbusVariableDescription] = ModbusVariableDescription(
         start_address=400, name="varApTFlow", data_type=DataType.INT16, scale=0.01
     )
