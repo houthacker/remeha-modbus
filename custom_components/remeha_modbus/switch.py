@@ -14,10 +14,14 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import STATE_ON
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import issue_registry as ir
+from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.restore_state import RestoreEntity
+from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from propcache.api import cached_property
 
+from custom_components.remeha_modbus.api import DeviceInstance, RemehaApi
+from custom_components.remeha_modbus.api.appliance import CoolingType
 from custom_components.remeha_modbus.blend.scheduler.helpers import scheduler_is_installed
 from custom_components.remeha_modbus.const import (
     DOMAIN,
@@ -25,6 +29,7 @@ from custom_components.remeha_modbus.const import (
     ISSUE_HEATPUMP_MANAGED_SCHEDULES_LEARN_MORE_URL,
     ISSUE_HEATPUMP_MANAGED_SCHEDULES_OFF,
     SWITCH_SCHEDULE_SYNC,
+    MetaRegisters,
 )
 from custom_components.remeha_modbus.coordinator import RemehaUpdateCoordinator
 from custom_components.remeha_modbus.helpers.entities import get_climate_entity_id
@@ -35,12 +40,23 @@ _LOGGER = logging.getLogger(__name__)
 async def async_setup_entry(
     hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
 ) -> None:
-    """Create the sensor entities based on the given config entry."""
+    """Create the switch entities based on the given config entry."""
+
+    api: RemehaApi = entry.runtime_data["api"]
+    coordinator: RemehaUpdateCoordinator = entry.runtime_data["coordinator"]
+    mainboards: list[DeviceInstance] = coordinator.get_devices(lambda device: device.is_mainboard())
+    parent_device_id: int | None = mainboards[0].id if mainboards else None
 
     async_add_entities(
         [
             RemehaScheduleSynchronizationSwitch(SWITCH_SCHEDULE_SYNC, entry),
             RemehaHeatpumpManagedSchedulesSwitch(HEATPUMP_MANAGED_SCHEDULES, entry),
+            RemehaChEnabledSwitch(
+                api=api, coordinator=coordinator, parent_device_id=parent_device_id
+            ),
+            RemehaCoolingEnabledSwitch(
+                api=api, coordinator=coordinator, parent_device_id=parent_device_id
+            ),
         ]
     )
 
@@ -192,3 +208,142 @@ class RemehaHeatpumpManagedSchedulesSwitch(RemehaModbusSwitch):
             severity=ir.IssueSeverity.WARNING,
             translation_key="heatpump_managed_schedules_turned_off",
         )
+
+
+class RemehaApplianceSwitch(CoordinatorEntity[RemehaUpdateCoordinator], SwitchEntity):
+    """Base class for appliance-level switches backed by a modbus register."""
+
+    _attr_has_entity_name = True
+    _attr_should_poll = False
+    _attr_device_class = SwitchDeviceClass.SWITCH
+
+    def __init__(
+        self,
+        api: RemehaApi,
+        coordinator: RemehaUpdateCoordinator,
+        parent_device_id: int | None,
+        name: str,
+    ):
+        """Create a new appliance switch."""
+
+        super().__init__(coordinator=coordinator)
+
+        self._api = api
+        self._parent_device_id = parent_device_id
+        self._attr_name = name
+        self._attr_unique_id = name
+
+    @property
+    def translation_key(self) -> str:
+        """The translation key."""
+
+        return cast(str, self.name)
+
+    @property
+    def device_info(self) -> DeviceInfo | None:
+        """Return information about the device this switch belongs to.
+
+        Returns
+            `DeviceInfo | None`: The device info, or `None` if this switch is not owned by any device.
+
+        """
+
+        if self._parent_device_id is None:
+            return None
+
+        device_instance: DeviceInstance | None = self.coordinator.get_device(
+            id=self._parent_device_id
+        )
+        return (
+            DeviceInfo(
+                identifiers={(DOMAIN, str(device_instance.article_number))},
+                hw_version=f"HW{device_instance.hw_version[0]:02d}.{device_instance.hw_version[1]:02d}",
+                manufacturer="Remeha",
+                model=str(device_instance.board_category),
+                sw_version=f"SW{device_instance.sw_version[0]:02d}.{device_instance.sw_version[1]:02d}",
+            )
+            if device_instance is not None
+            else None
+        )
+
+
+class RemehaChEnabledSwitch(RemehaApplianceSwitch):
+    """Switch that enables/disables central heating demand processing (parameter AP016)."""
+
+    def __init__(
+        self, api: RemehaApi, coordinator: RemehaUpdateCoordinator, parent_device_id: int | None
+    ):
+        """Create the central heating switch."""
+
+        super().__init__(
+            api=api,
+            coordinator=coordinator,
+            parent_device_id=parent_device_id,
+            name="ch_enabled",
+        )
+
+    @property
+    def is_on(self) -> bool:
+        """Return whether central heating demand processing is enabled."""
+
+        return self.coordinator.get_appliance().ch_enabled
+
+    async def async_turn_on(self, **kwargs: Any) -> None:
+        """Enable central heating demand processing."""
+
+        await self._async_set_enabled(enabled=True)
+
+    async def async_turn_off(self, **kwargs: Any) -> None:
+        """Disable central heating demand processing."""
+
+        await self._async_set_enabled(enabled=False)
+
+    async def _async_set_enabled(self, enabled: bool) -> None:
+        await self._api.async_write_variable(variable=MetaRegisters.CH_ENABLED, value=enabled)
+
+        # Reflect the change immediately, until the next coordinator refresh.
+        self.coordinator.get_appliance().ch_enabled = enabled
+        self.async_write_ha_state()
+
+
+class RemehaCoolingEnabledSwitch(RemehaApplianceSwitch):
+    """Switch that enables/disables cooling (parameter AP028).
+
+    Turning the switch on selects active cooling; turning it off disables cooling.
+    """
+
+    def __init__(
+        self, api: RemehaApi, coordinator: RemehaUpdateCoordinator, parent_device_id: int | None
+    ):
+        """Create the cooling switch."""
+
+        super().__init__(
+            api=api,
+            coordinator=coordinator,
+            parent_device_id=parent_device_id,
+            name="cooling_enabled",
+        )
+
+    @property
+    def is_on(self) -> bool:
+        """Return whether cooling is enabled."""
+
+        return self.coordinator.get_appliance().cooling_type is not CoolingType.OFF
+
+    async def async_turn_on(self, **kwargs: Any) -> None:
+        """Enable active cooling."""
+
+        await self._async_set_cooling(CoolingType.ACTIVE_COOLING)
+
+    async def async_turn_off(self, **kwargs: Any) -> None:
+        """Disable cooling."""
+
+        await self._async_set_cooling(CoolingType.OFF)
+
+    async def _async_set_cooling(self, cooling_type: CoolingType) -> None:
+        await self._api.async_write_variable(
+            variable=MetaRegisters.COOLING_ENABLED, value=cooling_type
+        )
+
+        self.coordinator.get_appliance().cooling_type = cooling_type
+        self.async_write_ha_state()
