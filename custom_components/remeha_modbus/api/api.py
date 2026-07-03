@@ -794,6 +794,13 @@ class RemehaApi:
             ),
         )
 
+        force_summer = bool(
+            from_registers(
+                registers=await self._async_read_registers(variable=MetaRegisters.FORCE_SUMMER),
+                destination_variable=MetaRegisters.FORCE_SUMMER,
+            )
+        )
+
         return Appliance(
             silent_mode=SilentMode(silent_mode),
             silent_mode_start_time=SteppedTimeOfDay.from_steps(silent_mode_start_time_steps),
@@ -807,6 +814,7 @@ class RemehaApi:
             season_mode=season_mode,
             summer_winter=summer_winter,
             neutral_band_summer_winter=neutral_band_summer_winter,
+            force_summer=force_summer,
         )
 
     async def async_read_sensor_values(

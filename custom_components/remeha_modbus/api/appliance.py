@@ -194,6 +194,9 @@ class Appliance:
     """Temperature band below the summer/winter limit within which the appliance
     neither heats nor cools (parameter AP075)."""
 
+    force_summer: bool = False
+    """Whether forced summer mode is active (parameter AP074)."""
+
     def is_cooling_required(self) -> bool:
         """Whether the appliance cooling mode is required.
 

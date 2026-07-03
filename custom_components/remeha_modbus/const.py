@@ -807,6 +807,14 @@ class MetaRegisters:
     """Temperature band below the summer/winter limit within which the appliance
     neither heats nor cools (transition season)."""
 
+    FORCE_SUMMER: Final[ModbusVariableDescription] = ModbusVariableDescription(
+        start_address=389,
+        name="parApForceSummer",
+        friendly_name="AP074",
+        data_type=DataType.UINT8,
+    )
+    """Whether forced summer mode is active. Heating is switched off, DHW stays active."""
+
     FLOW_TEMPERATURE: Final[ModbusVariableDescription] = ModbusVariableDescription(
         start_address=400, name="varApTFlow", data_type=DataType.INT16, scale=0.01
     )
