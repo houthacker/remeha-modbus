@@ -4,7 +4,6 @@ from unittest.mock import patch
 
 import pytest
 from homeassistant.components.climate.const import ATTR_PRESET_MODE, PRESET_ECO
-from homeassistant.components.repairs.issue_handler import async_process_repairs_platforms
 from homeassistant.components.switch.const import DOMAIN as SwitchDomain
 from homeassistant.const import ATTR_ENTITY_ID, SERVICE_TURN_OFF, STATE_OFF, STATE_ON
 from homeassistant.core import HomeAssistant
@@ -55,7 +54,6 @@ async def test_discovery_table_corrupted_repair(
         assert issues
         assert issue_registry.async_get_issue(DOMAIN, ISSUE_DISCOVERY_TABLE_CORRUPTED) is not None
 
-        await async_process_repairs_platforms(hass)
         client = await hass_client()
         data = await start_repair_fix_flow(client, DOMAIN, ISSUE_DISCOVERY_TABLE_CORRUPTED)
 
@@ -105,7 +103,6 @@ async def test_invalid_zone_schedule_repair(
         assert issues
         assert issue_registry.async_get_issue(DOMAIN, ISSUE_INVALID_ZONE_SCHEDULE) is not None
 
-        await async_process_repairs_platforms(hass)
         client = await hass_client()
         data = await start_repair_fix_flow(client, DOMAIN, ISSUE_INVALID_ZONE_SCHEDULE)
 
@@ -176,7 +173,6 @@ async def test_undo_manual_schedule_execution_repair(
             issue_registry.async_get_issue(DOMAIN, ISSUE_HEATPUMP_MANAGED_SCHEDULES_OFF) is not None
         )
 
-        await async_process_repairs_platforms(hass)
         client = await hass_client()
         data = await start_repair_fix_flow(client, DOMAIN, ISSUE_HEATPUMP_MANAGED_SCHEDULES_OFF)
 
