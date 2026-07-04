@@ -3,6 +3,7 @@
 from datetime import datetime, time
 
 import pytest
+from pymodbus import ModbusException
 
 from custom_components.remeha_modbus.api import (
     ConnectionType,
@@ -38,6 +39,34 @@ from custom_components.remeha_modbus.const import (
 from custom_components.remeha_modbus.errors import DiscoveryTableCorruptedError
 from custom_components.remeha_modbus.helpers.modbus import to_gtw08_null_value
 from tests.conftest import get_api
+
+
+@pytest.mark.parametrize("mock_modbus_client", ["modbus_store.json"], indirect=True)
+async def test_read_retries_on_timeout(mock_modbus_client):
+    """A transient modbus timeout on a read is retried instead of failing the read.
+
+    The GTW-08 occasionally does not answer a single request in time; such a timeout
+    raises a `ModbusException` rather than returning an error response. It must be
+    retried so one missing reply does not fail the whole update cycle.
+    """
+
+    api = get_api(mock_modbus_client=mock_modbus_client)
+
+    original_side_effect = mock_modbus_client.read_holding_registers.side_effect
+    state = {"raised": False}
+
+    async def flaky(*args, **kwargs):
+        if not state["raised"]:
+            state["raised"] = True
+            raise ModbusException("No response received after 0 retries")
+        return await original_side_effect(*args, **kwargs)
+
+    mock_modbus_client.read_holding_registers.side_effect = flaky
+
+    # The very first read raises a timeout; thanks to the retry the appliance still reads.
+    appliance = await api.async_read_appliance()
+    assert appliance is not None
+    assert state["raised"] is True
 
 
 @pytest.mark.parametrize("mock_modbus_client", ["modbus_store.json"], indirect=True)
