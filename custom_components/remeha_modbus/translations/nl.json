@@ -175,6 +175,14 @@
       "heatpump_managed_schedules": {
         "name": "Warmtepomp beheert uitvoer van klokprogramma's."
       }
+    },
+    "time": {
+      "silent_mode_start_time": {
+        "name": "Starttijd stille modus"
+      },
+      "silent_mode_end_time": {
+        "name": "Eindtijd stille modus"
+      }
     }
   },
   "services": {
