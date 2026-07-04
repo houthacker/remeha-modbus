@@ -405,31 +405,39 @@ class RemehaApi:
             if not self._client.connected and not await self._client.connect():
                 raise ModbusException("Connection to modbus device lost.")
 
+        address: int = variable.start_address + offset
         retries: int = 0
-        response: ModbusPDU
+        last_error: str = "unknown error"
         while retries < 3:
             await _async_ensure_connected()
-            response = await self._client.read_holding_registers(
-                address=variable.start_address + offset,
-                count=cast(int, variable.count),
-                device_id=self._device_address,
-            )
+
+            try:
+                response = await self._client.read_holding_registers(
+                    address=address, count=cast(int, variable.count), device_id=self._device_address
+                )
+            except ModbusException as ex:
+                # A missing reply (timeout) raises instead of returning an error response.
+                # The GTW-08 occasionally does not answer a single request in time because
+                # it shares the appliance L-bus. Treat this as retryable so one slow reply
+                # doesn't fail the entire update cycle.
+                retries += 1
+                last_error = str(ex)
+                await asyncio.sleep(0.05 * retries)
+                continue
 
             if response.isError():
                 retries += 1
-                await asyncio.sleep(0.001)
+                last_error = f"error code {response.exception_code}"
+                await asyncio.sleep(0.05 * retries)
             else:
                 if retries > 0:
-                    _LOGGER.debug(
-                        "Required %d retries to read address %d.",
-                        retries,
-                        variable.start_address + offset,
-                    )
+                    _LOGGER.debug("Required %d retries to read address %d.", retries, address)
 
                 return response.registers
 
         raise ModbusException(
-            f"Modbus device returned an error while reading registers. Error code: {response.exception_code}"
+            f"Modbus device returned an error while reading registers at address {address} "
+            f"after {retries} retries: {last_error}."
         )
 
     async def _async_write_registers(
