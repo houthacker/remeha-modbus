@@ -1,7 +1,49 @@
 """GTW-08 helper functions."""
 
-from datetime import datetime, timedelta, tzinfo
+from datetime import datetime, time, timedelta, tzinfo
 from typing import Final
+
+from dateutil import relativedelta
+
+from custom_components.remeha_modbus.const import REMEHA_TIME_STEP_MINUTES
+
+
+class SteppedTimeOfDay:
+    """Encoding to and from 'stepped' time.
+
+    This concerns time encoded using the amount of ten-minute
+    steps since midnight.
+    """
+
+    @classmethod
+    def from_steps(cls, steps: int, step_minutes: int = REMEHA_TIME_STEP_MINUTES) -> time:
+        """Decode time steps to a time of day.
+
+        Args:
+          steps (int): The amount of time steps since midnight.
+          step_minutes (int): The step size in minutes. Defaults to `REMEHA_TIME_STEP_MINUTES`.
+
+        """
+
+        delta = relativedelta.relativedelta(minutes=steps * step_minutes)
+        return time(delta.hours, delta.minutes, 0)
+
+    @classmethod
+    def to_steps(cls, time_of_day: time, step_minutes: int = REMEHA_TIME_STEP_MINUTES) -> int:
+        """Encode a time of day to time steps since midnight.
+
+        Args:
+          time_of_day (time): The time of day to encode.
+          step_minutes (int): The step size in minutes. Defaults to `REMEHA_TIME_STEP_MINUTES`.
+
+        Returns:
+          The amount of time steps since midnight.
+          Non-integer steps are ignored, meaning 1.9 steps will count as 1.
+
+        """
+
+        minutes = time_of_day.hour * 60 + time_of_day.minute
+        return int(minutes / step_minutes)
 
 
 class TimeOfDay:
