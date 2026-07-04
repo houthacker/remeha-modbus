@@ -56,7 +56,7 @@ from custom_components.remeha_modbus.const import (
     ZoneRegisters,
 )
 from custom_components.remeha_modbus.errors import DiscoveryTableCorruptedError, InvalidZoneSchedule
-from custom_components.remeha_modbus.helpers.gtw08 import TimeOfDay
+from custom_components.remeha_modbus.helpers.gtw08 import SteppedTimeOfDay, TimeOfDay
 from custom_components.remeha_modbus.helpers.modbus import (
     ModbusPrimitive,
     bytes_from_registers,
@@ -684,6 +684,26 @@ class RemehaApi:
             ),
         )
 
+        silent_mode_start_time_steps = cast(
+            int,
+            from_registers(
+                registers=await self._async_read_registers(
+                    variable=MetaRegisters.SILENT_MODE_START_TIME
+                ),
+                destination_variable=MetaRegisters.SILENT_MODE_START_TIME,
+            ),
+        )
+
+        silent_mode_end_time_steps = cast(
+            int,
+            from_registers(
+                registers=await self._async_read_registers(
+                    variable=MetaRegisters.SILENT_MODE_END_TIME
+                ),
+                destination_variable=MetaRegisters.SILENT_MODE_END_TIME,
+            ),
+        )
+
         ch_enabled = bool(
             from_registers(
                 registers=await self._async_read_registers(variable=MetaRegisters.CH_ENABLED),
@@ -766,6 +786,8 @@ class RemehaApi:
 
         return Appliance(
             silent_mode=SilentMode(silent_mode),
+            silent_mode_start_time=SteppedTimeOfDay.from_steps(silent_mode_start_time_steps),
+            silent_mode_end_time=SteppedTimeOfDay.from_steps(silent_mode_end_time_steps),
             ch_enabled=ch_enabled,
             cooling_type=CoolingType(cooling_type),
             cooling_forced=cooling_forced,

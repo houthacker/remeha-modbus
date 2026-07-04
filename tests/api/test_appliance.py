@@ -1,5 +1,7 @@
 """Tests for the appliance."""
 
+from datetime import time
+
 from custom_components.remeha_modbus.api.appliance import (
     Appliance,
     ApplianceErrorPriority,
@@ -16,6 +18,8 @@ def test_error_as_str():
     assert (
         Appliance(
             silent_mode=SilentMode.OFF,
+            silent_mode_start_time=time(hour=22),
+            silent_mode_end_time=time(hour=7),
             ch_enabled=True,
             cooling_type=CoolingType.ACTIVE_COOLING,
             cooling_forced=False,
@@ -31,6 +35,8 @@ def test_error_as_str():
     assert (
         Appliance(
             silent_mode=SilentMode.OFF,
+            silent_mode_start_time=time(hour=22),
+            silent_mode_end_time=time(hour=7),
             ch_enabled=True,
             cooling_type=CoolingType.ACTIVE_COOLING,
             cooling_forced=False,
@@ -46,6 +52,8 @@ def test_error_as_str():
     assert (
         Appliance(
             silent_mode=SilentMode.OFF,
+            silent_mode_start_time=time(hour=22),
+            silent_mode_end_time=time(hour=7),
             ch_enabled=True,
             cooling_type=CoolingType.ACTIVE_COOLING,
             cooling_forced=False,
@@ -61,6 +69,8 @@ def test_error_as_str():
     assert (
         Appliance(
             silent_mode=SilentMode.OFF,
+            silent_mode_start_time=time(hour=22),
+            silent_mode_end_time=time(hour=7),
             ch_enabled=True,
             cooling_type=CoolingType.ACTIVE_COOLING,
             cooling_forced=False,
