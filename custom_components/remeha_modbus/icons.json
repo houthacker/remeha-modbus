@@ -35,8 +35,8 @@
       "cooling_active": { "default": "mdi:coolant-temperature" }
     },
     "time": {
-      "silent_mode_start_time": "mdi:timer-play-outline",
-      "silent_mode_end_time": "mdi:timer-off-outline"
+      "silent_mode_start_time": { "default": "mdi:timer-play-outline" },
+      "silent_mode_end_time": { "default": "mdi:timer-off-outline" }
     }
   },
   "services": {
