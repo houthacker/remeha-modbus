@@ -1,9 +1,11 @@
-"""Platform for select entities in the Remeha Modbus integration."""
+"""Platform for time entities in the Remeha Modbus integration."""
 
 import logging
+from datetime import time
 
-from homeassistant.components.select import SelectEntity
+from homeassistant.components.time import TimeEntity
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -11,10 +13,14 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from custom_components.remeha_modbus.api import DeviceInstance
 from custom_components.remeha_modbus.api.api import RemehaApi
-from custom_components.remeha_modbus.api.appliance import SilentMode
-from custom_components.remeha_modbus.const import DOMAIN, MetaRegisters
+from custom_components.remeha_modbus.const import (
+    DOMAIN,
+    TIME_SILENT_MODE_END_TIME,
+    TIME_SILENT_MODE_START_TIME,
+    MetaRegisters,
+)
 from custom_components.remeha_modbus.coordinator import RemehaUpdateCoordinator
-from custom_components.remeha_modbus.errors import RemehaModbusError
+from custom_components.remeha_modbus.helpers.gtw08 import SteppedTimeOfDay
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -22,7 +28,7 @@ _LOGGER = logging.getLogger(__name__)
 async def async_setup_entry(
     hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
 ) -> None:
-    """Create the select entities based on the given config entry."""
+    """Create the time entities based on the given config entry."""
 
     api: RemehaApi = entry.runtime_data["api"]
     coordinator: RemehaUpdateCoordinator = entry.runtime_data["coordinator"]
@@ -33,17 +39,24 @@ async def async_setup_entry(
 
     async_add_entities(
         [
-            RemehaSilentModeEntity(
+            SilentModeStartTimeEntity(
                 api=api,
                 coordinator=coordinator,
                 parent_device_id=parent_device_id,
-            )
+                name=TIME_SILENT_MODE_START_TIME,
+            ),
+            SilentModeEndTimeEntity(
+                api=api,
+                coordinator=coordinator,
+                parent_device_id=parent_device_id,
+                name=TIME_SILENT_MODE_END_TIME,
+            ),
         ]
     )
 
 
-class RemehaSelectEntity(CoordinatorEntity[RemehaUpdateCoordinator], SelectEntity):
-    """Super class for select entities."""
+class RemehaTimeEntity(CoordinatorEntity[RemehaUpdateCoordinator], TimeEntity):
+    """Base class for Remeha time entities."""
 
     def __init__(
         self,
@@ -51,9 +64,8 @@ class RemehaSelectEntity(CoordinatorEntity[RemehaUpdateCoordinator], SelectEntit
         coordinator: RemehaUpdateCoordinator,
         parent_device_id: int | None,
         name: str,
-        options: list[str],
     ):
-        """Create a new select entity."""
+        """Entity to set time values."""
 
         super().__init__(coordinator=coordinator)
 
@@ -62,10 +74,10 @@ class RemehaSelectEntity(CoordinatorEntity[RemehaUpdateCoordinator], SelectEntit
         else:
             self._parent_device_id = parent_device_id
 
+        self._attr_entity_category = EntityCategory.CONFIG
         self._attr_name = name
         self._attr_unique_id = name
-        self._attr_options = options
-
+        self._attr_translation_key = name
         self._api = api
 
     @property
@@ -96,48 +108,41 @@ class RemehaSelectEntity(CoordinatorEntity[RemehaUpdateCoordinator], SelectEntit
         )
 
 
-class RemehaSilentModeEntity(RemehaSelectEntity):
-    """Entity to select appliance silent mode."""
-
-    def __init__(
-        self, api: RemehaApi, coordinator: RemehaUpdateCoordinator, parent_device_id: int | None
-    ):
-        """Entity to set the Appliance silent mode."""
-
-        super().__init__(
-            api=api,
-            coordinator=coordinator,
-            parent_device_id=parent_device_id,
-            name="appliance_silent_mode",
-            options=[e.name.lower() for e in SilentMode],
-        )
-
-        self._attr_translation_key = "appliance_silent_mode"
+class SilentModeStartTimeEntity(RemehaTimeEntity):
+    """Entity to expose the start time for the appliance silent mode."""
 
     @property
-    def current_option(self) -> str | None:
-        """Return the currently selected option."""
+    def native_value(self) -> time:
+        """The silent mode start time."""
 
-        return self.coordinator.get_appliance().silent_mode.name.lower()
+        return self.coordinator.get_appliance().silent_mode_start_time
 
-    async def async_select_option(self, option: str) -> None:
-        """Set the current option.
+    async def async_set_value(self, value: time) -> None:
+        """Set the silent mode start time."""
 
-        Raises:
-          RemehaModbusError if the option is invalid.
-
-        """
-        if option not in self._attr_options or option not in [e.name.lower() for e in SilentMode]:
-            raise RemehaModbusError(
-                translation_domain=DOMAIN,
-                translation_key="invalid_select_option",
-                translation_placeholders={"option": option},
-            )
-
-        selected_mode = SilentMode[option.upper()]
         await self._api.async_write_variable(
-            variable=MetaRegisters.SILENT_MODE, value=selected_mode
+            variable=MetaRegisters.SILENT_MODE_START_TIME, value=SteppedTimeOfDay.to_steps(value)
         )
 
-        # Update current data to reflect changes immediately
-        self.coordinator.get_appliance().silent_mode = selected_mode
+        # Reflect update until current update
+        self.coordinator.get_appliance().silent_mode_start_time = value
+
+
+class SilentModeEndTimeEntity(RemehaTimeEntity):
+    """Entity to expose the end time for the appliance silent mode."""
+
+    @property
+    def native_value(self) -> time:
+        """The silent mode end time."""
+
+        return self.coordinator.get_appliance().silent_mode_end_time
+
+    async def async_set_value(self, value: time) -> None:
+        """Set the silent mode end time."""
+
+        await self._api.async_write_variable(
+            variable=MetaRegisters.SILENT_MODE_END_TIME, value=SteppedTimeOfDay.to_steps(value)
+        )
+
+        # Reflect update until current update
+        self.coordinator.get_appliance().silent_mode_end_time = value

@@ -13,6 +13,7 @@ from custom_components.remeha_modbus.api.appliance import (
     ApplianceErrorPriority,
     ApplianceStatus,
     CoolingType,
+    SilentMode,
 )
 from custom_components.remeha_modbus.api.climate_zone import ClimateZone
 from custom_components.remeha_modbus.api.schedule import (
@@ -289,6 +290,9 @@ async def test_read_appliance(mock_modbus_client):
     assert appliance.ch_enabled
     assert appliance.cooling_type is CoolingType.ACTIVE_COOLING
     assert appliance.summer_winter == 22.0
+    assert appliance.silent_mode == SilentMode.LEVEL_1
+    assert appliance.silent_mode_start_time == time(hour=22)
+    assert appliance.silent_mode_end_time == time(hour=7)
 
     status: ApplianceStatus = appliance.status
     assert not status.flame_on

@@ -51,6 +51,12 @@ HEATPUMP_MANAGED_SCHEDULES: Final[str] = "heatpump_managed_schedules"
 The recommended setting is 'on', as to have the heat pump manage time schedule execution.
 """
 
+TIME_SILENT_MODE_START_TIME: Final[str] = "silent_mode_start_time"
+"""Entity name of the time entity that configures when the appliance silent mode starts."""
+
+TIME_SILENT_MODE_END_TIME: Final[str] = "silent_mode_end_time"
+"""Entity name of the time entity that configures when the appliance silent mode ends."""
+
 ISSUE_HEATPUMP_MANAGED_SCHEDULES_OFF: Final[str] = "heatpump_managed_schedules_off"
 
 ISSUE_HEATPUMP_MANAGED_SCHEDULES_LEARN_MORE_URL: Final[str] = (

@@ -176,6 +176,14 @@
       "heatpump_managed_schedules": {
         "name": "Heatpump manages time schedule execution."
       }
+    },
+    "time": {
+      "silent_mode_start_time": {
+        "name": "Silent mode start time"
+      },
+      "silent_mode_end_time": {
+        "name": "Silent mode end time"
+      }
     }
   },
   "services": {
