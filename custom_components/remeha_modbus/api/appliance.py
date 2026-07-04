@@ -1,6 +1,7 @@
 """Implementation of appliance-scoped functionality."""
 
 from dataclasses import dataclass
+from datetime import time
 from enum import Enum
 
 
@@ -153,6 +154,12 @@ class Appliance:
 
     silent_mode: SilentMode
     """The silent mode level of the appliance."""
+
+    silent_mode_start_time: time
+    """The time of day at which the silent mode starts."""
+
+    silent_mode_end_time: time
+    """The time of day at which the silent mode ends."""
 
     ch_enabled: bool
     """Whether central heating demand processing is enabled."""
