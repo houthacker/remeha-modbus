@@ -667,7 +667,7 @@ REMEHA_DEVICE_INSTANCE_RESERVED_REGISTERS: Final[int] = 6
 REMEHA_TIME_PROGRAM_RESERVED_REGISTERS: Final[int] = 70
 REMEHA_TIME_PROGRAM_BYTE_SIZE: Final[int] = 20
 REMEHA_TIME_PROGRAM_SLOT_SIZE: Final[int] = 3
-REMEHA_TIME_PROGRAM_TIME_STEP_MINUTES: Final[int] = 10
+REMEHA_TIME_STEP_MINUTES: Final[int] = 10
 
 # Reference to Remeha modbus registers
 type ModbusVariableRef = int
@@ -860,7 +860,24 @@ class MetaRegisters:
     )
 
     SILENT_MODE: Final[ModbusVariableDescription] = ModbusVariableDescription(
-        start_address=490, name="enabling_heat_pump_silent_mode", data_type=DataType.UINT8
+        start_address=490,
+        name="enabling_heat_pump_silent_mode",
+        friendly_name="HP058",
+        data_type=DataType.UINT8,
+    )
+
+    SILENT_MODE_START_TIME: Final[ModbusVariableDescription] = ModbusVariableDescription(
+        start_address=491,
+        name="silent_mode_start_time",
+        friendly_name="HP094",
+        data_type=DataType.UINT8,
+    )
+
+    SILENT_MODE_END_TIME: Final[ModbusVariableDescription] = ModbusVariableDescription(
+        start_address=492,
+        name="silent_mode_end_time",
+        friendly_name="HP095",
+        data_type=DataType.UINT8,
     )
 
     CH_ENABLED: Final[ModbusVariableDescription] = ModbusVariableDescription(

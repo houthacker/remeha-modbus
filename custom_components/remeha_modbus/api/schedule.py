@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import TYPE_CHECKING, Any, Self, cast
 
-from dateutil import parser, relativedelta
+from dateutil import parser
 from homeassistant.const import UnitOfTemperature
 
 from custom_components.remeha_modbus.const import (
@@ -18,7 +18,6 @@ from custom_components.remeha_modbus.const import (
     PV_EFFICIENCY_TABLE,
     PV_MAX_TILT_DEGREES,
     REMEHA_TIME_PROGRAM_BYTE_SIZE,
-    REMEHA_TIME_PROGRAM_TIME_STEP_MINUTES,
     WATER_SPECIFIC_HEAT_CAPACITY_KJ,
     BoilerConfiguration,
     BoilerEnergyLabel,
@@ -29,6 +28,7 @@ from custom_components.remeha_modbus.const import (
 )
 from custom_components.remeha_modbus.const import REMEHA_TIME_PROGRAM_SLOT_SIZE as SLOT_SIZE
 from custom_components.remeha_modbus.errors import AutoSchedulingError
+from custom_components.remeha_modbus.helpers.gtw08 import SteppedTimeOfDay
 from custom_components.remeha_modbus.helpers.iterators import consecutive_groups
 
 from .appliance import SeasonalMode
@@ -37,15 +37,6 @@ if TYPE_CHECKING:
     from .climate_zone import ClimateZone  # noqa: TC004
 
 _LOGGER = logging.getLogger(__name__)
-
-
-def _minutes_to_time(minutes_of_day: int) -> datetime.time:
-    delta = relativedelta.relativedelta(minutes=minutes_of_day)
-    return datetime.time(delta.hours, delta.minutes, 0)
-
-
-def _time_to_minutes(tm: datetime.time) -> int:
-    return tm.hour * 60 + tm.minute
 
 
 def _energy_label_to_heat_loss_rate(label: BoilerEnergyLabel, volume: float) -> float:
@@ -151,9 +142,7 @@ class Timeslot:
     def encode(self) -> bytes:
         """Encode this time slot into a `bytes` object."""
 
-        time_steps: int = int(
-            int(_time_to_minutes(self.switch_time)) / REMEHA_TIME_PROGRAM_TIME_STEP_MINUTES
-        )
+        time_steps: int = SteppedTimeOfDay.to_steps(self.switch_time)
 
         return (
             int(self.activity.value).to_bytes()
@@ -197,7 +186,7 @@ class Timeslot:
         return cls(
             activity=activity,
             setpoint_type=setpoint_type,
-            switch_time=_minutes_to_time(time_steps * REMEHA_TIME_PROGRAM_TIME_STEP_MINUTES),
+            switch_time=SteppedTimeOfDay.from_steps(time_steps),
         )
 
 
