@@ -126,6 +126,7 @@ class SilentModeStartTimeEntity(RemehaTimeEntity):
 
         # Reflect update until current update
         self.coordinator.get_appliance().silent_mode_start_time = value
+        self.async_write_ha_state()
 
 
 class SilentModeEndTimeEntity(RemehaTimeEntity):
@@ -146,3 +147,4 @@ class SilentModeEndTimeEntity(RemehaTimeEntity):
 
         # Reflect update until current update
         self.coordinator.get_appliance().silent_mode_end_time = value
+        self.async_write_ha_state()

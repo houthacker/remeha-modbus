@@ -141,3 +141,4 @@ class RemehaSilentModeEntity(RemehaSelectEntity):
 
         # Update current data to reflect changes immediately
         self.coordinator.get_appliance().silent_mode = selected_mode
+        self.async_write_ha_state()
