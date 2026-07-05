@@ -423,13 +423,13 @@ class RemehaApi:
                 # doesn't fail the entire update cycle.
                 retries += 1
                 last_error = str(ex)
-                await asyncio.sleep(0.05 * retries)
+                await asyncio.sleep(0.001)
                 continue
 
             if response.isError():
                 retries += 1
                 last_error = f"error code {response.exception_code}"
-                await asyncio.sleep(0.05 * retries)
+                await asyncio.sleep(0.001)
             else:
                 if retries > 0:
                     _LOGGER.debug("Required %d retries to read address %d.", retries, address)
