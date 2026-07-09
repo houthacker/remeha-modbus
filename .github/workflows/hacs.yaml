@@ -2,7 +2,6 @@ name: Validate HACS
 
 on:
   push:
-  pull_request:
   schedule:
     - cron: "0 0 * * *"
   workflow_dispatch:
@@ -11,10 +10,10 @@ jobs:
   validate-hacs:
     runs-on: "ubuntu-latest"
     steps:
-            - name: HACS Action
-              # You may pin to the exact commit or the version.
-              # uses: hacs/action@d556e736723344f83838d08488c983a15381059a
-              uses: hacs/action@22.5.0
-              with:
-                # The category of repository
-                category: "integration"
+      - name: HACS Action
+        # You may pin to the exact commit or the version.
+        # uses: hacs/action@d556e736723344f83838d08488c983a15381059a
+        uses: hacs/action@22.5.0
+        with:
+          # The category of repository
+          category: "integration"
