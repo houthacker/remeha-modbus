@@ -41,7 +41,7 @@ jobs:
   # must still be available.
   coverage_badge:
     runs-on: ubuntu-latest
-    needs: build
+    needs: coverage_reports
     if: github.ref == 'refs/heads/main' and ${{ success() }}
     steps:
       - name: Create the badge
@@ -51,5 +51,5 @@ jobs:
           gistID: ff0da84bf72a3d20fb68db8cb9d3e38e
           filename: coverage_badge.json
           label: coverage
-          message: "${{ needs.build.outputs.coverage_percent }}"
-          color: ${{ needs.build.outputs.coverage_color }}
+          message: "${{ needs.coverage_reports.outputs.coverage_percent }}"
+          color: ${{ needs.coverage_reports.outputs.coverage_color }}
