@@ -5,7 +5,6 @@ from datetime import time
 
 from homeassistant.components.time import TimeEntity
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -74,7 +73,6 @@ class RemehaTimeEntity(CoordinatorEntity[RemehaUpdateCoordinator], TimeEntity):
         else:
             self._parent_device_id = parent_device_id
 
-        self._attr_entity_category = EntityCategory.CONFIG
         self._attr_name = name
         self._attr_unique_id = name
         self._attr_translation_key = name
