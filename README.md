@@ -14,6 +14,12 @@
 
 This integration allows you to manage your Remeha heating/cooling appliance locally from Home Assistant.
 
+## Temporarily not accepting PRs
+
+I'm working on separating the API into a dedicated library which uses up all my available time at the moment.
+Therefore I'm not accepting PRs during this period. New issues are accepted though so new ideas and bugs can
+still be reported there.
+
 ### Like this integration?
 
 <a href="https://www.buymeacoffee.com/houthacker" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me a Coffee" style="height: 60px !important;width: 217px !important;"/>
