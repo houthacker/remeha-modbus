@@ -31,8 +31,10 @@ jobs:
       - name: Run pytest
         id: run_pytest
         run: |
-          output=$(pytest --cov-report=term-missing --junitxml=${{ github.workspace }}/junit-coverage.xml --cov=custom_components/remeha_modbus)
-          echo -n $output | tee ${{ github.workspace }}/pytest-coverage.txt
+          pytest --cov-report=term-missing --junitxml=${{ github.workspace }}/junit-coverage.xml --cov=custom_components/remeha_modbus | tee ${{ github.workspace }}/pytest-coverage.txt
+          if [ "${PIPESTATUS[0]}" != "0" ]; then
+            exit 1
+          fi
       - name: Check for test failures
         if: ${{ failure() }}
         run: |
