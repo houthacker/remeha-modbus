@@ -42,7 +42,7 @@ jobs:
   coverage_badge:
     runs-on: ubuntu-latest
     needs: build
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main' and ${{ steps.coverage_comment.output.outcome == 'success' }}
     steps:
       - name: Create the badge
         uses: schneegans/dynamic-badges-action@v1.7.0
