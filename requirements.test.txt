@@ -1,3 +1,4 @@
+aio-remeha-modbus
 aiodhcpwatcher
 aiodiscover
 aiofiles
