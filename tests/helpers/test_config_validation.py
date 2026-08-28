@@ -2,7 +2,8 @@
 
 import pytest
 import voluptuous as vol
-from remeha_modbus.helpers.validation import struct_format
+
+from custom_components.remeha_modbus.helpers.validation import struct_format
 
 
 def test_struct_format():
