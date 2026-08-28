@@ -3,6 +3,7 @@
 import logging
 from typing import cast
 
+from aio_remeha_modbus.api import DeviceInstance
 from homeassistant.components.sensor import (
     SensorEntity,
     SensorEntityDescription,
@@ -13,7 +14,6 @@ from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from custom_components.remeha_modbus.api import DeviceInstance
 from custom_components.remeha_modbus.const import (
     DOMAIN,
     REMEHA_ENUM_SENSOR_OPTIONS,

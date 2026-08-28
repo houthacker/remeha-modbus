@@ -3,6 +3,8 @@
 import logging
 from typing import TYPE_CHECKING
 
+from aio_remeha_modbus.api.api import RemehaApi
+from aio_remeha_modbus.api.const import ConnectionType
 from dateutil import tz
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_NAME, CONF_TYPE, EVENT_HOMEASSISTANT_STARTED, Platform
@@ -11,11 +13,8 @@ from homeassistant.exceptions import ConfigEntryError, ConfigEntryNotReady
 from homeassistant.helpers.typing import NoEventData
 from pymodbus import ModbusException
 
-from custom_components.remeha_modbus.api import (
-    ConnectionType,
-    RemehaApi,
-)
 from custom_components.remeha_modbus.api.store import RemehaModbusStorage
+from custom_components.remeha_modbus.helpers.config import to_api_configration
 
 if TYPE_CHECKING:
     from custom_components.remeha_modbus.blend.blender import Blender
@@ -56,7 +55,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     api: RemehaApi = RemehaApi.create(
         name=modbus_hub_name,
-        config=entry.data,
+        config=to_api_configration(entry),
         time_zone=await hass.async_add_executor_job(tz.gettz, hass.config.time_zone),
     )
 

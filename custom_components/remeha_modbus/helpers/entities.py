@@ -3,6 +3,7 @@
 from collections.abc import Iterable
 from typing import overload
 
+from aio_remeha_modbus.api.climate_zone import ClimateZone, ZoneSchedule
 from homeassistant.components.climate.const import DOMAIN as ClimatePlatform
 from homeassistant.components.switch.const import DOMAIN as SwitchPlatform
 from homeassistant.const import STATE_ON
@@ -10,7 +11,6 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_platform
 from homeassistant.helpers import entity_registry as er
 
-from custom_components.remeha_modbus.api.climate_zone import ClimateZone, ZoneSchedule
 from custom_components.remeha_modbus.blend.scheduler.const import SchedulerDomain
 from custom_components.remeha_modbus.const import DOMAIN, SWITCH_SCHEDULE_SYNC
 from custom_components.remeha_modbus.errors import EntityNotFoundError

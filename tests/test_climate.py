@@ -35,7 +35,7 @@ async def test_climates(hass: HomeAssistant, mock_modbus_client, mock_config_ent
 
     api = get_api(mock_modbus_client=mock_modbus_client)
     with patch(
-        "custom_components.remeha_modbus.api.RemehaApi.create",
+        "aio_remeha_modbus.api.api.RemehaApi.create",
         new=lambda *args, **kwargs: api,
     ):
         await setup_platform(hass=hass, config_entry=mock_config_entry)
@@ -50,7 +50,7 @@ async def test_dhw_climate(hass: HomeAssistant, mock_modbus_client, mock_config_
 
     api = get_api(mock_modbus_client=mock_modbus_client)
     with patch(
-        "custom_components.remeha_modbus.api.RemehaApi.create",
+        "aio_remeha_modbus.api.api.RemehaApi.create",
         new=lambda *args, **kwargs: api,
     ):
         await setup_platform(hass=hass, config_entry=mock_config_entry)
@@ -146,7 +146,7 @@ async def test_ch_climate(hass: HomeAssistant, mock_modbus_client, mock_config_e
 
     api = get_api(mock_modbus_client=mock_modbus_client)
     with patch(
-        "custom_components.remeha_modbus.api.RemehaApi.create",
+        "aio_remeha_modbus.api.api.RemehaApi.create",
         new=lambda *args, **kwargs: api,
     ):
         await setup_platform(hass=hass, config_entry=mock_config_entry)
@@ -275,7 +275,7 @@ async def test_ch_temporary_setpoint_override(
 
     api = get_api(mock_modbus_client=mock_modbus_client)
     with patch(
-        "custom_components.remeha_modbus.api.RemehaApi.create",
+        "aio_remeha_modbus.api.api.RemehaApi.create",
         new=lambda *args, **kwargs: api,
     ):
         await setup_platform(hass=hass, config_entry=mock_config_entry)
@@ -310,7 +310,7 @@ async def test_dhw_temporary_setpoint_override(
 
     api = get_api(mock_modbus_client=mock_modbus_client)
     with patch(
-        "custom_components.remeha_modbus.api.RemehaApi.create",
+        "aio_remeha_modbus.api.api.RemehaApi.create",
         new=lambda *args, **kwargs: api,
     ):
         await setup_platform(hass=hass, config_entry=mock_config_entry)
@@ -365,7 +365,7 @@ async def test_dhw_climate_hvac_mode_off(
 
     api = get_api(mock_modbus_client=mock_modbus_client)
     with patch(
-        "custom_components.remeha_modbus.api.RemehaApi.create",
+        "aio_remeha_modbus.api.api.RemehaApi.create",
         new=lambda *args, **kwargs: api,
     ):
         await setup_platform(hass=hass, config_entry=mock_config_entry)
@@ -402,7 +402,7 @@ async def test_dhw_climate_hvac_mode_heat(
     api = get_api(mock_modbus_client=mock_modbus_client)
     with (
         patch(
-            "custom_components.remeha_modbus.api.RemehaApi.create",
+            "aio_remeha_modbus.api.api.RemehaApi.create",
             new=lambda *args, **kwargs: api,
         ),
     ):
@@ -444,7 +444,7 @@ async def test_dhw_climate_hvac_mode_auto(
 
     api = get_api(mock_modbus_client=mock_modbus_client)
     with patch(
-        "custom_components.remeha_modbus.api.RemehaApi.create",
+        "aio_remeha_modbus.api.api.RemehaApi.create",
         new=lambda *args, **kwargs: api,
     ):
         # In the modbus_store.json file, the zone pump is not running. So update that before we actually start.
@@ -498,7 +498,7 @@ async def test_dhw_climate_preset_mode_schedule(
 
     api = get_api(mock_modbus_client=mock_modbus_client)
     with patch(
-        "custom_components.remeha_modbus.api.RemehaApi.create",
+        "aio_remeha_modbus.api.api.RemehaApi.create",
         new=lambda *args, **kwargs: api,
     ):
         # In the modbus_store.json file, the zone pump is not running. So update that before we actually start.
@@ -543,7 +543,7 @@ async def test_dhw_climate_preset_mode_eco(
 
     api = get_api(mock_modbus_client=mock_modbus_client)
     with patch(
-        "custom_components.remeha_modbus.api.RemehaApi.create",
+        "aio_remeha_modbus.api.api.RemehaApi.create",
         new=lambda *args, **kwargs: api,
     ):
         # Then setup platform.
@@ -583,7 +583,7 @@ async def test_dhw_climate_preset_mode_comfort(
 
     api = get_api(mock_modbus_client=mock_modbus_client)
     with patch(
-        "custom_components.remeha_modbus.api.RemehaApi.create",
+        "aio_remeha_modbus.api.api.RemehaApi.create",
         new=lambda *args, **kwargs: api,
     ):
         # In the modbus_store.json file, the zone pump is not running. So update that before we actually start.
@@ -627,7 +627,7 @@ async def test_dhw_climate_preset_mode_none(
 
     api = get_api(mock_modbus_client=mock_modbus_client)
     with patch(
-        "custom_components.remeha_modbus.api.RemehaApi.create",
+        "aio_remeha_modbus.api.api.RemehaApi.create",
         new=lambda *args, **kwargs: api,
     ):
         # In the modbus_store.json file, the zone pump is not running. So update that before we actually start.
@@ -665,7 +665,7 @@ async def test_dhw_climate_preset_mode_invalid(
 
     api = get_api(mock_modbus_client=mock_modbus_client)
     with patch(
-        "custom_components.remeha_modbus.api.RemehaApi.create",
+        "aio_remeha_modbus.api.api.RemehaApi.create",
         new=lambda *args, **kwargs: api,
     ):
         # In the modbus_store.json file, the zone pump is not running. So update that before we actually start.

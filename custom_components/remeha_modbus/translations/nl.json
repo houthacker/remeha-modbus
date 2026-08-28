@@ -359,6 +359,12 @@
     "climate_unsupported_preset_mode": {
       "message": "Aanvraagde voorkeuzemodus {preset_mode} wordt niet ondersteund."
     },
+    "config_entry_error_connection_type": {
+      "message": "{connection_type} is geen geldig type verbinding. Gebruik een type uit de lijst [{connection_types}]"
+    },
+    "config_entry_key_error": {
+      "message": "Fout in configuratie: veld {key} is ongeldig of vereist en niet aanwezig."
+    },
     "incorrect_entity_platform": {
       "message": "Entity {entity_id} hoort niet bij platform {expected_platform} en/of integratie {expected_component}."
     },

@@ -3,11 +3,11 @@
 from unittest.mock import patch
 
 import pytest
+from aio_remeha_modbus.api.climate_zone import ClimateZone
+from aio_remeha_modbus.api.schedule import ZoneSchedule
 from homeassistant.core import HomeAssistant, ServiceCall
 from pydantic import TypeAdapter, ValidationError
 
-from custom_components.remeha_modbus.api.climate_zone import ClimateZone
-from custom_components.remeha_modbus.api.schedule import ZoneSchedule
 from custom_components.remeha_modbus.api.store import RemehaModbusStore
 from custom_components.remeha_modbus.blend.scheduler.const import SchedulerDomain, SchedulerSchedule
 from custom_components.remeha_modbus.blend.scheduler.scenarios.modbus_schedule_updated import (
@@ -27,9 +27,7 @@ async def test_schedule_updated(
 
     api = get_api(mock_modbus_client=mock_modbus_client)
     with (
-        patch(
-            "custom_components.remeha_modbus.api.RemehaApi.create", new=lambda *args, **kwargs: api
-        ),
+        patch("aio_remeha_modbus.api.api.RemehaApi.create", new=lambda *args, **kwargs: api),
         patch(
             "custom_components.remeha_modbus.api.store.RemehaModbusStore",
             new=lambda *args, **kwargs: modbus_test_store,

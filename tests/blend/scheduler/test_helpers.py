@@ -8,14 +8,14 @@ from unittest.mock import patch
 from uuid import uuid4
 
 import pytest
-from homeassistant.core import HomeAssistant, State
-from pydantic import ValidationError
-
-from custom_components.remeha_modbus.api.schedule import (
+from aio_remeha_modbus.api.schedule import (
     Timeslot,
     TimeslotActivity,
     TimeslotSetpointType,
 )
+from homeassistant.core import HomeAssistant, State
+from pydantic import ValidationError
+
 from custom_components.remeha_modbus.blend.scheduler import helpers
 from custom_components.remeha_modbus.blend.scheduler.const import (
     SCHEDULER_TAG_PREFIX,
@@ -128,7 +128,7 @@ async def test_to_scheduler_schedule(
 
     api = get_api(mock_modbus_client=mock_modbus_client)
     with patch(
-        "custom_components.remeha_modbus.api.RemehaApi.create",
+        "aio_remeha_modbus.api.api.RemehaApi.create",
         new=lambda *args, **kwargs: api,
     ):
         await setup_platform(hass=hass, config_entry=mock_config_entry)
@@ -158,7 +158,7 @@ async def test_links_exclusively_to_remeha_climate(
 
     api = get_api(mock_modbus_client=mock_modbus_client)
     with patch(
-        "custom_components.remeha_modbus.api.RemehaApi.create",
+        "aio_remeha_modbus.api.api.RemehaApi.create",
         new=lambda *args, **kwargs: api,
     ):
         await setup_platform(hass=hass, config_entry=mock_config_entry)
@@ -178,7 +178,7 @@ async def test_links_exclusively_to_remeha_climate_invalid(
 
     api = get_api(mock_modbus_client=mock_modbus_client)
     with patch(
-        "custom_components.remeha_modbus.api.RemehaApi.create",
+        "aio_remeha_modbus.api.api.RemehaApi.create",
         new=lambda *args, **kwargs: api,
     ):
         await setup_platform(hass=hass, config_entry=mock_config_entry)

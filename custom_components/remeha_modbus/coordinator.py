@@ -6,6 +6,25 @@ from datetime import timedelta
 from typing import Any, cast
 from uuid import UUID
 
+from aio_remeha_modbus.api.api import DeviceInstance, RemehaApi
+from aio_remeha_modbus.api.appliance import Appliance
+from aio_remeha_modbus.api.climate_zone import ClimateZone
+from aio_remeha_modbus.api.const import (
+    WEEKDAY_TO_MODBUS_VARIABLE,
+    BoilerConfiguration,
+    BoilerEnergyLabel,
+    ClimateZoneScheduleId,
+    MetaRegisters,
+    ModbusVariableDescription,
+    PVSystem,
+    PVSystemOrientation,
+)
+from aio_remeha_modbus.api.errors import (
+    DiscoveryTableCorruptedError,
+    InvalidZoneSchedule,
+)
+from aio_remeha_modbus.api.schedule import HourlyForecast, WeatherForecast, ZoneSchedule
+from aio_remeha_modbus.api.schedule import UnitOfTemperature as RemehaUnitOfTemperature
 from dateutil.parser import parse
 from homeassistant.components.switch.const import DOMAIN as SwitchPlatform
 from homeassistant.config_entries import ConfigEntry
@@ -15,13 +34,6 @@ from homeassistant.helpers import issue_registry as ir
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from pymodbus import ModbusException
 
-from custom_components.remeha_modbus.api import (
-    DeviceInstance,
-    RemehaApi,
-)
-from custom_components.remeha_modbus.api.appliance import Appliance
-from custom_components.remeha_modbus.api.climate_zone import ClimateZone, ZoneSchedule
-from custom_components.remeha_modbus.api.schedule import HourlyForecast, WeatherForecast
 from custom_components.remeha_modbus.api.store import RemehaModbusStorage, WaitingListEntry
 from custom_components.remeha_modbus.blend.scheduler.const import SchedulerLinkView, ZoneScheduleUID
 from custom_components.remeha_modbus.blend.scheduler.helpers import get_updated_dhw_schedules
@@ -44,20 +56,10 @@ from custom_components.remeha_modbus.const import (
     PV_ORIENTATION,
     PV_TILT,
     REMEHA_SENSORS,
-    WEEKDAY_TO_MODBUS_VARIABLE,
-    BoilerConfiguration,
-    BoilerEnergyLabel,
-    ClimateZoneScheduleId,
-    MetaRegisters,
-    ModbusVariableDescription,
-    PVSystem,
-    PVSystemOrientation,
     UnsubscribeCallback,
 )
 from custom_components.remeha_modbus.errors import (
-    DiscoveryTableCorruptedError,
     IncorrectEntityPlatformError,
-    InvalidZoneSchedule,
     RemehaIncorrectServiceCall,
     RemehaServiceError,
 )
@@ -592,7 +594,7 @@ class RemehaUpdateCoordinator(DataUpdateCoordinator):
         _LOGGER.debug("Using DHW zone with id=%d", dhw_zone.id)
 
         weather_forecast: WeatherForecast = WeatherForecast(
-            unit_of_temperature=temperature_unit,
+            unit_of_temperature=RemehaUnitOfTemperature(temperature_unit.value),
             forecasts=[HourlyForecast.from_dict(e) for e in hourly_forecasts],
         )
 

@@ -3,6 +3,8 @@
 import logging
 from typing import cast
 
+from aio_remeha_modbus.api.api import DeviceInstance, MetaRegisters, RemehaApi, ZoneRegisters
+from aio_remeha_modbus.api.climate_zone import ClimateZone
 from homeassistant.components.number import NumberDeviceClass, NumberEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
@@ -10,14 +12,10 @@ from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from custom_components.remeha_modbus.api import DeviceInstance, RemehaApi
-from custom_components.remeha_modbus.api.climate_zone import ClimateZone
 from custom_components.remeha_modbus.const import (
     DOMAIN,
     TEMPERATURE_STEP,
     Limits,
-    MetaRegisters,
-    ZoneRegisters,
 )
 from custom_components.remeha_modbus.coordinator import RemehaUpdateCoordinator
 

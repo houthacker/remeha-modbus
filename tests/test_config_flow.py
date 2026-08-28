@@ -345,7 +345,7 @@ async def test_reconfigure_non_unique_id(
     """Test that reconfiguring the modbus connection fails if the hub name is changed as well."""
     api = get_api(mock_modbus_client=mock_modbus_client)
     with patch(
-        "custom_components.remeha_modbus.api.RemehaApi.create",
+        "aio_remeha_modbus.api.api.RemehaApi.create",
         new=lambda *args, **kwargs: api,
     ):
         # First setup the platform with the mocked ConfigEntry
@@ -414,7 +414,7 @@ async def test_migrate_from_config_v1_0(
 
     api = get_api(mock_modbus_client=mock_modbus_client)
     with patch(
-        "custom_components.remeha_modbus.api.RemehaApi.create",
+        "aio_remeha_modbus.api.api.RemehaApi.create",
         new=lambda *args, **kwargs: api,
     ):
         # First setup the platform with the mocked ConfigEntry

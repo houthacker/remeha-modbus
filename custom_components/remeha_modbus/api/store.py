@@ -5,6 +5,7 @@ from collections.abc import MutableMapping
 from typing import TypedDict
 from uuid import UUID
 
+from aio_remeha_modbus.api.const import ClimateZoneScheduleId, Weekday
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.storage import Store
 from pydantic.dataclasses import dataclass
@@ -14,8 +15,6 @@ from custom_components.remeha_modbus.const import (
     STORAGE_FILE_KEY,
     STORAGE_MAJOR_VERSION,
     STORAGE_MINOR_VERSION,
-    ClimateZoneScheduleId,
-    Weekday,
 )
 
 _LOGGER = logging.getLogger(__name__)

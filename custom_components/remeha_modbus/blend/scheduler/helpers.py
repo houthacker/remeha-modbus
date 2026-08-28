@@ -4,6 +4,13 @@ from datetime import datetime, time, timedelta
 from typing import cast
 from uuid import UUID
 
+from aio_remeha_modbus.api.climate_zone import ClimateZone
+from aio_remeha_modbus.api.schedule import (
+    Timeslot,
+    TimeslotActivity,
+    TimeslotSetpointType,
+    ZoneSchedule,
+)
 from homeassistant.components.climate.const import DOMAIN as ClimateDomain
 from homeassistant.components.climate.const import PRESET_COMFORT, PRESET_ECO, PRESET_NONE
 from homeassistant.components.switch.const import DOMAIN as SwitchDomain
@@ -11,13 +18,6 @@ from homeassistant.const import STATE_OFF
 from homeassistant.core import HomeAssistant, State
 from pydantic import TypeAdapter
 
-from custom_components.remeha_modbus.api.climate_zone import ClimateZone
-from custom_components.remeha_modbus.api.schedule import (
-    Timeslot,
-    TimeslotActivity,
-    TimeslotSetpointType,
-    ZoneSchedule,
-)
 from custom_components.remeha_modbus.blend.scheduler.const import (
     SCHEDULER_TAG_PREFIX,
     SchedulerAction,

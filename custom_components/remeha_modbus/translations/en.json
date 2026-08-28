@@ -360,6 +360,12 @@
     "climate_unsupported_preset_mode": {
       "message": "Requested preset mode {preset_mode} is unsupported."
     },
+    "config_entry_error_connection_type": {
+      "message": "{connection_type} is not a valid connection type. Use one of [{connection_types}]"
+    },
+    "config_entry_key_error": {
+      "message": "Invalid configuration: key {key} is invalid or missing."
+    },
     "incorrect_entity_platform": {
       "message": "Entity {entity_id} doesn't belong to the expected platform {expected_platform} and/or the integration {expected_component}."
     },

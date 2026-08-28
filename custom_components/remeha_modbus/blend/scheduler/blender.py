@@ -4,12 +4,12 @@ import asyncio
 import logging
 from typing import Final, override
 
+from aio_remeha_modbus.api.schedule import ZoneSchedule
 from homeassistant.components.switch.const import DOMAIN as SwitchDomain
 from homeassistant.const import STATE_ON
 from homeassistant.core import Event, HomeAssistant, State, callback
 from homeassistant.helpers.event import EventStateChangedData, async_track_state_change_event
 
-from custom_components.remeha_modbus.api.schedule import ZoneSchedule
 from custom_components.remeha_modbus.blend import Blender
 from custom_components.remeha_modbus.blend.blender import BlenderState
 from custom_components.remeha_modbus.blend.scheduler.const import (

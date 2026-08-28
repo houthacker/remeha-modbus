@@ -26,9 +26,7 @@ async def test_schedule_updated_not_on_waiting_list(
 
     api = get_api(mock_modbus_client=mock_modbus_client)
     with (
-        patch(
-            "custom_components.remeha_modbus.api.RemehaApi.create", new=lambda *args, **kwargs: api
-        ),
+        patch("aio_remeha_modbus.api.api.RemehaApi.create", new=lambda *args, **kwargs: api),
         patch(
             "custom_components.remeha_modbus.api.store.RemehaModbusStore",
             new=lambda *args, **kwargs: modbus_test_store,
@@ -64,9 +62,7 @@ async def test_schedule_updated_not_linked(
 
     api = get_api(mock_modbus_client=mock_modbus_client)
     with (
-        patch(
-            "custom_components.remeha_modbus.api.RemehaApi.create", new=lambda *args, **kwargs: api
-        ),
+        patch("aio_remeha_modbus.api.api.RemehaApi.create", new=lambda *args, **kwargs: api),
         patch(
             "custom_components.remeha_modbus.api.store.RemehaModbusStore",
             new=lambda *args, **kwargs: modbus_test_store,
@@ -105,9 +101,7 @@ async def test_schedule_updated_missing_climate(
 
     api = get_api(mock_modbus_client=mock_modbus_client)
     with (
-        patch(
-            "custom_components.remeha_modbus.api.RemehaApi.create", new=lambda *args, **kwargs: api
-        ),
+        patch("aio_remeha_modbus.api.api.RemehaApi.create", new=lambda *args, **kwargs: api),
         patch(
             "custom_components.remeha_modbus.api.store.RemehaModbusStore",
             new=lambda *args, **kwargs: modbus_test_store,
@@ -153,9 +147,7 @@ async def test_schedule_updated_successfully(
 
     api = get_api(mock_modbus_client=mock_modbus_client)
     with (
-        patch(
-            "custom_components.remeha_modbus.api.RemehaApi.create", new=lambda *args, **kwargs: api
-        ),
+        patch("aio_remeha_modbus.api.api.RemehaApi.create", new=lambda *args, **kwargs: api),
         patch(
             "custom_components.remeha_modbus.api.store.RemehaModbusStore",
             new=lambda *args, **kwargs: modbus_test_store,
@@ -205,9 +197,7 @@ async def test_schedule_updated_calls_async_write_schedule_with_correct_data(
 
     api = get_api(mock_modbus_client=mock_modbus_client)
     with (
-        patch(
-            "custom_components.remeha_modbus.api.RemehaApi.create", new=lambda *args, **kwargs: api
-        ),
+        patch("aio_remeha_modbus.api.api.RemehaApi.create", new=lambda *args, **kwargs: api),
         patch(
             "custom_components.remeha_modbus.api.store.RemehaModbusStore",
             new=lambda *args, **kwargs: modbus_test_store,
@@ -259,9 +249,7 @@ async def test_init_with_none_state(
 
     api = get_api(mock_modbus_client=mock_modbus_client)
     with (
-        patch(
-            "custom_components.remeha_modbus.api.RemehaApi.create", new=lambda *args, **kwargs: api
-        ),
+        patch("aio_remeha_modbus.api.api.RemehaApi.create", new=lambda *args, **kwargs: api),
         patch(
             "custom_components.remeha_modbus.api.store.RemehaModbusStore",
             new=lambda *args, **kwargs: modbus_test_store,
@@ -294,9 +282,7 @@ async def test_schedule_modbus_sourced_update_is_ignored(
 
     api = get_api(mock_modbus_client=mock_modbus_client)
     with (
-        patch(
-            "custom_components.remeha_modbus.api.RemehaApi.create", new=lambda *args, **kwargs: api
-        ),
+        patch("aio_remeha_modbus.api.api.RemehaApi.create", new=lambda *args, **kwargs: api),
         patch(
             "custom_components.remeha_modbus.api.store.RemehaModbusStore",
             new=lambda *args, **kwargs: modbus_test_store,
@@ -348,9 +334,7 @@ async def test_schedule_updated_on_waiting_list_removes_from_list(
 
     api = get_api(mock_modbus_client=mock_modbus_client)
     with (
-        patch(
-            "custom_components.remeha_modbus.api.RemehaApi.create", new=lambda *args, **kwargs: api
-        ),
+        patch("aio_remeha_modbus.api.api.RemehaApi.create", new=lambda *args, **kwargs: api),
         patch(
             "custom_components.remeha_modbus.api.store.RemehaModbusStore",
             new=lambda *args, **kwargs: modbus_test_store,

@@ -3,11 +3,9 @@
 from typing import TYPE_CHECKING, Any, cast, override
 from uuid import UUID, uuid4
 
+from aio_remeha_modbus.api.schedule import ZoneSchedule
 from homeassistant.core import HomeAssistant
 
-from custom_components.remeha_modbus.api.schedule import (
-    ZoneSchedule,
-)
 from custom_components.remeha_modbus.blend import Scenario
 from custom_components.remeha_modbus.blend.scheduler.const import (
     SchedulerDomain,

@@ -2,6 +2,9 @@
 
 import logging
 
+from aio_remeha_modbus.api.api import DeviceInstance, RemehaApi, SilentMode
+from aio_remeha_modbus.api.const import MetaRegisters
+from aio_remeha_modbus.api.errors import RemehaModbusError
 from homeassistant.components.select import SelectEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
@@ -9,12 +12,8 @@ from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from custom_components.remeha_modbus.api import DeviceInstance
-from custom_components.remeha_modbus.api.api import RemehaApi
-from custom_components.remeha_modbus.api.appliance import SilentMode
-from custom_components.remeha_modbus.const import DOMAIN, MetaRegisters
+from custom_components.remeha_modbus.const import DOMAIN
 from custom_components.remeha_modbus.coordinator import RemehaUpdateCoordinator
-from custom_components.remeha_modbus.errors import RemehaModbusError
 
 _LOGGER = logging.getLogger(__name__)
 

@@ -3,10 +3,16 @@
 from unittest.mock import patch
 
 import pytest
+from aio_remeha_modbus.api.climate_zone import (
+    ClimateZone,
+    ClimateZoneMode,
+    ClimateZoneScheduleId,
+    Weekday,
+    ZoneSchedule,
+)
 from homeassistant.core import HomeAssistant
 from pymodbus import ModbusException
 
-from custom_components.remeha_modbus.api.climate_zone import ClimateZone, Weekday, ZoneSchedule
 from custom_components.remeha_modbus.const import (
     AUTO_SCHEDULE_DEFAULT_ID,
     DOMAIN,
@@ -15,8 +21,6 @@ from custom_components.remeha_modbus.const import (
     READ_REGISTERS_STRUCT_FORMAT,
     SERVICE_AUTO_SCHEDULE,
     SERVICE_READ_REGISTERS,
-    ClimateZoneMode,
-    ClimateZoneScheduleId,
 )
 from custom_components.remeha_modbus.errors import (
     RemehaServiceError,
@@ -32,7 +36,7 @@ async def test_scheduling_service(hass: HomeAssistant, mock_modbus_client, mock_
 
     api = get_api(mock_modbus_client=mock_modbus_client)
     with patch(
-        "custom_components.remeha_modbus.api.RemehaApi.create",
+        "aio_remeha_modbus.api.api.RemehaApi.create",
         new=lambda *args, **kwargs: api,
     ):
         await setup_platform(hass=hass, config_entry=mock_config_entry)
@@ -70,7 +74,7 @@ async def test_read_registers_service(hass: HomeAssistant, mock_modbus_client, m
 
     api = get_api(mock_modbus_client=mock_modbus_client)
     with patch(
-        "custom_components.remeha_modbus.api.RemehaApi.create",
+        "aio_remeha_modbus.api.api.RemehaApi.create",
         new=lambda *args, **kwargs: api,
     ):
         await setup_platform(hass=hass, config_entry=mock_config_entry)
@@ -98,7 +102,7 @@ async def test_read_registers_service_exceptions(
     api = get_api(mock_modbus_client=mock_modbus_client)
     with (
         patch(
-            "custom_components.remeha_modbus.api.RemehaApi.create",
+            "aio_remeha_modbus.api.api.RemehaApi.create",
             new=lambda *args, **kwargs: api,
         ),
         patch(

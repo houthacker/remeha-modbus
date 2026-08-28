@@ -3,6 +3,7 @@
 from unittest.mock import patch
 
 import pytest
+from aio_remeha_modbus.api.const import MetaRegisters, ZoneRegisters
 from homeassistant.components.climate.const import ATTR_PRESET_MODE, PRESET_ECO
 from homeassistant.components.switch.const import DOMAIN as SwitchDomain
 from homeassistant.const import ATTR_ENTITY_ID, SERVICE_TURN_OFF, STATE_OFF, STATE_ON
@@ -17,8 +18,6 @@ from custom_components.remeha_modbus.const import (
     ISSUE_HEATPUMP_MANAGED_SCHEDULES_OFF,
     ISSUE_INVALID_ZONE_SCHEDULE,
     REMEHA_ZONE_RESERVED_REGISTERS,
-    MetaRegisters,
-    ZoneRegisters,
 )
 from custom_components.remeha_modbus.helpers.entities import get_climate_entity_id
 from tests.conftest import get_api, setup_platform
@@ -35,7 +34,7 @@ async def test_discovery_table_corrupted_repair(
 
     api = get_api(mock_modbus_client=mock_modbus_client)
     with patch(
-        "custom_components.remeha_modbus.api.RemehaApi.create",
+        "aio_remeha_modbus.api.api.RemehaApi.create",
         new=lambda *args, **kwargs: api,
     ):
         # Modbus recovery register must be zero
@@ -84,7 +83,7 @@ async def test_invalid_zone_schedule_repair(
 
     api = get_api(mock_modbus_client=mock_modbus_client)
     with patch(
-        "custom_components.remeha_modbus.api.RemehaApi.create",
+        "aio_remeha_modbus.api.api.RemehaApi.create",
         new=lambda *args, **kwargs: api,
     ):
         # Start remeha_modbus
@@ -130,7 +129,7 @@ async def test_undo_manual_schedule_execution_repair(
 
     api = get_api(mock_modbus_client=mock_modbus_client)
     with patch(
-        "custom_components.remeha_modbus.api.RemehaApi.create",
+        "aio_remeha_modbus.api.api.RemehaApi.create",
         new=lambda *args, **kwargs: api,
     ):
         # Start remeha_modbus

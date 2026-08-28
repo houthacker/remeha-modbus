@@ -3,6 +3,8 @@
 import logging
 from datetime import time
 
+from aio_remeha_modbus.api.api import DeviceInstance, RemehaApi
+from aio_remeha_modbus.api.const import MetaRegisters
 from homeassistant.components.time import TimeEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
@@ -10,13 +12,10 @@ from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from custom_components.remeha_modbus.api import DeviceInstance
-from custom_components.remeha_modbus.api.api import RemehaApi
 from custom_components.remeha_modbus.const import (
     DOMAIN,
     TIME_SILENT_MODE_END_TIME,
     TIME_SILENT_MODE_START_TIME,
-    MetaRegisters,
 )
 from custom_components.remeha_modbus.coordinator import RemehaUpdateCoordinator
 from custom_components.remeha_modbus.helpers.gtw08 import SteppedTimeOfDay

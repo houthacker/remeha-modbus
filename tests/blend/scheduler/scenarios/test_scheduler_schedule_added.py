@@ -29,9 +29,7 @@ async def test_schedule_added_no_tags(
 
     api = get_api(mock_modbus_client=mock_modbus_client)
     with (
-        patch(
-            "custom_components.remeha_modbus.api.RemehaApi.create", new=lambda *args, **kwargs: api
-        ),
+        patch("aio_remeha_modbus.api.api.RemehaApi.create", new=lambda *args, **kwargs: api),
         patch(
             "custom_components.remeha_modbus.api.store.RemehaModbusStore",
             new=lambda *args, **kwargs: modbus_test_store,
@@ -70,9 +68,7 @@ async def test_schedule_added_not_on_waiting_list(
 
     api = get_api(mock_modbus_client=mock_modbus_client)
     with (
-        patch(
-            "custom_components.remeha_modbus.api.RemehaApi.create", new=lambda *args, **kwargs: api
-        ),
+        patch("aio_remeha_modbus.api.api.RemehaApi.create", new=lambda *args, **kwargs: api),
         patch(
             "custom_components.remeha_modbus.api.store.RemehaModbusStore",
             new=lambda *args, **kwargs: modbus_test_store,
@@ -111,9 +107,7 @@ async def test_schedule_added(
 
     api = get_api(mock_modbus_client=mock_modbus_client)
     with (
-        patch(
-            "custom_components.remeha_modbus.api.RemehaApi.create", new=lambda *args, **kwargs: api
-        ),
+        patch("aio_remeha_modbus.api.api.RemehaApi.create", new=lambda *args, **kwargs: api),
         patch(
             "custom_components.remeha_modbus.api.store.RemehaModbusStore",
             new=lambda *args, **kwargs: modbus_test_store,

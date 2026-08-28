@@ -2,12 +2,11 @@
 
 from datetime import datetime
 
+from aio_remeha_modbus.api.const import DeviceInstanceRegisters, ZoneRegisters
 from dateutil import tz
 
 from custom_components.remeha_modbus.const import (
     ClimateZoneHeatingMode,
-    DeviceInstanceRegisters,
-    ZoneRegisters,
 )
 from custom_components.remeha_modbus.helpers import gtw08, modbus
 

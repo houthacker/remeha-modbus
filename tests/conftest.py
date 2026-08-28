@@ -9,6 +9,8 @@ from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import pytest
 import voluptuous as vol
+from aio_remeha_modbus.api.api import ConnectionType, RemehaApi
+from aio_remeha_modbus.api.const import BoilerEnergyLabel, ZoneRegisters
 from dateutil import tz
 from homeassistant.components.weather import (
     SERVICE_GET_FORECASTS,
@@ -32,7 +34,6 @@ from pytest_homeassistant_custom_component.common import (
     load_json_value_fixture,
 )
 
-from custom_components.remeha_modbus.api import ConnectionType, RemehaApi
 from custom_components.remeha_modbus.api.store import RemehaModbusStore
 from custom_components.remeha_modbus.const import (
     AUTO_SCHEDULE_SELECTED_SCHEDULE,
@@ -55,8 +56,6 @@ from custom_components.remeha_modbus.const import (
     REMEHA_PRESET_SCHEDULE_1,
     REMEHA_ZONE_RESERVED_REGISTERS,
     WEATHER_ENTITY_ID,
-    BoilerEnergyLabel,
-    ZoneRegisters,
 )
 from custom_components.remeha_modbus.services import register_services
 from custom_components.scheduler.store import ScheduleEntry

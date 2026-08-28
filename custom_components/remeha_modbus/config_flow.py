@@ -56,7 +56,7 @@ from custom_components.remeha_modbus.const import (
     BoilerEnergyLabel,
     PVSystemOrientation,
 )
-from custom_components.remeha_modbus.helpers import config_validation as remeha_cv
+from custom_components.remeha_modbus.helpers import validation as remeha_cv
 
 _LOGGER = logging.getLogger(__name__)
 

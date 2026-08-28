@@ -3,6 +3,9 @@
 import logging
 from typing import Any, cast
 
+from aio_remeha_modbus.api.api import DeviceInstance, RemehaApi
+from aio_remeha_modbus.api.appliance import CoolingType
+from aio_remeha_modbus.api.const import MetaRegisters
 from homeassistant.components.climate.const import (
     ATTR_PRESET_MODE,
     PRESET_ECO,
@@ -20,8 +23,6 @@ from homeassistant.helpers.restore_state import RestoreEntity
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from propcache.api import cached_property
 
-from custom_components.remeha_modbus.api import DeviceInstance, RemehaApi
-from custom_components.remeha_modbus.api.appliance import CoolingType
 from custom_components.remeha_modbus.blend.scheduler.helpers import scheduler_is_installed
 from custom_components.remeha_modbus.const import (
     DOMAIN,
@@ -29,7 +30,6 @@ from custom_components.remeha_modbus.const import (
     ISSUE_HEATPUMP_MANAGED_SCHEDULES_LEARN_MORE_URL,
     ISSUE_HEATPUMP_MANAGED_SCHEDULES_OFF,
     SWITCH_SCHEDULE_SYNC,
-    MetaRegisters,
 )
 from custom_components.remeha_modbus.coordinator import RemehaUpdateCoordinator
 from custom_components.remeha_modbus.helpers.entities import get_climate_entity_id

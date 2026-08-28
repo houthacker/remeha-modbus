@@ -96,5 +96,13 @@
         }
       }
     }
+  },
+  "exceptions": {
+    "config_entry_error_connection_type": {
+      "message": "{connection_type} ist kein gültiger Verbindungstyp. Verwenden Sie einen der folgenden [{connection_types}]"
+    },
+    "config_entry_key_error": {
+      "message": "Konfigurationsfehler: das Feld {key} ist ungültig order erforderlich und nicht vorhanden."
+    }
   }
 }
