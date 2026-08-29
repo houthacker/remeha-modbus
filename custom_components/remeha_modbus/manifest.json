@@ -11,6 +11,6 @@
   "issue_tracker": "https://github.com/houthacker/remeha-modbus/issues",
   "loggers": ["remeha_modbus"],
   "quality_scale": "bronze",
-  "requirements": ["pymodbus", "python-dateutil==2.9.0.post0"],
+  "requirements": ["aio-remeha-modbus", "python-dateutil==2.9.0.post0"],
   "version": "1.0.0b0"
 }
