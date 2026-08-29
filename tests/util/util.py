@@ -131,6 +131,9 @@ class SchedulerCoordinatorStub(DataUpdateCoordinator):
             hass, _LOGGER, config_entry=config_entry, name="test_scheduler", update_interval=None
         )
 
+        self.id = config_entry.unique_id
+        self.hass = hass
+
         self._schedules: dict[str, ScheduleEntry] = {}
         self._tags: dict[str, list[str]] = {}
 
