@@ -23,8 +23,6 @@ Whether you're submitting a patch for a bug or a new feature, be sure to:
 
 * Follow the [Home Assistant Development Guidelines](https://developers.home-assistant.io/docs/development_guidelines/) and the [Home Assistant Documentation Guidelines](https://developers.home-assistant.io/docs/documenting/general-style-guide/)
 
-*
-
 * Your patch **must** contain tests that prove:
   * No regressions have been introduced
   * The bug has actually been fixed
