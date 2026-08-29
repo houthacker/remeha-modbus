@@ -102,6 +102,7 @@ The following proxies are known to be working with this integration. Other gatew
 | Device type                              | URL                                                                     | Notes |
 | ---------------------------------------- | ----------------------------------------------------------------------- | - |
 | Waveshare RS232/485 to WiFi and Ethernet | https://www.waveshare.com/product/rs232-485-to-wifi-eth-b.htm?sku=25222 | When setting a static ip, the device is only reachable in the same subnet since no default gateway can be set. |
+| PUSR USR-DR132 / USR-DR134 | https://www.pusr.com/products/Lipstick-Size-Serial-Device-Server.html | Seems most reliable in **Modbus Multi Host Polling** mode, probably avoids frame misalignment on L-bus |
 
 ## Entities
 
