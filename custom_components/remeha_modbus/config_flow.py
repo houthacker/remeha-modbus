@@ -14,7 +14,7 @@ from homeassistant.config_entries import (
 from homeassistant.const import CONF_HOST, CONF_NAME, CONF_PORT, CONF_TYPE
 from homeassistant.data_entry_flow import section
 from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.selector import selector
+from homeassistant.helpers.selector import SerialPortSelector, selector
 
 from custom_components.remeha_modbus.const import (
     AUTO_SCHEDULE_SELECTED_SCHEDULE,
@@ -187,20 +187,28 @@ def _modbus_serial_schema(current: ConfigEntry | None = None) -> vol.Schema:
         {
             vol.Required(
                 MODBUS_SERIAL_BAUDRATE,
-                default=current.data[MODBUS_SERIAL_BAUDRATE] if current else 115200,
+                default=current.data[MODBUS_SERIAL_BAUDRATE]
+                if current and MODBUS_SERIAL_BAUDRATE in current.data
+                else 115200,
             ): cv.positive_int,
             vol.Required(
                 MODBUS_SERIAL_BYTESIZE,
-                default=current.data[MODBUS_SERIAL_BYTESIZE] if current else 8,
+                default=current.data[MODBUS_SERIAL_BYTESIZE]
+                if current and MODBUS_SERIAL_BYTESIZE in current.data
+                else 8,
             ): vol.All(int, vol.In([5, 6, 7, 8])),
             vol.Required(
                 MODBUS_SERIAL_METHOD,
-                default=current.data[MODBUS_SERIAL_METHOD] if current else MODBUS_SERIAL_METHOD_RTU,
+                default=current.data[MODBUS_SERIAL_METHOD]
+                if current and MODBUS_SERIAL_METHOD in current.data
+                else MODBUS_SERIAL_METHOD_RTU,
             ): vol.In([MODBUS_SERIAL_METHOD_RTU, MODBUS_SERIAL_METHOD_ASCII]),
             vol.Required(
                 MODBUS_SERIAL_PARITY,
                 default=(
-                    current.data[MODBUS_SERIAL_PARITY] if current else MODBUS_SERIAL_PARITY_NONE
+                    current.data[MODBUS_SERIAL_PARITY]
+                    if current and MODBUS_SERIAL_PARITY in current.data
+                    else MODBUS_SERIAL_PARITY_NONE
                 ),
             ): vol.In(
                 [
@@ -211,10 +219,12 @@ def _modbus_serial_schema(current: ConfigEntry | None = None) -> vol.Schema:
             ),
             vol.Required(
                 CONF_PORT, default=current.data[CONF_PORT] if current else vol.UNDEFINED
-            ): vol.Any(cv.port, cv.string),
+            ): SerialPortSelector(),
             vol.Required(
                 MODBUS_SERIAL_STOPBITS,
-                default=current.data[MODBUS_SERIAL_STOPBITS] if current else 2,
+                default=current.data[MODBUS_SERIAL_STOPBITS]
+                if current and MODBUS_SERIAL_STOPBITS in current.data
+                else 2,
             ): vol.All(int, vol.In([1, 2])),
         }
     )
