@@ -12,5 +12,5 @@
   "loggers": ["remeha_modbus"],
   "quality_scale": "bronze",
   "requirements": ["aio-remeha-modbus==0.3.0", "python-dateutil==2.9.0.post0"],
-  "version": "1.0.0b0"
+  "version": "1.0.0b1"
 }
