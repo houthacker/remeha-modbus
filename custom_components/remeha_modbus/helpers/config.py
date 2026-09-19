@@ -25,6 +25,8 @@ from modbus_connection import ModbusSerialParams, ModbusTcpParams, ModbusUdpPara
 from custom_components.remeha_modbus.const import (
     CONF_FRAMER,
     MODBUS_DEVICE_ADDRESS,
+    MODBUS_SERIAL_METHOD,
+    MODBUS_SERIAL_METHOD_RTU,
 )
 
 
@@ -46,13 +48,16 @@ def to_modbus_params(config: MappingProxyType[str, Any]) -> tuple[ModbusParams, 
             bytesize=config.get(CONF_BYTESIZE, 8),
             parity=config.get(CONF_PARITY, "N"),
             stopbits=config.get(CONF_STOPBITS, 1),
-            framer=config[CONF_FRAMER],
+            framer=config.get(
+                MODBUS_SERIAL_METHOD, config.get(CONF_FRAMER, MODBUS_SERIAL_METHOD_RTU)
+            ),
         )
     elif config[CONF_TYPE] == TCP:
         params = ModbusTcpParams(host=config[CONF_HOST], port=config[CONF_PORT], framer="socket")
     elif config[CONF_TYPE] == UDP:
         params = ModbusUdpParams(host=config[CONF_HOST], port=config[CONF_PORT], framer="socket")
     elif config[CONF_TYPE] == RTUOVERTCP:
+        # TODO modbus TCP with framer is deprecated
         params = ModbusTcpParams(host=config[CONF_HOST], port=config[CONF_PORT], framer="rtu")
     else:
         raise KeyError(config[CONF_TYPE])
