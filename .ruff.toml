@@ -1,11 +1,12 @@
 required-version = ">=0.15.1"
-target-version = "py313"
+target-version = "py314"
 line-length = 100
 
 [format]
 preview = false
 
 [lint]
+per-file-ignores = {"tests/test_repairs.py" = ["PLR0917"]}
 select = [
   "A001",   # Variable {name} is shadowing a Python builtin
   "ASYNC",  # flake8-async

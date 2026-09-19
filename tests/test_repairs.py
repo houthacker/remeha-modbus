@@ -3,7 +3,9 @@
 from unittest.mock import patch
 
 import pytest
+from aio_remeha_modbus.api import RemehaApi
 from aio_remeha_modbus.api.const import MetaRegisters, ZoneRegisters
+from aio_remeha_modbus.api.errors import DiscoveryTableCorruptedError
 from homeassistant.components.climate.const import ATTR_PRESET_MODE, PRESET_ECO
 from homeassistant.components.switch.const import DOMAIN as SwitchDomain
 from homeassistant.const import ATTR_ENTITY_ID, SERVICE_TURN_OFF, STATE_OFF, STATE_ON
@@ -20,26 +22,34 @@ from custom_components.remeha_modbus.const import (
     REMEHA_ZONE_RESERVED_REGISTERS,
 )
 from custom_components.remeha_modbus.helpers.entities import get_climate_entity_id
-from tests.conftest import remeha_api, setup_platform
+from tests.conftest import setup_platform
 from tests.util.repairs import get_repairs, process_repair_fix_flow, start_repair_fix_flow
 
 
 @pytest.mark.parametrize(
-    "remeha_modbus_unit", ["modbus_store_corrupted_discovery_table.json"], indirect=True
+    "json_fixture", ["modbus_store_corrupted_discovery_table.json"], indirect=True
 )
 async def test_discovery_table_corrupted_repair(
-    hass: HomeAssistant, remeha_modbus_unit, mock_config_entry, hass_client, hass_ws_client
+    hass: HomeAssistant,
+    remeha_api: RemehaApi,
+    mock_config_entry,
+    hass_client,
+    hass_ws_client,
+    remeha_modbus_unit,
 ):
     """Test repairing a corrupted modbus discovery table."""
 
-    api = remeha_api(remeha_modbus_unit=remeha_modbus_unit)
+    remeha_modbus_unit.fail_read(
+        129, DiscoveryTableCorruptedError(translation_key="discovery_table_corrupted")
+    )
+
     with patch(
-        "aio_remeha_modbus.api.api.RemehaApi.create",
-        new=lambda *args, **kwargs: api,
+        "custom_components.remeha_modbus.RemehaApi",
+        new=lambda *args, **kwargs: remeha_api,
     ):
         # Modbus recovery register must be zero
-        (discovery_register,) = await api.async_read_registers(
-            MetaRegisters.RESET_DISCOVERY_TABLE.start_address, 1
+        (discovery_register,) = await remeha_api.async_read_registers(
+            MetaRegisters.RESET_DISCOVERY_TABLE.start_address,
         )
         assert discovery_register == 0x0000
 
@@ -67,32 +77,29 @@ async def test_discovery_table_corrupted_repair(
         assert issue_registry.async_get_issue(DOMAIN, ISSUE_DISCOVERY_TABLE_CORRUPTED) is None
 
         # And modbus register 200 must contain 0x5a
-        (discovery_register,) = await api.async_read_registers(
-            MetaRegisters.RESET_DISCOVERY_TABLE.start_address, 1
+        (discovery_register,) = await remeha_api.async_read_registers(
+            MetaRegisters.RESET_DISCOVERY_TABLE.start_address,
         )
         assert discovery_register == 0x5A00
 
 
-@pytest.mark.parametrize(
-    "remeha_modbus_unit", ["modbus_store_invalid_timeslot.json"], indirect=True
-)
+@pytest.mark.parametrize("json_fixture", ["modbus_store_invalid_timeslot.json"], indirect=True)
 async def test_invalid_zone_schedule_repair(
-    hass: HomeAssistant, remeha_modbus_unit, mock_config_entry, hass_client, hass_ws_client
+    hass: HomeAssistant, remeha_api: RemehaApi, mock_config_entry, hass_client, hass_ws_client
 ):
     """Test repairing an invalid zone schedule."""
 
-    api = remeha_api(remeha_modbus_unit=remeha_modbus_unit)
     with patch(
-        "aio_remeha_modbus.api.api.RemehaApi.create",
-        new=lambda *args, **kwargs: api,
+        "custom_components.remeha_modbus.RemehaApi",
+        new=lambda *args, **kwargs: remeha_api,
     ):
         # Start remeha_modbus
         await setup_platform(hass=hass, config_entry=mock_config_entry)
         await hass.async_block_till_done()
 
         # And modbus register 1201 must contain 0x05a0
-        (timeslot_activity_register,) = await api.async_read_registers(
-            ZoneRegisters.TIME_PROGRAM_MONDAY.start_address + REMEHA_ZONE_RESERVED_REGISTERS, 1
+        (timeslot_activity_register,) = await remeha_api.async_read_registers(
+            ZoneRegisters.TIME_PROGRAM_MONDAY.start_address + REMEHA_ZONE_RESERVED_REGISTERS,
         )
         assert timeslot_activity_register == 0xA005
 
@@ -116,21 +123,20 @@ async def test_invalid_zone_schedule_repair(
         assert issue_registry.async_get_issue(DOMAIN, ISSUE_INVALID_ZONE_SCHEDULE) is None
 
         # And modbus register 1201 must contain 0x0100 (was 0x05a0)
-        (timeslot_activity_register,) = await api.async_read_registers(
-            ZoneRegisters.TIME_PROGRAM_MONDAY.start_address + REMEHA_ZONE_RESERVED_REGISTERS, 1
+        (timeslot_activity_register,) = await remeha_api.async_read_registers(
+            ZoneRegisters.TIME_PROGRAM_MONDAY.start_address + REMEHA_ZONE_RESERVED_REGISTERS,
         )
         assert timeslot_activity_register == 0x0001
 
 
 async def test_undo_manual_schedule_execution_repair(
-    hass: HomeAssistant, remeha_modbus_unit, mock_config_entry, hass_client, hass_ws_client
+    hass: HomeAssistant, remeha_api, mock_config_entry, hass_client, hass_ws_client
 ):
     """Test repairing/resetting `switch.heatpump_managed_schedules`."""
 
-    api = remeha_api(remeha_modbus_unit=remeha_modbus_unit)
     with patch(
-        "aio_remeha_modbus.api.api.RemehaApi.create",
-        new=lambda *args, **kwargs: api,
+        "custom_components.remeha_modbus.RemehaApi",
+        new=lambda *args, **kwargs: remeha_api,
     ):
         # Start remeha_modbus
         await setup_platform(hass=hass, config_entry=mock_config_entry)
