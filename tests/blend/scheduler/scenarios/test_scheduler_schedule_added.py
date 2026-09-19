@@ -50,9 +50,9 @@ async def test_schedule_added_no_tags(
         assert not schedule_state_tracked[0]
 
 
-@pytest.mark.parametrize("load_json_file", ["scheduler.state.json"], indirect=True)
+@pytest.mark.parametrize("json_file", ["scheduler.state.json"], indirect=True)
 async def test_schedule_added_not_on_waiting_list(
-    hass: HomeAssistant, remeha_api, mock_config_entry, modbus_test_store, load_json_file
+    hass: HomeAssistant, remeha_api, mock_config_entry, modbus_test_store, json_file
 ):
     """Test an added scheduler.schedule having no tags."""
 
@@ -67,7 +67,7 @@ async def test_schedule_added_not_on_waiting_list(
         await hass.async_block_till_done()
 
         coordinator: RemehaUpdateCoordinator = mock_config_entry.runtime_data["coordinator"]
-        scheduler_state = State(**load_json_file)
+        scheduler_state = State(**json_file)
         schedule_state_tracked = [False]
 
         def _track_schedule_state():
@@ -84,13 +84,13 @@ async def test_schedule_added_not_on_waiting_list(
         assert not schedule_state_tracked[0]
 
 
-@pytest.mark.parametrize("load_json_file", ["scheduler.state.json"], indirect=True)
+@pytest.mark.parametrize("json_file", ["scheduler.state.json"], indirect=True)
 async def test_schedule_added(
     hass: HomeAssistant,
     remeha_api,
     mock_config_entry,
     modbus_test_store,
-    load_json_file,
+    json_file,
 ):
     """Test an added scheduler.schedule having no tags."""
 
@@ -102,7 +102,7 @@ async def test_schedule_added(
         ),
     ):
         uuid = uuid4()
-        scheduler_state = State(**replace_tag_template(load_json_file, uuid))
+        scheduler_state = State(**replace_tag_template(json_file, uuid))
         await setup_platform(
             hass=hass,
             config_entry=mock_config_entry,
