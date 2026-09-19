@@ -6,7 +6,10 @@ line-length = 100
 preview = false
 
 [lint]
-per-file-ignores = {"tests/test_repairs.py" = ["PLR0917"]}
+per-file-ignores = {
+  "tests/test_repairs.py" = ["PLR0917"],
+  "tests/conftest.py"= ["PLR0917"]
+}
 select = [
   "A001",   # Variable {name} is shadowing a Python builtin
   "ASYNC",  # flake8-async
