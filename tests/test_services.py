@@ -12,9 +12,9 @@ from aio_remeha_modbus.api.climate_zone import (
 )
 from homeassistant.core import HomeAssistant
 from pymodbus import ModbusException
+from remeha_modbus.coordinator import RemehaUpdateCoordinator
 
 from custom_components.remeha_modbus.const import (
-    AUTO_SCHEDULE_DEFAULT_ID,
     DOMAIN,
     READ_REGISTERS_REGISTER_COUNT,
     READ_REGISTERS_START_REGISTER,
@@ -26,21 +26,23 @@ from custom_components.remeha_modbus.errors import (
     RemehaServiceError,
 )
 
-from .conftest import remeha_api, setup_platform
+from .conftest import setup_platform
 
 
-@pytest.mark.parametrize("remeha_modbus_unit", ["modbus_store.json"], indirect=True)
 @pytest.mark.parametrize("mock_config_entry", [{"auto_scheduling": True}], indirect=True)
-async def test_scheduling_service(hass: HomeAssistant, remeha_modbus_unit, mock_config_entry):
+async def test_scheduling_service(
+    hass: HomeAssistant, remeha_api, remeha_modbus_unit, mock_config_entry
+):
     """Test of the auto scheduling service."""
 
-    api = remeha_api(remeha_modbus_unit=remeha_modbus_unit)
     with patch(
-        "aio_remeha_modbus.api.api.RemehaApi.create",
-        new=lambda *args, **kwargs: api,
+        "custom_components.remeha_modbus.RemehaApi",
+        new=lambda *args, **kwargs: remeha_api,
     ):
         await setup_platform(hass=hass, config_entry=mock_config_entry)
         await hass.async_block_till_done()
+
+        coordinator: RemehaUpdateCoordinator = mock_config_entry.runtime_data["coordinator"]
 
         # Call the service
         await hass.services.async_call(
@@ -54,28 +56,25 @@ async def test_scheduling_service(hass: HomeAssistant, remeha_modbus_unit, mock_
         # Check that the schedule has been created but not activated.
         # For auto scheduling, we use SCHEDULE_1.
         # Using the test data, a schedule will be created for Weekday.FRIDAY.
-        zone: ClimateZone | None = await api.async_read_zone(
-            id=2, appliance=await api.async_read_appliance()
-        )
+        zone: ClimateZone | None = coordinator.get_climate(id=2)
         assert zone is not None
         assert zone.selected_schedule == ClimateZoneScheduleId.SCHEDULE_1
         assert zone.mode == ClimateZoneMode.SCHEDULING
 
         day: Weekday = Weekday.FRIDAY
-        schedule: ZoneSchedule | None = await api.async_read_zone_schedule(
-            zone=zone, schedule_id=AUTO_SCHEDULE_DEFAULT_ID, day=day
+        schedule: ZoneSchedule | None = (
+            zone.current_schedule[day] if zone.current_schedule else None
         )
         assert schedule is not None
 
 
 @pytest.mark.parametrize("mock_config_entry", [{"auto_scheduling": True}], indirect=True)
-async def test_read_registers_service(hass: HomeAssistant, remeha_modbus_unit, mock_config_entry):
+async def test_read_registers_service(hass: HomeAssistant, remeha_api, mock_config_entry):
     """Test of the auto scheduling service."""
 
-    api = remeha_api(remeha_modbus_unit=remeha_modbus_unit)
     with patch(
-        "aio_remeha_modbus.api.api.RemehaApi.create",
-        new=lambda *args, **kwargs: api,
+        "custom_components.remeha_modbus.RemehaApi",
+        new=lambda *args, **kwargs: remeha_api,
     ):
         await setup_platform(hass=hass, config_entry=mock_config_entry)
         await hass.async_block_till_done()
@@ -96,14 +95,13 @@ async def test_read_registers_service(hass: HomeAssistant, remeha_modbus_unit, m
 
 @pytest.mark.parametrize("mock_config_entry", [{"auto_scheduling": True}], indirect=True)
 async def test_read_registers_service_exceptions(
-    hass: HomeAssistant, remeha_modbus_unit, mock_config_entry
+    hass: HomeAssistant, remeha_api, mock_config_entry
 ):
     """Test modbus errors raised from the read_registers service."""
-    api = remeha_api(remeha_modbus_unit=remeha_modbus_unit)
     with (
         patch(
-            "aio_remeha_modbus.api.api.RemehaApi.create",
-            new=lambda *args, **kwargs: api,
+            "custom_components.remeha_modbus.RemehaApi",
+            new=lambda *args, **kwargs: remeha_api,
         ),
         patch(
             "custom_components.remeha_modbus.coordinator.RemehaUpdateCoordinator.async_read_registers"

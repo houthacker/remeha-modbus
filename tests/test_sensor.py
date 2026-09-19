@@ -22,8 +22,8 @@ async def test_sensors(hass: HomeAssistant, remeha_api, mock_config_entry):
 
         assert len(hass.states.async_all(domain_filter=SensorDomain)) == 33
 
-        for sd in REMEHA_SENSORS.values():
+        for sd in REMEHA_SENSORS:
             assert isinstance(sd.name, str)
-            state = hass.states.get(f"sensor.{sd.name}")
+            state = hass.states.get(f"sensor.remeha_modbus_test_hub_{sd.name}")
             assert state is not None
-            assert state.name == sd.name
+            assert state.entity_id == f"sensor.remeha_modbus_test_hub_{sd.name}"
