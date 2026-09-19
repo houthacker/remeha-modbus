@@ -1,6 +1,5 @@
 """Tests for the SchedulerScheduleAdded scenario."""
 
-from typing import Any
 from unittest.mock import patch
 from uuid import uuid4
 
@@ -13,23 +12,18 @@ from custom_components.remeha_modbus.blend.scheduler.scenarios.scheduler_schedul
 )
 from custom_components.remeha_modbus.const import ClimateZoneScheduleId, Weekday, ZoneScheduleUID
 from custom_components.remeha_modbus.coordinator import RemehaUpdateCoordinator
-from tests.conftest import remeha_api, setup_platform
+from tests.conftest import setup_platform
 from tests.util.util import replace_tag_template
 
 
-@pytest.mark.parametrize("json_fixture", ["scheduler.state_no_tags.json"], indirect=True)
+@pytest.mark.parametrize("json_file", ["scheduler.state_no_tags.json"], indirect=True)
 async def test_schedule_added_no_tags(
-    hass: HomeAssistant,
-    remeha_modbus_unit,
-    mock_config_entry,
-    modbus_test_store,
-    json_fixture: dict[str, Any],
+    hass: HomeAssistant, remeha_api, mock_config_entry, modbus_test_store, json_file
 ):
     """Test an added scheduler.schedule having no tags."""
 
-    api = remeha_api(remeha_modbus_unit=remeha_modbus_unit)
     with (
-        patch("aio_remeha_modbus.api.api.RemehaApi.create", new=lambda *args, **kwargs: api),
+        patch("custom_components.remeha_modbus.RemehaApi", new=lambda *args, **kwargs: remeha_api),
         patch(
             "custom_components.remeha_modbus.api.store.RemehaModbusStore",
             new=lambda *args, **kwargs: modbus_test_store,
@@ -39,7 +33,7 @@ async def test_schedule_added_no_tags(
         await hass.async_block_till_done()
 
         coordinator: RemehaUpdateCoordinator = mock_config_entry.runtime_data["coordinator"]
-        scheduler_state = State(**json_fixture)
+        scheduler_state = State(**json_file)
         schedule_state_tracked = [False]
 
         def _track_schedule_state():
@@ -56,19 +50,14 @@ async def test_schedule_added_no_tags(
         assert not schedule_state_tracked[0]
 
 
-@pytest.mark.parametrize("json_fixture", ["scheduler.state.json"], indirect=True)
+@pytest.mark.parametrize("load_json_file", ["scheduler.state.json"], indirect=True)
 async def test_schedule_added_not_on_waiting_list(
-    hass: HomeAssistant,
-    remeha_modbus_unit,
-    mock_config_entry,
-    modbus_test_store,
-    json_fixture: dict[str, Any],
+    hass: HomeAssistant, remeha_api, mock_config_entry, modbus_test_store, load_json_file
 ):
     """Test an added scheduler.schedule having no tags."""
 
-    api = remeha_api(remeha_modbus_unit=remeha_modbus_unit)
     with (
-        patch("aio_remeha_modbus.api.api.RemehaApi.create", new=lambda *args, **kwargs: api),
+        patch("custom_components.remeha_modbus.RemehaApi", new=lambda *args, **kwargs: remeha_api),
         patch(
             "custom_components.remeha_modbus.api.store.RemehaModbusStore",
             new=lambda *args, **kwargs: modbus_test_store,
@@ -78,7 +67,7 @@ async def test_schedule_added_not_on_waiting_list(
         await hass.async_block_till_done()
 
         coordinator: RemehaUpdateCoordinator = mock_config_entry.runtime_data["coordinator"]
-        scheduler_state = State(**json_fixture)
+        scheduler_state = State(**load_json_file)
         schedule_state_tracked = [False]
 
         def _track_schedule_state():
@@ -95,26 +84,25 @@ async def test_schedule_added_not_on_waiting_list(
         assert not schedule_state_tracked[0]
 
 
-@pytest.mark.parametrize("json_fixture", ["scheduler.state.json"], indirect=True)
+@pytest.mark.parametrize("load_json_file", ["scheduler.state.json"], indirect=True)
 async def test_schedule_added(
     hass: HomeAssistant,
-    remeha_modbus_unit,
+    remeha_api,
     mock_config_entry,
     modbus_test_store,
-    json_fixture: dict[str, Any],
+    load_json_file,
 ):
     """Test an added scheduler.schedule having no tags."""
 
-    api = remeha_api(remeha_modbus_unit=remeha_modbus_unit)
     with (
-        patch("aio_remeha_modbus.api.api.RemehaApi.create", new=lambda *args, **kwargs: api),
+        patch("custom_components.remeha_modbus.RemehaApi", new=lambda *args, **kwargs: remeha_api),
         patch(
             "custom_components.remeha_modbus.api.store.RemehaModbusStore",
             new=lambda *args, **kwargs: modbus_test_store,
         ),
     ):
         uuid = uuid4()
-        scheduler_state = State(**replace_tag_template(json_fixture, uuid))
+        scheduler_state = State(**replace_tag_template(load_json_file, uuid))
         await setup_platform(
             hass=hass,
             config_entry=mock_config_entry,

@@ -16,18 +16,17 @@ from custom_components.remeha_modbus.blend.scheduler.scenarios.modbus_schedule_u
 from custom_components.remeha_modbus.const import Weekday
 from custom_components.remeha_modbus.coordinator import RemehaUpdateCoordinator
 from custom_components.remeha_modbus.helpers.entities import integration_entities
-from tests.conftest import remeha_api, setup_platform
+from tests.conftest import setup_platform
 from tests.util.util import set_storage_stub_return_value
 
 
 async def test_schedule_updated(
-    hass: HomeAssistant, remeha_modbus_unit, mock_config_entry, modbus_test_store: RemehaModbusStore
+    hass: HomeAssistant, remeha_api, mock_config_entry, modbus_test_store: RemehaModbusStore
 ):
     """Test schedule updates through modbus."""
 
-    api = remeha_api(remeha_modbus_unit=remeha_modbus_unit)
     with (
-        patch("aio_remeha_modbus.api.api.RemehaApi.create", new=lambda *args, **kwargs: api),
+        patch("custom_components.remeha_modbus.RemehaApi", new=lambda *args, **kwargs: remeha_api),
         patch(
             "custom_components.remeha_modbus.api.store.RemehaModbusStore",
             new=lambda *args, **kwargs: modbus_test_store,
@@ -46,7 +45,9 @@ async def test_schedule_updated(
         climate: ClimateZone | None = coordinator.get_climate(id=2)
         assert climate is not None
 
-        schedule: ZoneSchedule | None = climate.current_schedule[Weekday.MONDAY]
+        schedule: ZoneSchedule | None = (
+            climate.current_schedule[Weekday.MONDAY] if climate.current_schedule else None
+        )
         assert schedule is not None
 
         scenario = ModbusScheduleUpdated(hass=hass, coordinator=coordinator, schedule=schedule)

@@ -147,6 +147,14 @@ def json_fixture(request) -> JsonValueType:
     return load_json_value_fixture(filename=filename)
 
 
+@pytest.fixture
+def json_file(request) -> JsonValueType:
+    """Load an additional json file."""
+
+    filename = request.param if hasattr(request, "param") else "no-file-specified"
+    return load_json_value_fixture(filename=filename)
+
+
 @pytest.fixture(autouse=True)
 def auto_enable_custom_integrations(enable_custom_integrations):
     """Enable custom integrations."""

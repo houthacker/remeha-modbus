@@ -11,22 +11,17 @@ from custom_components.remeha_modbus.blend.scheduler.scenarios.scheduler_schedul
 from custom_components.remeha_modbus.const import ClimateZoneScheduleId, Weekday, ZoneScheduleUID
 from custom_components.remeha_modbus.coordinator import RemehaUpdateCoordinator
 from custom_components.remeha_modbus.errors import ScenarioExecutionError
-from tests.conftest import remeha_api, setup_platform
+from tests.conftest import setup_platform
 
 
-@pytest.mark.parametrize("json_fixture", ["scheduler.state.json"], indirect=True)
+@pytest.mark.parametrize("json_file", ["scheduler.state.json"], indirect=True)
 async def test_schedule_updated_not_on_waiting_list(
-    hass: HomeAssistant,
-    remeha_modbus_unit,
-    mock_config_entry,
-    modbus_test_store,
-    json_fixture: dict,
+    hass: HomeAssistant, remeha_api, mock_config_entry, modbus_test_store, json_file
 ):
     """Test that an updated schedule not on the waiting list is ignored."""
 
-    api = remeha_api(remeha_modbus_unit=remeha_modbus_unit)
     with (
-        patch("aio_remeha_modbus.api.api.RemehaApi.create", new=lambda *args, **kwargs: api),
+        patch("custom_components.remeha_modbus.RemehaApi", new=lambda *args, **kwargs: remeha_api),
         patch(
             "custom_components.remeha_modbus.api.store.RemehaModbusStore",
             new=lambda *args, **kwargs: modbus_test_store,
@@ -36,7 +31,7 @@ async def test_schedule_updated_not_on_waiting_list(
         await hass.async_block_till_done()
 
         coordinator: RemehaUpdateCoordinator = mock_config_entry.runtime_data["coordinator"]
-        scheduler_state = State(**json_fixture)
+        scheduler_state = State(**json_file)
 
         scenario = SchedulerScheduleUpdated(
             hass=hass,
@@ -50,19 +45,18 @@ async def test_schedule_updated_not_on_waiting_list(
             await scenario.async_execute()
 
 
-@pytest.mark.parametrize("json_fixture", ["scheduler.state.json"], indirect=True)
+@pytest.mark.parametrize("json_file", ["scheduler.state.json"], indirect=True)
 async def test_schedule_updated_not_linked(
     hass: HomeAssistant,
-    remeha_modbus_unit,
+    remeha_api,
     mock_config_entry,
     modbus_test_store,
-    json_fixture: dict,
+    json_file,
 ):
     """Test that an updated schedule not linked to a ZoneSchedule is ignored."""
 
-    api = remeha_api(remeha_modbus_unit=remeha_modbus_unit)
     with (
-        patch("aio_remeha_modbus.api.api.RemehaApi.create", new=lambda *args, **kwargs: api),
+        patch("custom_components.remeha_modbus.RemehaApi", new=lambda *args, **kwargs: remeha_api),
         patch(
             "custom_components.remeha_modbus.api.store.RemehaModbusStore",
             new=lambda *args, **kwargs: modbus_test_store,
@@ -72,7 +66,7 @@ async def test_schedule_updated_not_linked(
         await hass.async_block_till_done()
 
         coordinator: RemehaUpdateCoordinator = mock_config_entry.runtime_data["coordinator"]
-        scheduler_state = State(**json_fixture)
+        scheduler_state = State(**json_file)
 
         scenario = SchedulerScheduleUpdated(
             hass=hass,
@@ -89,19 +83,18 @@ async def test_schedule_updated_not_linked(
             await scenario.async_execute()
 
 
-@pytest.mark.parametrize("json_fixture", ["scheduler.state.json"], indirect=True)
+@pytest.mark.parametrize("json_file", ["scheduler.state.json"], indirect=True)
 async def test_schedule_updated_missing_climate(
     hass: HomeAssistant,
-    remeha_modbus_unit,
+    remeha_api,
     mock_config_entry,
     modbus_test_store,
-    json_fixture: dict,
+    json_file,
 ):
     """Test that an updated schedule linked to a non-existent climate raises an error."""
 
-    api = remeha_api(remeha_modbus_unit=remeha_modbus_unit)
     with (
-        patch("aio_remeha_modbus.api.api.RemehaApi.create", new=lambda *args, **kwargs: api),
+        patch("custom_components.remeha_modbus.RemehaApi", new=lambda *args, **kwargs: remeha_api),
         patch(
             "custom_components.remeha_modbus.api.store.RemehaModbusStore",
             new=lambda *args, **kwargs: modbus_test_store,
@@ -111,7 +104,7 @@ async def test_schedule_updated_missing_climate(
         await hass.async_block_till_done()
 
         coordinator: RemehaUpdateCoordinator = mock_config_entry.runtime_data["coordinator"]
-        scheduler_state = State(**json_fixture)
+        scheduler_state = State(**json_file)
 
         # Create a UID for zone 99 which doesn't exist
         fake_uid = ZoneScheduleUID(
@@ -135,19 +128,18 @@ async def test_schedule_updated_missing_climate(
         assert exc_info.value.translation_key == "scenario_execution_error_missing_climate"
 
 
-@pytest.mark.parametrize("json_fixture", ["scheduler.state.json"], indirect=True)
+@pytest.mark.parametrize("json_file", ["scheduler.state.json"], indirect=True)
 async def test_schedule_updated_successfully(
     hass: HomeAssistant,
-    remeha_modbus_unit,
+    remeha_api,
     mock_config_entry,
     modbus_test_store,
-    json_fixture: dict,
+    json_file: dict,
 ):
     """Test a successful schedule update."""
 
-    api = remeha_api(remeha_modbus_unit=remeha_modbus_unit)
     with (
-        patch("aio_remeha_modbus.api.api.RemehaApi.create", new=lambda *args, **kwargs: api),
+        patch("custom_components.remeha_modbus.RemehaApi", new=lambda *args, **kwargs: remeha_api),
         patch(
             "custom_components.remeha_modbus.api.store.RemehaModbusStore",
             new=lambda *args, **kwargs: modbus_test_store,
@@ -157,7 +149,7 @@ async def test_schedule_updated_successfully(
         await hass.async_block_till_done()
 
         coordinator: RemehaUpdateCoordinator = mock_config_entry.runtime_data["coordinator"]
-        scheduler_state = State(**json_fixture)
+        scheduler_state = State(**json_file)
 
         # Get the actual DHW zone (zone 2 based on fixture)
         climate = coordinator.get_climate(id=2)
@@ -185,19 +177,18 @@ async def test_schedule_updated_successfully(
             assert mock_write.called
 
 
-@pytest.mark.parametrize("json_fixture", ["scheduler.state.json"], indirect=True)
+@pytest.mark.parametrize("json_file", ["scheduler.state.json"], indirect=True)
 async def test_schedule_updated_calls_async_write_schedule_with_correct_data(
     hass: HomeAssistant,
-    remeha_modbus_unit,
+    remeha_api,
     mock_config_entry,
     modbus_test_store,
-    json_fixture: dict,
+    json_file,
 ):
     """Test that async_write_schedule is called with the correct ZoneSchedule data."""
 
-    api = remeha_api(remeha_modbus_unit=remeha_modbus_unit)
     with (
-        patch("aio_remeha_modbus.api.api.RemehaApi.create", new=lambda *args, **kwargs: api),
+        patch("custom_components.remeha_modbus.RemehaApi", new=lambda *args, **kwargs: remeha_api),
         patch(
             "custom_components.remeha_modbus.api.store.RemehaModbusStore",
             new=lambda *args, **kwargs: modbus_test_store,
@@ -207,7 +198,7 @@ async def test_schedule_updated_calls_async_write_schedule_with_correct_data(
         await hass.async_block_till_done()
 
         coordinator: RemehaUpdateCoordinator = mock_config_entry.runtime_data["coordinator"]
-        scheduler_state = State(**json_fixture)
+        scheduler_state = State(**json_file)
 
         climate = coordinator.get_climate(id=2)
         assert climate is not None
@@ -243,13 +234,12 @@ async def test_schedule_updated_calls_async_write_schedule_with_correct_data(
 
 
 async def test_init_with_none_state(
-    hass: HomeAssistant, remeha_modbus_unit, mock_config_entry, modbus_test_store
+    hass: HomeAssistant, remeha_api, mock_config_entry, modbus_test_store
 ):
     """Test initialization with None state raises an error."""
 
-    api = remeha_api(remeha_modbus_unit=remeha_modbus_unit)
     with (
-        patch("aio_remeha_modbus.api.api.RemehaApi.create", new=lambda *args, **kwargs: api),
+        patch("custom_components.remeha_modbus.RemehaApi", new=lambda *args, **kwargs: remeha_api),
         patch(
             "custom_components.remeha_modbus.api.store.RemehaModbusStore",
             new=lambda *args, **kwargs: modbus_test_store,
@@ -270,19 +260,18 @@ async def test_init_with_none_state(
         assert exc_info.value.translation_key == "scenario_execution_error_missing_required_state"
 
 
-@pytest.mark.parametrize("json_fixture", ["scheduler.state.json"], indirect=True)
+@pytest.mark.parametrize("json_file", ["scheduler.state.json"], indirect=True)
 async def test_schedule_modbus_sourced_update_is_ignored(
     hass: HomeAssistant,
-    remeha_modbus_unit,
+    remeha_api,
     mock_config_entry,
     modbus_test_store,
-    json_fixture: dict,
+    json_file,
 ):
     """Test that an updated schedule sourced by modbus is ignored (prevents update cycles)."""
 
-    api = remeha_api(remeha_modbus_unit=remeha_modbus_unit)
     with (
-        patch("aio_remeha_modbus.api.api.RemehaApi.create", new=lambda *args, **kwargs: api),
+        patch("custom_components.remeha_modbus.RemehaApi", new=lambda *args, **kwargs: remeha_api),
         patch(
             "custom_components.remeha_modbus.api.store.RemehaModbusStore",
             new=lambda *args, **kwargs: modbus_test_store,
@@ -292,7 +281,7 @@ async def test_schedule_modbus_sourced_update_is_ignored(
         await hass.async_block_till_done()
 
         coordinator: RemehaUpdateCoordinator = mock_config_entry.runtime_data["coordinator"]
-        scheduler_state = State(**json_fixture)
+        scheduler_state = State(**json_file)
 
         scenario = SchedulerScheduleUpdated(
             hass=hass,
@@ -322,19 +311,18 @@ async def test_schedule_modbus_sourced_update_is_ignored(
             assert not mock_get.called
 
 
-@pytest.mark.parametrize("json_fixture", ["scheduler.state.json"], indirect=True)
+@pytest.mark.parametrize("json_file", ["scheduler.state.json"], indirect=True)
 async def test_schedule_updated_on_waiting_list_removes_from_list(
     hass: HomeAssistant,
-    remeha_modbus_unit,
+    remeha_api,
     mock_config_entry,
     modbus_test_store,
-    json_fixture: dict,
+    json_file,
 ):
     """Test that when schedule is on waiting list, it's removed from the list."""
 
-    api = remeha_api(remeha_modbus_unit=remeha_modbus_unit)
     with (
-        patch("aio_remeha_modbus.api.api.RemehaApi.create", new=lambda *args, **kwargs: api),
+        patch("custom_components.remeha_modbus.RemehaApi", new=lambda *args, **kwargs: remeha_api),
         patch(
             "custom_components.remeha_modbus.api.store.RemehaModbusStore",
             new=lambda *args, **kwargs: modbus_test_store,
@@ -344,7 +332,7 @@ async def test_schedule_updated_on_waiting_list_removes_from_list(
         await hass.async_block_till_done()
 
         coordinator: RemehaUpdateCoordinator = mock_config_entry.runtime_data["coordinator"]
-        scheduler_state = State(**json_fixture)
+        scheduler_state = State(**json_file)
 
         scenario = SchedulerScheduleUpdated(
             hass=hass,
