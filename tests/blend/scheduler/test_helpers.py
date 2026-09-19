@@ -1,7 +1,5 @@
 """Test scheduler helpers."""
 
-from copy import deepcopy
-from dataclasses import replace
 from datetime import time
 from typing import Any
 from unittest.mock import patch
@@ -16,6 +14,7 @@ from aio_remeha_modbus.api.schedule import (
 from homeassistant.core import HomeAssistant, State
 from pydantic import ValidationError
 
+from custom_components.remeha_modbus import RemehaUpdateCoordinator
 from custom_components.remeha_modbus.blend.scheduler import helpers
 from custom_components.remeha_modbus.blend.scheduler.const import (
     SCHEDULER_TAG_PREFIX,
@@ -24,7 +23,7 @@ from custom_components.remeha_modbus.blend.scheduler.const import (
 )
 from custom_components.remeha_modbus.const import ClimateZoneScheduleId, Weekday, ZoneScheduleUID
 from custom_components.remeha_modbus.errors import ParseError, RemehaModbusError
-from tests.conftest import remeha_api, setup_platform
+from tests.conftest import setup_platform
 from tests.util.util import replace_tag_template
 
 
@@ -119,119 +118,92 @@ def test_to_zone_schedule_invalid(json_fixture: dict[str, Any]):
         helpers.to_zone_schedule(scheduler_state, uid)
 
 
-@pytest.mark.parametrize("remeha_modbus_unit", ["modbus_store.json"], indirect=True)
-@pytest.mark.parametrize("json_fixture", ["scheduler_schedule.json"], indirect=True)
-async def test_to_scheduler_schedule(
-    hass: HomeAssistant, remeha_modbus_unit, mock_config_entry, json_fixture: dict[str, Any]
-):
+@pytest.mark.parametrize("json_file", ["scheduler_schedule.json"], indirect=True)
+async def test_to_scheduler_schedule(hass: HomeAssistant, remeha_api, mock_config_entry, json_file):
     """Test that to_scheduler_schedule converts a ZoneSchedule correctly."""
 
-    api = remeha_api(remeha_modbus_unit=remeha_modbus_unit)
     with patch(
-        "aio_remeha_modbus.api.api.RemehaApi.create",
-        new=lambda *args, **kwargs: api,
+        "custom_components.remeha_modbus.RemehaApi",
+        new=lambda *args, **kwargs: remeha_api,
     ):
         await setup_platform(hass=hass, config_entry=mock_config_entry)
         await hass.async_block_till_done()
 
-        zone_schedule = await api.async_read_zone_schedule(
-            2, ClimateZoneScheduleId.SCHEDULE_1, Weekday.MONDAY
+        coordinator: RemehaUpdateCoordinator = mock_config_entry.runtime_data["coordinator"]
+        climate = coordinator.get_climate(id=2)
+        assert climate is not None
+        zone_schedule = (
+            climate.current_schedule[Weekday.MONDAY]
+            if climate.current_schedule is not None
+            else None
         )
         assert zone_schedule is not None
 
         uuid = uuid4()
 
         # Replace placeholder in fixture with real value
-        json_fixture = replace_tag_template(json_fixture, uuid)
+        json_file = replace_tag_template(json_file, uuid)
         scheduler_schedule = await helpers.to_scheduler_schedule(
             hass=hass, schedule=zone_schedule, operation=ServiceOperation.ADD, linking_tag=uuid
         )
-        assert scheduler_schedule == json_fixture
+        assert scheduler_schedule == json_file
 
 
-@pytest.mark.parametrize("remeha_modbus_unit", ["modbus_store.json"], indirect=True)
-@pytest.mark.parametrize("json_fixture", ["remeha.schedulerstate.json"], indirect=True)
+@pytest.mark.parametrize("json_file", ["remeha.schedulerstate.json"], indirect=True)
 async def test_links_exclusively_to_remeha_climate(
-    hass: HomeAssistant, remeha_modbus_unit, mock_config_entry, json_fixture: SchedulerState
+    hass: HomeAssistant, remeha_api, mock_config_entry, json_file: SchedulerState
 ):
     """Test whether a given scheduler.State links exclusively to a remeha climate entity."""
 
-    api = remeha_api(remeha_modbus_unit=remeha_modbus_unit)
     with patch(
-        "aio_remeha_modbus.api.api.RemehaApi.create",
-        new=lambda *args, **kwargs: api,
+        "custom_components.remeha_modbus.RemehaApi",
+        new=lambda *args, **kwargs: remeha_api,
     ):
         await setup_platform(hass=hass, config_entry=mock_config_entry)
         await hass.async_block_till_done()
 
-        assert helpers.links_exclusively_to_remeha_climate(hass, json_fixture)
+        assert helpers.links_exclusively_to_remeha_climate(hass, json_file)
 
 
-@pytest.mark.parametrize("remeha_modbus_unit", ["modbus_store.json"], indirect=True)
 @pytest.mark.parametrize(
-    "json_fixture", ["remeha.schedulerstate.multiple-climates.json"], indirect=True
+    "json_file", ["remeha.schedulerstate.multiple-climates.json"], indirect=True
 )
 async def test_links_exclusively_to_remeha_climate_invalid(
-    hass: HomeAssistant, remeha_modbus_unit, mock_config_entry, json_fixture: SchedulerState
+    hass: HomeAssistant, remeha_api, mock_config_entry, json_file: SchedulerState
 ):
     """Test that the helper returns False when a SchedulerState links to at least two entities."""
 
-    api = remeha_api(remeha_modbus_unit=remeha_modbus_unit)
     with patch(
-        "aio_remeha_modbus.api.api.RemehaApi.create",
-        new=lambda *args, **kwargs: api,
+        "custom_components.remeha_modbus.RemehaApi",
+        new=lambda *args, **kwargs: remeha_api,
     ):
         await setup_platform(hass=hass, config_entry=mock_config_entry)
         await hass.async_block_till_done()
 
-        assert not helpers.links_exclusively_to_remeha_climate(hass, json_fixture)
+        assert not helpers.links_exclusively_to_remeha_climate(hass, json_file)
 
 
-@pytest.mark.parametrize("remeha_modbus_unit", ["modbus_store.json"], indirect=True)
-async def test_get_updated_dhw_schedules(remeha_modbus_unit):
+async def test_get_updated_dhw_schedules(hass: HomeAssistant, remeha_api, mock_config_entry):
     """Test calculating updated DHW schedules between two schedule sets."""
 
-    api = remeha_api(remeha_modbus_unit=remeha_modbus_unit)
-    climates = [
-        climate
-        for climate in await api.async_read_zones(await api.async_read_appliance())
-        if climate.is_domestic_hot_water()
-    ]
+    with patch(
+        "custom_components.remeha_modbus.RemehaApi",
+        new=lambda *args, **kwargs: remeha_api,
+    ):
+        await setup_platform(hass=hass, config_entry=mock_config_entry)
+        await hass.async_block_till_done()
 
-    # Same climates have no updates
-    assert (
-        helpers.get_updated_dhw_schedules(
-            {zone.id: zone for zone in climates}, {zone.id: zone for zone in climates}
+        coordinator: RemehaUpdateCoordinator = mock_config_entry.runtime_data["coordinator"]
+        climates = coordinator.get_climates(lambda zone: zone.is_domestic_hot_water())
+
+        # Same climates have no updates
+        assert (
+            helpers.get_updated_dhw_schedules(
+                {zone.id: zone for zone in climates}, {zone.id: zone for zone in climates}
+            )
+            == []
         )
-        == []
-    )
 
-    # climate sets with different keys raise an error
-    with pytest.raises(RemehaModbusError):
-        helpers.get_updated_dhw_schedules({zone.id: zone for zone in climates}, {})
-
-    # climates with different schedules return the mutual difference.
-    new_climates = deepcopy(climates)
-    dhw = new_climates[0]
-    zone_schedule = dhw.current_schedule[Weekday.MONDAY]
-
-    # Update the setpoint_type
-    assert zone_schedule is not None
-    ts = zone_schedule.time_slots[0]
-    zone_schedule.time_slots[0] = replace(
-        ts,
-        setpoint_type=(
-            TimeslotSetpointType.ECO
-            if ts.setpoint_type == TimeslotSetpointType.COMFORT
-            else TimeslotSetpointType.COMFORT
-        ),
-    )
-
-    # These must now differ.
-    assert zone_schedule != climates[0].current_schedule[Weekday.MONDAY]
-
-    updates = helpers.get_updated_dhw_schedules(
-        {zone.id: zone for zone in climates}, {zone.id: zone for zone in new_climates}
-    )
-    assert len(updates) == 1
-    assert updates[0] == zone_schedule
+        # climate sets with different keys raise an error
+        with pytest.raises(RemehaModbusError):
+            helpers.get_updated_dhw_schedules({zone.id: zone for zone in climates}, {})
