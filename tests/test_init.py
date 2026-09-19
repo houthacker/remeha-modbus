@@ -2,7 +2,6 @@
 
 from unittest.mock import patch
 
-import pytest
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry as dr
 from homeassistant.setup import async_setup_component
@@ -10,7 +9,7 @@ from homeassistant.setup import async_setup_component
 from custom_components.remeha_modbus import async_remove_config_entry_device
 from custom_components.remeha_modbus.const import DOMAIN
 
-from .conftest import remeha_api, setup_platform
+from .conftest import setup_platform
 
 
 async def test_async_setup(hass):
@@ -18,16 +17,12 @@ async def test_async_setup(hass):
     assert await async_setup_component(hass, DOMAIN, {}) is True
 
 
-@pytest.mark.parametrize("remeha_modbus_unit", ["modbus_store.json"], indirect=True)
-async def test_remove_config_entry_device(
-    hass: HomeAssistant, remeha_modbus_unit, mock_config_entry
-):
+async def test_remove_config_entry_device(hass: HomeAssistant, remeha_api, mock_config_entry):
     """Stale devices may be removed from the UI; devices still in use may not."""
 
-    api = remeha_api(remeha_modbus_unit=remeha_modbus_unit)
     with patch(
-        "aio_remeha_modbus.api.api.RemehaApi.create",
-        new=lambda *args, **kwargs: api,
+        "custom_components.remeha_modbus.RemehaApi",
+        new=lambda *args, **kwargs: remeha_api,
     ):
         await setup_platform(hass=hass, config_entry=mock_config_entry)
         await hass.async_block_till_done()
