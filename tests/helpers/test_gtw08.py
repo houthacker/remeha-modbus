@@ -3,9 +3,8 @@
 from datetime import datetime
 from typing import Final
 
+from aio_remeha_modbus.helpers.gtw08 import TimeOfDay
 from dateutil import tz
-
-from custom_components.remeha_modbus.helpers.gtw08 import TimeOfDay
 
 
 def test_time_of_day_encode():

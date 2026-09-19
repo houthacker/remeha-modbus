@@ -16,16 +16,16 @@ from custom_components.remeha_modbus.blend.scheduler.scenarios.modbus_schedule_u
 from custom_components.remeha_modbus.const import Weekday
 from custom_components.remeha_modbus.coordinator import RemehaUpdateCoordinator
 from custom_components.remeha_modbus.helpers.entities import integration_entities
-from tests.conftest import get_api, setup_platform
+from tests.conftest import remeha_api, setup_platform
 from tests.util.util import set_storage_stub_return_value
 
 
 async def test_schedule_updated(
-    hass: HomeAssistant, mock_modbus_client, mock_config_entry, modbus_test_store: RemehaModbusStore
+    hass: HomeAssistant, remeha_modbus_unit, mock_config_entry, modbus_test_store: RemehaModbusStore
 ):
     """Test schedule updates through modbus."""
 
-    api = get_api(mock_modbus_client=mock_modbus_client)
+    api = remeha_api(remeha_modbus_unit=remeha_modbus_unit)
     with (
         patch("aio_remeha_modbus.api.api.RemehaApi.create", new=lambda *args, **kwargs: api),
         patch(

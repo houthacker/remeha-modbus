@@ -3,9 +3,9 @@
 import logging
 from typing import Any, cast
 
-from aio_remeha_modbus.api.api import DeviceInstance, RemehaApi
+from aio_remeha_modbus.api import RemehaApi
 from aio_remeha_modbus.api.appliance import CoolingType
-from aio_remeha_modbus.api.const import MetaRegisters
+from aio_remeha_modbus.api.system_discovery_table import DeviceBoard
 from homeassistant.components.climate.const import (
     ATTR_PRESET_MODE,
     PRESET_ECO,
@@ -44,7 +44,7 @@ async def async_setup_entry(
 
     api: RemehaApi = entry.runtime_data["api"]
     coordinator: RemehaUpdateCoordinator = entry.runtime_data["coordinator"]
-    mainboards: list[DeviceInstance] = coordinator.get_devices(lambda device: device.is_mainboard())
+    mainboards: list[DeviceBoard] = coordinator.get_devices(lambda device: device.is_mainboard())
     parent_device_id: int | None = mainboards[0].id if mainboards else None
 
     async_add_entities(
@@ -254,18 +254,18 @@ class RemehaApplianceSwitch(CoordinatorEntity[RemehaUpdateCoordinator], SwitchEn
         if self._parent_device_id is None:
             return None
 
-        device_instance: DeviceInstance | None = self.coordinator.get_device(
-            id=self._parent_device_id
-        )
+        device_instance: DeviceBoard | None = self.coordinator.get_device(id=self._parent_device_id)
         return (
             DeviceInfo(
                 identifiers={(DOMAIN, str(device_instance.article_number))},
-                hw_version=f"HW{device_instance.hw_version[0]:02d}.{device_instance.hw_version[1]:02d}",
+                hw_version=f"HW{device_instance.hardware_version[0]:02d}.{device_instance.hardware_version[1]:02d}",
                 manufacturer="Remeha",
                 model=str(device_instance.board_category),
-                sw_version=f"SW{device_instance.sw_version[0]:02d}.{device_instance.sw_version[1]:02d}",
+                sw_version=f"SW{device_instance.software_version[0]:02d}.{device_instance.software_version[1]:02d}",
             )
             if device_instance is not None
+            and device_instance.hardware_version is not None
+            and device_instance.software_version is not None
             else None
         )
 
@@ -289,7 +289,7 @@ class RemehaChEnabledSwitch(RemehaApplianceSwitch):
     def is_on(self) -> bool:
         """Return whether central heating demand processing is enabled."""
 
-        return self.coordinator.get_appliance().ch_enabled
+        return self.coordinator.get_appliance().ch_enabled or False
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Enable central heating demand processing."""
@@ -302,10 +302,12 @@ class RemehaChEnabledSwitch(RemehaApplianceSwitch):
         await self._async_set_enabled(enabled=False)
 
     async def _async_set_enabled(self, enabled: bool) -> None:
-        await self._api.async_write_variable(variable=MetaRegisters.CH_ENABLED, value=enabled)
+        if enabled:
+            await self.coordinator.get_appliance().async_set_ch_enabled()
+        else:
+            await self.coordinator.get_appliance().async_set_ch_disabled()
 
-        # Reflect the change immediately, until the next coordinator refresh.
-        self.coordinator.get_appliance().ch_enabled = enabled
+        # TODO Reflect the change immediately, until the next coordinator refresh.
         self.async_write_ha_state()
 
 
@@ -344,11 +346,9 @@ class RemehaCoolingEnabledSwitch(RemehaApplianceSwitch):
         await self._async_set_cooling(CoolingType.OFF)
 
     async def _async_set_cooling(self, cooling_type: CoolingType) -> None:
-        await self._api.async_write_variable(
-            variable=MetaRegisters.COOLING_ENABLED, value=cooling_type
-        )
+        await self.coordinator.get_appliance().async_set_cooling_type(cooling_type)
 
-        self.coordinator.get_appliance().cooling_type = cooling_type
+        # TODO set HA state values.
         self.async_write_ha_state()
 
 
@@ -375,7 +375,7 @@ class RemehaForceSummerSwitch(RemehaApplianceSwitch):
     def is_on(self) -> bool:
         """Return whether forced summer mode is active."""
 
-        return self.coordinator.get_appliance().force_summer
+        return self.coordinator.get_appliance().forced_summer_mode or False
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Enable forced summer mode."""
@@ -388,8 +388,10 @@ class RemehaForceSummerSwitch(RemehaApplianceSwitch):
         await self._async_set_force_summer(enabled=False)
 
     async def _async_set_force_summer(self, enabled: bool) -> None:
-        await self._api.async_write_variable(variable=MetaRegisters.FORCE_SUMMER, value=enabled)
+        if enabled:
+            await self.coordinator.get_appliance().async_enable_forced_summer_mode()
+        else:
+            await self.coordinator.get_appliance().async_disable_forced_summer_mode()
 
-        # Reflect the change immediately, until the next coordinator refresh.
-        self.coordinator.get_appliance().force_summer = enabled
+        # TODO Reflect the change immediately, until the next coordinator refresh.
         self.async_write_ha_state()

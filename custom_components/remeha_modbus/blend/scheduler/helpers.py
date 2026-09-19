@@ -369,6 +369,9 @@ def get_updated_dhw_schedules(
         if new_zone.is_domestic_hot_water():
             # Either both zones have a selected schedule,
             if old_zone.selected_schedule is not None and new_zone.selected_schedule is not None:
+                assert old_zone.current_schedule is not None
+                assert new_zone.current_schedule is not None
+
                 updated_new_schedules += [
                     schedule
                     for weekday, schedule in new_zone.current_schedule.items()
@@ -376,6 +379,7 @@ def get_updated_dhw_schedules(
                 ]
             # or, the old zone didn't have a schedule yet and a new one was created.
             elif new_zone.selected_schedule is not None:
+                assert new_zone.current_schedule is not None
                 updated_new_schedules += [
                     schedule
                     for schedule in new_zone.current_schedule.values()

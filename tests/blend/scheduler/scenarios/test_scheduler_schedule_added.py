@@ -13,21 +13,21 @@ from custom_components.remeha_modbus.blend.scheduler.scenarios.scheduler_schedul
 )
 from custom_components.remeha_modbus.const import ClimateZoneScheduleId, Weekday, ZoneScheduleUID
 from custom_components.remeha_modbus.coordinator import RemehaUpdateCoordinator
-from tests.conftest import get_api, setup_platform
+from tests.conftest import remeha_api, setup_platform
 from tests.util.util import replace_tag_template
 
 
 @pytest.mark.parametrize("json_fixture", ["scheduler.state_no_tags.json"], indirect=True)
 async def test_schedule_added_no_tags(
     hass: HomeAssistant,
-    mock_modbus_client,
+    remeha_modbus_unit,
     mock_config_entry,
     modbus_test_store,
     json_fixture: dict[str, Any],
 ):
     """Test an added scheduler.schedule having no tags."""
 
-    api = get_api(mock_modbus_client=mock_modbus_client)
+    api = remeha_api(remeha_modbus_unit=remeha_modbus_unit)
     with (
         patch("aio_remeha_modbus.api.api.RemehaApi.create", new=lambda *args, **kwargs: api),
         patch(
@@ -59,14 +59,14 @@ async def test_schedule_added_no_tags(
 @pytest.mark.parametrize("json_fixture", ["scheduler.state.json"], indirect=True)
 async def test_schedule_added_not_on_waiting_list(
     hass: HomeAssistant,
-    mock_modbus_client,
+    remeha_modbus_unit,
     mock_config_entry,
     modbus_test_store,
     json_fixture: dict[str, Any],
 ):
     """Test an added scheduler.schedule having no tags."""
 
-    api = get_api(mock_modbus_client=mock_modbus_client)
+    api = remeha_api(remeha_modbus_unit=remeha_modbus_unit)
     with (
         patch("aio_remeha_modbus.api.api.RemehaApi.create", new=lambda *args, **kwargs: api),
         patch(
@@ -98,14 +98,14 @@ async def test_schedule_added_not_on_waiting_list(
 @pytest.mark.parametrize("json_fixture", ["scheduler.state.json"], indirect=True)
 async def test_schedule_added(
     hass: HomeAssistant,
-    mock_modbus_client,
+    remeha_modbus_unit,
     mock_config_entry,
     modbus_test_store,
     json_fixture: dict[str, Any],
 ):
     """Test an added scheduler.schedule having no tags."""
 
-    api = get_api(mock_modbus_client=mock_modbus_client)
+    api = remeha_api(remeha_modbus_unit=remeha_modbus_unit)
     with (
         patch("aio_remeha_modbus.api.api.RemehaApi.create", new=lambda *args, **kwargs: api),
         patch(

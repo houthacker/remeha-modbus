@@ -1,9 +1,22 @@
 """Config flow for the Remeha Modbus integration."""
 
 import logging
+from types import MappingProxyType
 from typing import Any
 
 import voluptuous as vol
+from aio_remeha_modbus.api.const import BoilerEnergyLabel, PVSystemOrientation
+from aio_remeha_modbus.api.errors import RemehaModbusError
+from homeassistant.components.modbus.const import (
+    CONF_BAUDRATE,
+    CONF_BYTESIZE,
+    CONF_PARITY,
+    CONF_STOPBITS,
+    RTUOVERTCP,
+    SERIAL,
+    TCP,
+    UDP,
+)
 from homeassistant.components.weather.const import DOMAIN as WeatherDomain
 from homeassistant.config_entries import (
     SOURCE_RECONFIGURE,
@@ -19,10 +32,6 @@ from homeassistant.helpers.selector import SerialPortSelector, selector
 from custom_components.remeha_modbus.const import (
     AUTO_SCHEDULE_SELECTED_SCHEDULE,
     CONFIG_AUTO_SCHEDULE,
-    CONNECTION_RTU_OVER_TCP,
-    CONNECTION_SERIAL,
-    CONNECTION_TCP,
-    CONNECTION_UDP,
     DHW_BOILER_CONFIG_SECTION,
     DHW_BOILER_ENERGY_LABEL,
     DHW_BOILER_HEAT_LOSS_RATE,
@@ -31,16 +40,12 @@ from custom_components.remeha_modbus.const import (
     HA_CONFIG_MINOR_VERSION,
     HA_CONFIG_VERSION,
     MODBUS_DEVICE_ADDRESS,
-    MODBUS_SERIAL_BAUDRATE,
-    MODBUS_SERIAL_BYTESIZE,
     MODBUS_SERIAL_METHOD,
     MODBUS_SERIAL_METHOD_ASCII,
     MODBUS_SERIAL_METHOD_RTU,
-    MODBUS_SERIAL_PARITY,
     MODBUS_SERIAL_PARITY_EVEN,
     MODBUS_SERIAL_PARITY_NONE,
     MODBUS_SERIAL_PARITY_ODD,
-    MODBUS_SERIAL_STOPBITS,
     PV_ANNUAL_EFFICIENCY_DECREASE,
     PV_CONFIG_SECTION,
     PV_INSTALLATION_DATE,
@@ -53,10 +58,9 @@ from custom_components.remeha_modbus.const import (
     REMEHA_PRESET_SCHEDULE_2,
     REMEHA_PRESET_SCHEDULE_3,
     WEATHER_ENTITY_ID,
-    BoilerEnergyLabel,
-    PVSystemOrientation,
 )
 from custom_components.remeha_modbus.helpers import validation as remeha_cv
+from custom_components.remeha_modbus.helpers.config import async_probe_connection
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -186,15 +190,15 @@ def _modbus_serial_schema(current: ConfigEntry | None = None) -> vol.Schema:
     return vol.Schema(
         {
             vol.Required(
-                MODBUS_SERIAL_BAUDRATE,
-                default=current.data[MODBUS_SERIAL_BAUDRATE]
-                if current and MODBUS_SERIAL_BAUDRATE in current.data
+                CONF_BAUDRATE,
+                default=current.data[CONF_BAUDRATE]
+                if current and CONF_BAUDRATE in current.data
                 else 115200,
             ): cv.positive_int,
             vol.Required(
-                MODBUS_SERIAL_BYTESIZE,
-                default=current.data[MODBUS_SERIAL_BYTESIZE]
-                if current and MODBUS_SERIAL_BYTESIZE in current.data
+                CONF_BYTESIZE,
+                default=current.data[CONF_BYTESIZE]
+                if current and CONF_BYTESIZE in current.data
                 else 8,
             ): vol.All(int, vol.In([5, 6, 7, 8])),
             vol.Required(
@@ -204,10 +208,10 @@ def _modbus_serial_schema(current: ConfigEntry | None = None) -> vol.Schema:
                 else MODBUS_SERIAL_METHOD_RTU,
             ): vol.In([MODBUS_SERIAL_METHOD_RTU, MODBUS_SERIAL_METHOD_ASCII]),
             vol.Required(
-                MODBUS_SERIAL_PARITY,
+                CONF_PARITY,
                 default=(
-                    current.data[MODBUS_SERIAL_PARITY]
-                    if current and MODBUS_SERIAL_PARITY in current.data
+                    current.data[CONF_PARITY]
+                    if current and CONF_PARITY in current.data
                     else MODBUS_SERIAL_PARITY_NONE
                 ),
             ): vol.In(
@@ -221,9 +225,9 @@ def _modbus_serial_schema(current: ConfigEntry | None = None) -> vol.Schema:
                 CONF_PORT, default=current.data[CONF_PORT] if current else vol.UNDEFINED
             ): SerialPortSelector(),
             vol.Required(
-                MODBUS_SERIAL_STOPBITS,
-                default=current.data[MODBUS_SERIAL_STOPBITS]
-                if current and MODBUS_SERIAL_STOPBITS in current.data
+                CONF_STOPBITS,
+                default=current.data[CONF_STOPBITS]
+                if current and CONF_STOPBITS in current.data
                 else 2,
             ): vol.All(int, vol.In([1, 2])),
         }
@@ -244,7 +248,7 @@ def _modbus_socket_schema(current: ConfigEntry | None = None) -> vol.Schema:
 
 
 def _validate_modbus_generic_config(data: dict[str, Any]) -> dict[str, Any]:
-    """Validate the user input that should contain the gemeric modbus configuration."""
+    """Validate the user input that should contain the generic modbus configuration."""
 
     return {
         CONF_NAME: data[CONF_NAME],
@@ -310,7 +314,7 @@ class RemehaConfigFlow(ConfigFlow, domain=DOMAIN):
                         errors=errors,
                     )
 
-                if self.data[CONF_TYPE] == CONNECTION_SERIAL:
+                if self.data[CONF_TYPE] == SERIAL:
                     return self.async_show_form(
                         step_id="modbus_serial",
                         data_schema=_modbus_serial_schema(),
@@ -333,10 +337,10 @@ class RemehaConfigFlow(ConfigFlow, domain=DOMAIN):
                             "select": {
                                 "translation_key": "modbus_type",
                                 "options": [
-                                    CONNECTION_TCP,
-                                    CONNECTION_UDP,
-                                    CONNECTION_RTU_OVER_TCP,
-                                    CONNECTION_SERIAL,
+                                    TCP,
+                                    UDP,
+                                    RTUOVERTCP,
+                                    SERIAL,
                                 ],
                             }
                         }
@@ -363,7 +367,7 @@ class RemehaConfigFlow(ConfigFlow, domain=DOMAIN):
                 )
                 errors["base"] = "unknown"
 
-            if self.data[CONF_TYPE] == CONNECTION_SERIAL:
+            if self.data[CONF_TYPE] == SERIAL:
                 return self.async_show_form(
                     step_id="modbus_serial",
                     data_schema=_modbus_serial_schema(
@@ -395,7 +399,15 @@ class RemehaConfigFlow(ConfigFlow, domain=DOMAIN):
     ) -> ConfigFlowResult:
         """Configure modbus over a serial connection."""
 
-        if user_input is not None and user_input[MODBUS_SERIAL_BAUDRATE] is not None:
+        errors: dict[str, str] = {}
+        if user_input is not None and user_input[CONF_BAUDRATE] is not None:
+            data = self.data | user_input
+            try:
+                await async_probe_connection(hass=self.hass, data=MappingProxyType(data))
+            except RemehaModbusError as e:
+                _LOGGER.exception("Probing connection failed.", exc_info=e, stack_info=True)
+                errors["base"] = "cannot_connect"
+
             if self.source == SOURCE_RECONFIGURE:
                 return self.async_update_reload_and_abort(
                     self._get_reconfigure_entry(), data_updates=self.data | user_input
@@ -407,6 +419,7 @@ class RemehaConfigFlow(ConfigFlow, domain=DOMAIN):
             data_schema=_modbus_serial_schema(
                 current=self._get_reconfigure_entry() if self.source == SOURCE_RECONFIGURE else None
             ),
+            errors=errors,
         )
 
     async def async_step_modbus_socket(
@@ -416,11 +429,18 @@ class RemehaConfigFlow(ConfigFlow, domain=DOMAIN):
 
         errors: dict[str, str] = {}
         if user_input is not None and user_input[CONF_HOST] is not None:
+            data = self.data | user_input
+            try:
+                await async_probe_connection(hass=self.hass, data=MappingProxyType(data))
+            except RemehaModbusError as e:
+                _LOGGER.exception("Probing connection failed.", exc_info=e, stack_info=True)
+                errors["base"] = "cannot_connect"
+
             if self.source == SOURCE_RECONFIGURE:
                 return self.async_update_reload_and_abort(
-                    self._get_reconfigure_entry(), data_updates=self.data | user_input
+                    self._get_reconfigure_entry(), data_updates=data
                 )
-            return self.async_create_entry(title="Remeha Modbus", data=self.data | user_input)
+            return self.async_create_entry(title="Remeha Modbus", data=data)
 
         return self.async_show_form(
             step_id="modbus_socket",
@@ -452,7 +472,7 @@ class RemehaConfigFlow(ConfigFlow, domain=DOMAIN):
                 )
 
             # Forward to either serial or socket settings.
-            if self.data[CONF_TYPE] == CONNECTION_SERIAL:
+            if self.data[CONF_TYPE] == SERIAL:
                 return self.async_show_form(
                     step_id="modbus_serial",
                     data_schema=_modbus_serial_schema(current=reconf_entry),
@@ -474,10 +494,10 @@ class RemehaConfigFlow(ConfigFlow, domain=DOMAIN):
                             "select": {
                                 "translation_key": "modbus_type",
                                 "options": [
-                                    CONNECTION_TCP,
-                                    CONNECTION_UDP,
-                                    CONNECTION_RTU_OVER_TCP,
-                                    CONNECTION_SERIAL,
+                                    TCP,
+                                    UDP,
+                                    RTUOVERTCP,
+                                    SERIAL,
                                 ],
                             }
                         }

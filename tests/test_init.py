@@ -10,7 +10,7 @@ from homeassistant.setup import async_setup_component
 from custom_components.remeha_modbus import async_remove_config_entry_device
 from custom_components.remeha_modbus.const import DOMAIN
 
-from .conftest import get_api, setup_platform
+from .conftest import remeha_api, setup_platform
 
 
 async def test_async_setup(hass):
@@ -18,13 +18,13 @@ async def test_async_setup(hass):
     assert await async_setup_component(hass, DOMAIN, {}) is True
 
 
-@pytest.mark.parametrize("mock_modbus_client", ["modbus_store.json"], indirect=True)
+@pytest.mark.parametrize("remeha_modbus_unit", ["modbus_store.json"], indirect=True)
 async def test_remove_config_entry_device(
-    hass: HomeAssistant, mock_modbus_client, mock_config_entry
+    hass: HomeAssistant, remeha_modbus_unit, mock_config_entry
 ):
     """Stale devices may be removed from the UI; devices still in use may not."""
 
-    api = get_api(mock_modbus_client=mock_modbus_client)
+    api = remeha_api(remeha_modbus_unit=remeha_modbus_unit)
     with patch(
         "aio_remeha_modbus.api.api.RemehaApi.create",
         new=lambda *args, **kwargs: api,
@@ -35,7 +35,7 @@ async def test_remove_config_entry_device(
         device_registry = dr.async_get(hass)
         remeha_devices = [
             device
-            for device in device_registry.devices.values()
+            for device in device_registry.devices
             if any(domain == DOMAIN for domain, _ in device.identifiers)
         ]
         assert remeha_devices, "expected at least one remeha_modbus device"

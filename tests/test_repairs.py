@@ -20,19 +20,19 @@ from custom_components.remeha_modbus.const import (
     REMEHA_ZONE_RESERVED_REGISTERS,
 )
 from custom_components.remeha_modbus.helpers.entities import get_climate_entity_id
-from tests.conftest import get_api, setup_platform
+from tests.conftest import remeha_api, setup_platform
 from tests.util.repairs import get_repairs, process_repair_fix_flow, start_repair_fix_flow
 
 
 @pytest.mark.parametrize(
-    "mock_modbus_client", ["modbus_store_corrupted_discovery_table.json"], indirect=True
+    "remeha_modbus_unit", ["modbus_store_corrupted_discovery_table.json"], indirect=True
 )
 async def test_discovery_table_corrupted_repair(
-    hass: HomeAssistant, mock_modbus_client, mock_config_entry, hass_client, hass_ws_client
+    hass: HomeAssistant, remeha_modbus_unit, mock_config_entry, hass_client, hass_ws_client
 ):
     """Test repairing a corrupted modbus discovery table."""
 
-    api = get_api(mock_modbus_client=mock_modbus_client)
+    api = remeha_api(remeha_modbus_unit=remeha_modbus_unit)
     with patch(
         "aio_remeha_modbus.api.api.RemehaApi.create",
         new=lambda *args, **kwargs: api,
@@ -74,14 +74,14 @@ async def test_discovery_table_corrupted_repair(
 
 
 @pytest.mark.parametrize(
-    "mock_modbus_client", ["modbus_store_invalid_timeslot.json"], indirect=True
+    "remeha_modbus_unit", ["modbus_store_invalid_timeslot.json"], indirect=True
 )
 async def test_invalid_zone_schedule_repair(
-    hass: HomeAssistant, mock_modbus_client, mock_config_entry, hass_client, hass_ws_client
+    hass: HomeAssistant, remeha_modbus_unit, mock_config_entry, hass_client, hass_ws_client
 ):
     """Test repairing an invalid zone schedule."""
 
-    api = get_api(mock_modbus_client=mock_modbus_client)
+    api = remeha_api(remeha_modbus_unit=remeha_modbus_unit)
     with patch(
         "aio_remeha_modbus.api.api.RemehaApi.create",
         new=lambda *args, **kwargs: api,
@@ -123,11 +123,11 @@ async def test_invalid_zone_schedule_repair(
 
 
 async def test_undo_manual_schedule_execution_repair(
-    hass: HomeAssistant, mock_modbus_client, mock_config_entry, hass_client, hass_ws_client
+    hass: HomeAssistant, remeha_modbus_unit, mock_config_entry, hass_client, hass_ws_client
 ):
     """Test repairing/resetting `switch.heatpump_managed_schedules`."""
 
-    api = get_api(mock_modbus_client=mock_modbus_client)
+    api = remeha_api(remeha_modbus_unit=remeha_modbus_unit)
     with patch(
         "aio_remeha_modbus.api.api.RemehaApi.create",
         new=lambda *args, **kwargs: api,

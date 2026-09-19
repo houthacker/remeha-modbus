@@ -1,17 +1,13 @@
 """Constants for the Remeha Modbus integration."""
 
 from collections.abc import Callable
-from datetime import date
-from enum import Enum, StrEnum
+from enum import StrEnum
 from typing import Final, Literal, NamedTuple
 
 import voluptuous as vol
+from aio_remeha_modbus.api.climate_zone import ClimateZoneMode
 from aio_remeha_modbus.api.const import (
-    ClimateZoneMode,
     ClimateZoneScheduleId,
-    HybridRegisters,
-    MetaRegisters,
-    ModbusVariableDescription,
     Weekday,
 )
 from homeassistant.components.climate.const import (
@@ -26,7 +22,6 @@ from homeassistant.components.sensor import (
 )
 from homeassistant.core import Event, EventStateChangedData
 from homeassistant.helpers import config_validation as cv
-from pydantic.dataclasses import dataclass
 
 from custom_components.remeha_modbus.helpers import validation as remeha_cv
 
@@ -42,6 +37,9 @@ STORAGE_MAJOR_VERSION = 1
 STORAGE_MINOR_VERSION = 0
 STORAGE_FILE_KEY = f"{DOMAIN}.storage"
 STORAGE_RUNTIME_KEY = f"{DOMAIN}_storage"
+
+# Configuration fields not provided by libs
+CONF_FRAMER = "framer"
 
 type EntityEventCallback = Callable[[Event[EventStateChangedData]], None]
 
@@ -83,28 +81,6 @@ ISSUE_DISCOVERY_TABLE_CORRUPTED_LEARN_MORE_URL: Final[str] = (
 
 ISSUE_RESTART_REQUIRED_REDISCOVERY: Final[str] = "restart_required_force_system_rediscovery"
 
-MAXIMUM_NORMAL_SURFACE_IRRADIANCE_NL: Final[int] = 1000
-"""The maximum normal surface irradiance in The Netherlands, in W/m²"""
-
-WATER_SPECIFIC_HEAT_CAPACITY_KJ: Final[float] = 4.18
-"""The amount of energy required to warm 1 kilogram of water by one degree K"""
-
-AUTO_SCHEDULE_MINIMAL_END_HOUR: Final[int] = 21
-"""The minimal latest hour required to create a useful auto schedule.
-
-This means that if a schedule is planned before this hour, it cannot succeed
-because then no full day can be planned ahead.
-"""
-
-BOILER_MAX_ALLOWED_HEAT_DURATION: Final[int] = 3
-"""The maximum amount of hours the boiler will get to heat up.
-
-If the central heating- the heat pump unit can modulate, this
-is the estimated amount of time required since that is most
-energy-efficient. When the unit is unable to modulate, this time
-is much shorter, but it will cost more energy.
-"""
-
 
 PV_MIN_TILT_DEGREES: Final[int] = 10
 """The minimum supported PV system tilt"""
@@ -135,298 +111,6 @@ class ForecastField(StrEnum):
     PRECIPITATION = "precipitation"
     SOLAR_IRRADIANCE = "solar_irradiance"
     """Solar irradiance is not a field that's available by default"""
-
-
-class PVSystemOrientation(StrEnum):
-    """Describe the PV system orientations."""
-
-    EAST_WEST = "EW"
-    """East/West evenly distributes total PV power over east and west."""
-    NORTH = "N"
-    NORTH_NORTH_EAST = "NNE"
-    NORTH_EAST = "NE"
-    EAST_NORTH_EAST = "ENE"
-    EAST = "E"
-    EAST_SOUTH_EAST = "ESE"
-    SOUTH_EAST = "SE"
-    SOUTH_SOUTH_EAST = "SSE"
-    SOUTH = "S"
-    SOUTH_SOUTH_WEST = "SSW"
-    SOUTH_WEST = "SW"
-    WEST_SOUTH_WEST = "WSW"
-    WEST = "W"
-    WEST_NORTH_WEST = "WNW"
-    NORTH_WEST = "NW"
-    NORTH_NORTH_WEST = "NNW"
-
-
-PV_EFFICIENCY_TABLE = {
-    PVSystemOrientation.NORTH: {
-        10: 0.77,
-        20: 0.68,
-        30: 0.59,
-        40: 0.50,
-        50: 0.40,
-        60: 0.35,
-        70: 0.30,
-        80: 0.25,
-        90: 0.20,
-    },
-    PVSystemOrientation.NORTH_NORTH_EAST: {
-        10: 0.78,
-        20: 0.70,
-        30: 0.59,
-        40: 0.50,
-        50: 0.45,
-        60: 0.39,
-        70: 0.35,
-        80: 0.30,
-        90: 0.25,
-    },
-    PVSystemOrientation.NORTH_EAST: {
-        10: 0.79,
-        20: 0.73,
-        30: 0.65,
-        40: 0.59,
-        50: 0.53,
-        60: 0.46,
-        70: 0.42,
-        80: 0.38,
-        90: 0.35,
-    },
-    PVSystemOrientation.EAST_NORTH_EAST: {
-        10: 0.83,
-        20: 0.78,
-        30: 0.73,
-        40: 0.68,
-        50: 0.62,
-        60: 0.57,
-        70: 0.52,
-        80: 0.46,
-        90: 0.42,
-    },
-    PVSystemOrientation.EAST: {
-        10: 0.85,
-        20: 0.82,
-        30: 0.80,
-        40: 0.76,
-        50: 0.72,
-        60: 0.67,
-        70: 0.62,
-        80: 0.55,
-        90: 0.50,
-    },
-    PVSystemOrientation.EAST_SOUTH_EAST: {
-        10: 0.87,
-        20: 0.87,
-        30: 0.86,
-        40: 0.85,
-        50: 0.81,
-        60: 0.76,
-        70: 0.71,
-        80: 0.65,
-        90: 0.58,
-    },
-    PVSystemOrientation.SOUTH_EAST: {
-        10: 0.90,
-        20: 0.92,
-        30: 0.93,
-        40: 0.92,
-        50: 0.87,
-        60: 0.84,
-        70: 0.78,
-        80: 0.71,
-        90: 0.62,
-    },
-    PVSystemOrientation.SOUTH_SOUTH_EAST: {
-        10: 0.91,
-        20: 0.94,
-        30: 0.96,
-        40: 0.95,
-        50: 0.92,
-        60: 0.88,
-        70: 0.82,
-        80: 0.75,
-        90: 0.65,
-    },
-    PVSystemOrientation.SOUTH: {
-        10: 0.91,
-        20: 0.95,
-        30: 0.97,
-        40: 0.96,
-        50: 0.94,
-        60: 0.90,
-        70: 0.84,
-        80: 0.75,
-        90: 0.65,
-    },
-    PVSystemOrientation.SOUTH_SOUTH_WEST: {
-        10: 0.91,
-        20: 0.95,
-        30: 0.96,
-        40: 0.95,
-        50: 0.92,
-        60: 0.87,
-        70: 0.82,
-        80: 0.74,
-        90: 0.68,
-    },
-    PVSystemOrientation.SOUTH_WEST: {
-        10: 0.90,
-        20: 0.92,
-        30: 0.93,
-        40: 0.92,
-        50: 0.87,
-        60: 0.84,
-        70: 0.78,
-        80: 0.70,
-        90: 0.63,
-    },
-    PVSystemOrientation.WEST_SOUTH_WEST: {
-        10: 0.87,
-        20: 0.87,
-        30: 0.87,
-        40: 0.85,
-        50: 0.81,
-        60: 0.76,
-        70: 0.71,
-        80: 0.64,
-        90: 0.57,
-    },
-    PVSystemOrientation.WEST: {
-        10: 0.85,
-        20: 0.82,
-        30: 0.80,
-        40: 0.76,
-        50: 0.72,
-        60: 0.68,
-        70: 0.62,
-        80: 0.55,
-        90: 0.49,
-    },
-    PVSystemOrientation.WEST_NORTH_WEST: {
-        10: 0.82,
-        20: 0.77,
-        30: 0.71,
-        40: 0.68,
-        50: 0.62,
-        60: 0.57,
-        70: 0.52,
-        80: 0.46,
-        90: 0.42,
-    },
-    PVSystemOrientation.NORTH_WEST: {
-        10: 0.79,
-        20: 0.72,
-        30: 0.65,
-        40: 0.59,
-        50: 0.52,
-        60: 0.47,
-        70: 0.43,
-        80: 0.38,
-        90: 0.34,
-    },
-    PVSystemOrientation.NORTH_NORTH_WEST: {
-        10: 0.78,
-        20: 0.69,
-        30: 0.60,
-        40: 0.51,
-        50: 0.44,
-        60: 0.39,
-        70: 0.35,
-        80: 0.30,
-        90: 0.26,
-    },
-}
-
-
-class BoilerEnergyLabel(StrEnum):
-    """Energy label for DHW boiler.
-
-    The energy label is used to provide an alternative method of calculating heat loss rate.
-    See also https://www.energielabel.nl/apparaten/boiler-en-geiser (Dutch)
-    """
-
-    A_PLUS = "A+"
-    A = "A"
-    B = "B"
-    C = "C"
-    D = "D"
-    E = "E"
-    F = "F"
-
-
-@dataclass(frozen=True)
-class PVSystem:
-    """Parameters that describe a PV system."""
-
-    nominal_power: Final[int]
-    """The total Wp of the system."""
-
-    orientation: Final[PVSystemOrientation]
-    """The direction the PV system faces."""
-
-    tilt: Final[float | None]
-    """The tilt of the PV system, in degrees."""
-
-    annual_efficiency_decrease: Final[float | None]
-    """The annual decrease of efficiency, in percent."""
-
-    installation_date: Final[date | None]
-    """The installation date """
-
-
-class ClimateZoneType(Enum):
-    """Enumerates the available zone types."""
-
-    NOT_PRESENT = 0
-    CH_ONLY = 1
-    CH_AND_COOLING = 2
-    DHW = 3
-    PROCESS_HEAT = 4
-    SWIMMING_POOL = 5
-    OTHER = 254
-
-
-class ClimateZoneFunction(Enum):
-    """Enumerates the available zone functions."""
-
-    DISABLED = 0
-    DIRECT = 1
-    MIXING_CIRCUIT = 2
-    SWIMMING_POOL = 3
-    HIGH_TEMPERATURE = 4
-    FAN_CONVECTOR = 5
-    DHW_TANK = 6
-    ELECTRICAL_DHW_TANK = 7
-    TIME_PROGRAM = 8
-    PROCESS_HEAT = 9
-    DHW_LAYERED = 10
-    DHW_BIC = 11
-    DHW_COMMERCIAL_TANK = 12
-    DHW_PRIMARY = 254
-
-    def is_supported(self) -> bool:
-        """Return whether this `ClimateZoneFunction` is currently supported within this integration."""
-        return self in [
-            ClimateZoneFunction.MIXING_CIRCUIT,
-            ClimateZoneFunction.DHW_PRIMARY,
-        ]
-
-    def has_cooling_capability(self) -> bool:
-        """Return whether this `ClimateZoneFunction` supports cooling."""
-        return self in [
-            ClimateZoneFunction.MIXING_CIRCUIT,
-            ClimateZoneFunction.FAN_CONVECTOR,
-        ]
-
-
-class ClimateZoneHeatingMode(Enum):
-    """The mode the zone is currently functioning in."""
-
-    STANDBY = 0
-    HEATING = 1
-    COOLING = 2
 
 
 class ZoneScheduleUID(NamedTuple):
@@ -505,21 +189,12 @@ DHW_BOILER_VOLUME: Final[str] = "dhw_boiler_volume"
 DHW_BOILER_HEAT_LOSS_RATE: Final[str] = "dhw_heat_loss_rate"
 DHW_BOILER_ENERGY_LABEL: Final[str] = "dhw_boiler_energy_label"
 
-# Modbus connection types
-CONNECTION_TCP: Final[str] = "tcp"
-CONNECTION_UDP: Final[str] = "udp"
-CONNECTION_RTU_OVER_TCP: Final[str] = "rtuovertcp"
-CONNECTION_SERIAL: Final[str] = "serial"
-
 # Modbus slave number
 MODBUS_DEVICE_ADDRESS: Final[str] = "slave"
 
 # Modbus serial configuration fields
-MODBUS_SERIAL_BAUDRATE: Final[str] = "baudrate"
-MODBUS_SERIAL_BYTESIZE: Final[str] = "bytesize"
 MODBUS_SERIAL_METHOD: Final[str] = "method"
 MODBUS_SERIAL_PARITY: Final[str] = "parity"
-MODBUS_SERIAL_STOPBITS: Final[str] = "stopbits"
 
 # Modbus serial method types
 MODBUS_SERIAL_METHOD_RTU: Final[str] = "rtu"
@@ -529,13 +204,6 @@ MODBUS_SERIAL_METHOD_ASCII: Final[str] = "ascii"
 MODBUS_SERIAL_PARITY_EVEN: Final[str] = "E"
 MODBUS_SERIAL_PARITY_ODD: Final[str] = "O"
 MODBUS_SERIAL_PARITY_NONE: Final[str] = "N"
-
-# Modbus common struct formats
-MODBUS_UINT8: Final[str] = "=xB"
-MODBUS_ENUM8: Final[str] = "=xB"
-MODBUS_DEVICE_CATEGORY: Final[str] = "=BB"
-MODBUS_UINT16_BYTES: Final[str] = "=BB"
-MODBUS_TIME_PROGRAM: Final[str] = "=BHBHBHBHBHBHBx"
 
 # The supported step size the setpoint can be increased or decreased
 TEMPERATURE_STEP: float = 0.5
@@ -571,65 +239,6 @@ HA_CLIMATE_PRESET_TO_REMEHA_ZONE_MODE: Final[dict[str, ClimateZoneMode]] = {
     PRESET_COMFORT: ClimateZoneMode.MANUAL,
     PRESET_ECO: ClimateZoneMode.ANTI_FROST,
 }
-
-
-class DataType(StrEnum):
-    """Data types for GTW-08 modbus.
-
-    #### Notes
-    The HA modbus component also provides a `DataType` enum, but it has a deprecated
-    `UINT8` variant, which is used extensively by the GTW-08 parameter list.
-    Not providing an `UINT8` variant would require a more generic approach
-    while reading/writing registers, that is more complex than adding a new
-    variant and handling it specifically.
-    """
-
-    UINT8 = "uint8"
-    """A single byte, read from a 2-byte register with struct format of `xB`.
-    Also used for ENUM8"""
-
-    INT16 = "int16"
-    INT32 = "int32"
-    INT64 = "int64"
-    UINT16 = "uint16"
-    UINT32 = "uint32"
-    UINT64 = "uint64"
-    FLOAT32 = "float32"
-    FLOAT64 = "float64"
-    STRING = "string"
-    CIA_301_TIME_OF_DAY = "cia301_time_of_day"
-    """A time of day, encoded as defined in the CAN301 par 9.1.6.4, 'Time of Day'."""
-
-    TUPLE16 = "tuple16"
-    """A `tuple[int, int]` read from a single register."""
-
-    ZONE_TIME_PROGRAM = "zone_time_program"
-    """A zone time program for a single day, encoded in bytes as defined in the GTW-08 parameter list."""
-
-
-class Limits(float, Enum):
-    """Forced limits users must not exceed."""
-
-    CH_MIN_TEMP = 6.0
-    """Central heating minimum temperature."""
-
-    CH_MAX_TEMP = 30.0
-    """Central heating maximum temperature."""
-
-    DHW_MIN_TEMP = 10.0
-    """Domestic hot water minimum temperature."""
-
-    DHW_MAX_TEMP = 65.0
-    """Domestic hot water maximum temperature."""
-
-    DHW_SCHEDULING_SETPOINT_OVERRIDE_DURATION = 2
-    """The duration in hours of a temporary setpoint override in DHW scheduling."""
-
-    HYSTERESIS_MIN_TEMP = 0.0
-    """The minimum required hysteresis."""
-
-    HYSTERESIS_MAX_TEMP = 40.0
-    """The maximum allowed hysteresis."""
 
 
 # Base register information for zones, device info, time schedules
@@ -730,230 +339,230 @@ SUBSTATUS_OPTIONS: Final[dict[int, str]] = {
     255: "safety_shutdown",
 }
 
-REMEHA_ENUM_SENSOR_OPTIONS: Final[dict[ModbusVariableDescription, dict[int, str]]] = {
-    MetaRegisters.SEASON_MODE: SEASON_MODE_OPTIONS,
-    MetaRegisters.STATUS: STATUS_OPTIONS,
-    MetaRegisters.SUBSTATUS: SUBSTATUS_OPTIONS,
+REMEHA_ENUM_SENSOR_OPTIONS: Final[dict[str, dict[int, str]]] = {
+    "season_mode": SEASON_MODE_OPTIONS,
+    "status": STATUS_OPTIONS,
+    "substatus": SUBSTATUS_OPTIONS,
 }
 
-REMEHA_SENSORS: Final[dict[ModbusVariableDescription, SensorEntityDescription]] = {
-    MetaRegisters.CURRENT_ERROR: SensorEntityDescription(  # 277
-        key=MetaRegisters.CURRENT_ERROR.name, name="current_error"
+REMEHA_SENSORS: tuple[SensorEntityDescription, ...] = (
+    SensorEntityDescription(  # 277
+        key="applianceCurrentError", name="current_error"
     ),
-    MetaRegisters.ERROR_PRIORITY: SensorEntityDescription(  # 278
-        key=MetaRegisters.ERROR_PRIORITY.name, name="error_priority"
+    SensorEntityDescription(  # 278
+        key="applianceErrorPriority", name="error_priority"
     ),
-    MetaRegisters.OUTSIDE_TEMPERATURE: SensorEntityDescription(  # 384
-        key=MetaRegisters.OUTSIDE_TEMPERATURE.name,
+    SensorEntityDescription(  # 384
+        key="varApTOutside",
         device_class=SensorDeviceClass.TEMPERATURE,
         name="outside_temperature",
         native_unit_of_measurement="°C",
         state_class=SensorStateClass.MEASUREMENT,
     ),
-    MetaRegisters.SEASON_MODE: SensorEntityDescription(  # 385
-        key=MetaRegisters.SEASON_MODE.name,
+    SensorEntityDescription(  # 385
+        key="varApSeasonMode",
         name="season_mode",
         translation_key="season_mode",
         device_class=SensorDeviceClass.ENUM,
         options=list(SEASON_MODE_OPTIONS.values()),
     ),
-    MetaRegisters.FLOW_TEMPERATURE: SensorEntityDescription(  # 400
-        key=MetaRegisters.FLOW_TEMPERATURE.name,
+    SensorEntityDescription(  # 400
+        key="varApTFlow",
         device_class=SensorDeviceClass.TEMPERATURE,
         name="flow_temperature",
         native_unit_of_measurement="°C",
         state_class=SensorStateClass.MEASUREMENT,
     ),
-    MetaRegisters.RETURN_TEMPERATURE: SensorEntityDescription(  # 401
-        key=MetaRegisters.RETURN_TEMPERATURE.name,
+    SensorEntityDescription(  # 401
+        key="varApTReturn",
         device_class=SensorDeviceClass.TEMPERATURE,
         name="return_temperature",
         native_unit_of_measurement="°C",
         state_class=SensorStateClass.MEASUREMENT,
     ),
-    MetaRegisters.HEAT_PUMP_FLOW_TEMPERATURE: SensorEntityDescription(  # 403
-        key=MetaRegisters.HEAT_PUMP_FLOW_TEMPERATURE.name,
+    SensorEntityDescription(  # 403
+        key="varHpHeatPumpTF",
         device_class=SensorDeviceClass.TEMPERATURE,
         name="heat_pump_flow_temperature",
         native_unit_of_measurement="°C",
         state_class=SensorStateClass.MEASUREMENT,
     ),
-    MetaRegisters.HEAT_PUMP_RETURN_TEMPERATURE: SensorEntityDescription(  # 404
-        key=MetaRegisters.HEAT_PUMP_RETURN_TEMPERATURE.name,
+    SensorEntityDescription(  # 404
+        key="varHpHeatPumpTR",
         device_class=SensorDeviceClass.TEMPERATURE,
         name="heat_pump_return_temperature",
         native_unit_of_measurement="°C",
         state_class=SensorStateClass.MEASUREMENT,
     ),
-    MetaRegisters.WATER_PRESSURE: SensorEntityDescription(  # 409
-        key=MetaRegisters.WATER_PRESSURE.name,
+    SensorEntityDescription(  # 409
+        key="varApWaterPressure",
         device_class=SensorDeviceClass.PRESSURE,
         name="water_pressure",
         native_unit_of_measurement="bar",
         state_class=SensorStateClass.MEASUREMENT,
     ),
-    MetaRegisters.FLOW_METER: SensorEntityDescription(  # 410
-        key=MetaRegisters.FLOW_METER.name,
+    SensorEntityDescription(  # 410
+        key="varApFlowmeter",
         device_class=SensorDeviceClass.VOLUME_FLOW_RATE,
         name="flow_rate",
         native_unit_of_measurement="L/min",
         state_class=SensorStateClass.MEASUREMENT,
     ),
-    MetaRegisters.STATUS: SensorEntityDescription(  # 411
-        key=MetaRegisters.STATUS.name,
+    SensorEntityDescription(  # 411
+        key="varApStatus",
         name="status",
         translation_key="status",
         device_class=SensorDeviceClass.ENUM,
         options=list(STATUS_OPTIONS.values()),
     ),
-    MetaRegisters.SUBSTATUS: SensorEntityDescription(  # 412
-        key=MetaRegisters.SUBSTATUS.name,
+    SensorEntityDescription(  # 412
+        key="varApSubStatus",
         name="substatus",
         translation_key="substatus",
         device_class=SensorDeviceClass.ENUM,
         options=list(SUBSTATUS_OPTIONS.values()),
     ),
-    MetaRegisters.POWER_ACTUAL: SensorEntityDescription(  # 413
-        key=MetaRegisters.POWER_ACTUAL.name,
+    SensorEntityDescription(  # 413
+        key="varApPowerActual",
         name="actual_relative_power",
         native_unit_of_measurement="%",
         device_class=SensorDeviceClass.POWER_FACTOR,
         state_class=SensorStateClass.MEASUREMENT,
     ),
-    MetaRegisters.GENERATOR_STARTS_TOTAL: SensorEntityDescription(  # 419
-        key=MetaRegisters.GENERATOR_STARTS_TOTAL.name,
+    SensorEntityDescription(  # 419
+        key="varApGeneratorStartsTotal",
         name="generator_starts_total",
         native_unit_of_measurement="starts",
         state_class=SensorStateClass.TOTAL,
     ),
-    MetaRegisters.GENERATOR_HOURS_TOTAL: SensorEntityDescription(  # 421
-        key=MetaRegisters.GENERATOR_HOURS_TOTAL.name,
+    SensorEntityDescription(  # 421
+        key="varApGeneratorHoursTotal",
         name="generator_hours_total",
         native_unit_of_measurement="h",
         device_class=SensorDeviceClass.DURATION,
         state_class=SensorStateClass.TOTAL,
     ),
-    MetaRegisters.BACKUP1_STARTS: SensorEntityDescription(  # 423
-        key=MetaRegisters.BACKUP1_STARTS.name,
+    SensorEntityDescription(  # 423
+        key="varApBackup1Starts",
         name="backup1_starts",
         native_unit_of_measurement="starts",
         state_class=SensorStateClass.TOTAL,
     ),
-    MetaRegisters.BACKUP1_HOURS: SensorEntityDescription(  # 425
-        key=MetaRegisters.BACKUP1_HOURS.name,
+    SensorEntityDescription(  # 425
+        key="varApBackup1Hours",
         name="backup1_hours",
         native_unit_of_measurement="h",
         device_class=SensorDeviceClass.DURATION,
         state_class=SensorStateClass.TOTAL,
     ),
-    MetaRegisters.BACKUP2_STARTS: SensorEntityDescription(  # 427
-        key=MetaRegisters.BACKUP2_STARTS.name,
+    SensorEntityDescription(  # 427
+        key="varApBackup2Starts",
         name="backup2_starts",
         native_unit_of_measurement="starts",
         state_class=SensorStateClass.TOTAL,
     ),
-    MetaRegisters.BACKUP2_HOURS: SensorEntityDescription(  # 429
-        key=MetaRegisters.BACKUP2_HOURS.name,
+    SensorEntityDescription(  # 429
+        key="varApBackup2Hours",
         name="backup2_hours",
         native_unit_of_measurement="h",
         device_class=SensorDeviceClass.DURATION,
         state_class=SensorStateClass.TOTAL,
     ),
-    MetaRegisters.POWER_ON_HOURS: SensorEntityDescription(  # 431
-        key=MetaRegisters.POWER_ON_HOURS.name,
+    SensorEntityDescription(  # 431
+        key="varApPowerOnHours",
         name="power_on_hours",
         native_unit_of_measurement="h",
         device_class=SensorDeviceClass.DURATION,
         state_class=SensorStateClass.TOTAL,
     ),
-    MetaRegisters.CH_ENERGY_CONSUMPTION: SensorEntityDescription(  # 433
-        key=MetaRegisters.CH_ENERGY_CONSUMPTION.name,
+    SensorEntityDescription(  # 433
+        key="varApChEnergyConsumption",
         name="ch_energy_consumption",
         native_unit_of_measurement="kWh",
         device_class=SensorDeviceClass.ENERGY,
         state_class=SensorStateClass.TOTAL,
     ),
-    MetaRegisters.DHW_ENERGY_CONSUMPTION: SensorEntityDescription(  # 435
-        key=MetaRegisters.DHW_ENERGY_CONSUMPTION.name,
+    SensorEntityDescription(  # 435
+        key="varApDhwEnergyConsumption",
         name="dhw_energy_consumption",
         native_unit_of_measurement="kWh",
         device_class=SensorDeviceClass.ENERGY,
         state_class=SensorStateClass.TOTAL,
     ),
-    MetaRegisters.COOLING_ENERGY_CONSUMPTION: SensorEntityDescription(  # 437
-        key=MetaRegisters.COOLING_ENERGY_CONSUMPTION.name,
+    SensorEntityDescription(  # 437
+        key="varApCoolingEnergyConsumption",
         name="cooling_energy_consumption",
         native_unit_of_measurement="kWh",
         device_class=SensorDeviceClass.ENERGY,
         state_class=SensorStateClass.TOTAL,
     ),
-    MetaRegisters.BACKUP_ENERGY_CONSUMPTION: SensorEntityDescription(  # 441
-        key=MetaRegisters.BACKUP_ENERGY_CONSUMPTION.name,
+    SensorEntityDescription(  # 441
+        key="varApBackupEnergyConsumption",
         name="backup_energy_consumption",
         native_unit_of_measurement="kWh",
         device_class=SensorDeviceClass.ENERGY,
         state_class=SensorStateClass.TOTAL,
     ),
-    MetaRegisters.TOTAL_ENERGY_CONSUMPTION: SensorEntityDescription(  # 439
-        key=MetaRegisters.TOTAL_ENERGY_CONSUMPTION.name,
+    SensorEntityDescription(  # 439
+        key="varApTotalEnergyConsumption",
         name="total_energy_consumption",
         native_unit_of_measurement="kWh",
         device_class=SensorDeviceClass.ENERGY,
         state_class=SensorStateClass.TOTAL,
     ),
-    MetaRegisters.TOTAL_ENERGY_DELIVERY: SensorEntityDescription(  # 443
-        key=MetaRegisters.TOTAL_ENERGY_DELIVERY.name,
+    SensorEntityDescription(  # 443
+        key="varApTotalEnergyDelivery",
         name="total_energy_delivery",
         native_unit_of_measurement="kWh",
         device_class=SensorDeviceClass.ENERGY,
         state_class=SensorStateClass.TOTAL,
     ),
-    MetaRegisters.CH_ENERGY_DELIVERY: SensorEntityDescription(  # 445
-        key=MetaRegisters.CH_ENERGY_DELIVERY.name,
+    SensorEntityDescription(  # 445
+        key="varApChEnergyDelivery",
         name="ch_energy_delivery",
         native_unit_of_measurement="kWh",
         device_class=SensorDeviceClass.ENERGY,
         state_class=SensorStateClass.TOTAL,
     ),
-    MetaRegisters.DHW_ENERGY_DELIVERY: SensorEntityDescription(  # 447
-        key=MetaRegisters.DHW_ENERGY_DELIVERY.name,
+    SensorEntityDescription(  # 447
+        key="varApDhwEnergyDelivery",
         name="dhw_energy_delivery",
         native_unit_of_measurement="kWh",
         device_class=SensorDeviceClass.ENERGY,
         state_class=SensorStateClass.TOTAL,
     ),
-    MetaRegisters.COOLING_ENERGY_DELIVERY: SensorEntityDescription(  # 449
-        key=MetaRegisters.COOLING_ENERGY_DELIVERY.name,
+    SensorEntityDescription(  # 449
+        key="varApCoolingEnergyDelivery",
         name="cooling_energy_delivery",
         native_unit_of_measurement="kWh",
         device_class=SensorDeviceClass.ENERGY,
         state_class=SensorStateClass.TOTAL,
     ),
-    MetaRegisters.BACKUP_ENERGY_DELIVERY: SensorEntityDescription(  # 451
-        key=MetaRegisters.BACKUP_ENERGY_DELIVERY.name,
+    SensorEntityDescription(  # 451
+        key="varApBackupEnergydelivery",
         name="backup_energy_delivery",
         native_unit_of_measurement="kWh",
         device_class=SensorDeviceClass.ENERGY,
         state_class=SensorStateClass.TOTAL,
     ),
-    MetaRegisters.PUMP_SPEED: SensorEntityDescription(  # 459
-        key=MetaRegisters.PUMP_SPEED.name,
+    SensorEntityDescription(  # 459
+        key="varApPumpSpeed",
         name="pump_speed",
         native_unit_of_measurement="%",
         device_class=SensorDeviceClass.POWER_FACTOR,
         state_class=SensorStateClass.MEASUREMENT,
     ),
-    MetaRegisters.ACTUAL_PRODUCED_POWER: SensorEntityDescription(  # 460
-        key=MetaRegisters.ACTUAL_PRODUCED_POWER.name,
+    SensorEntityDescription(  # 460
+        key="varApActualProducedPower",
         name="actual_produced_power",
         native_unit_of_measurement="kW",
         device_class=SensorDeviceClass.POWER,
         state_class=SensorStateClass.MEASUREMENT,
     ),
-    HybridRegisters.COP_CALCULATED: SensorEntityDescription(  # 9230
-        key=HybridRegisters.COP_CALCULATED.name,
+    SensorEntityDescription(  # 9230
+        key="varHpCopCalculated",
         name="cop_calculated",
         native_unit_of_measurement="CoP",
         state_class=SensorStateClass.MEASUREMENT,
     ),
-}
+)

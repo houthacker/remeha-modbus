@@ -3,8 +3,8 @@
 import logging
 from datetime import time
 
-from aio_remeha_modbus.api.api import DeviceInstance, RemehaApi
-from aio_remeha_modbus.api.const import MetaRegisters
+from aio_remeha_modbus.api import RemehaApi
+from aio_remeha_modbus.api.system_discovery_table import DeviceBoard
 from homeassistant.components.time import TimeEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
@@ -18,7 +18,6 @@ from custom_components.remeha_modbus.const import (
     TIME_SILENT_MODE_START_TIME,
 )
 from custom_components.remeha_modbus.coordinator import RemehaUpdateCoordinator
-from custom_components.remeha_modbus.helpers.gtw08 import SteppedTimeOfDay
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -30,7 +29,7 @@ async def async_setup_entry(
 
     api: RemehaApi = entry.runtime_data["api"]
     coordinator: RemehaUpdateCoordinator = entry.runtime_data["coordinator"]
-    mainboards: list[DeviceInstance] = coordinator.get_devices(
+    mainboards: list[DeviceBoard] = coordinator.get_devices(
         predicate=lambda device: device.is_mainboard()
     )
     parent_device_id: int | None = mainboards[0].id if mainboards else None
@@ -69,8 +68,8 @@ class RemehaTimeEntity(CoordinatorEntity[RemehaUpdateCoordinator], TimeEntity):
 
         if parent_device_id is None:
             _LOGGER.warning("Select entity [%s] not linked to a parent device.", name)
-        else:
-            self._parent_device_id = parent_device_id
+
+        self._parent_device_id = parent_device_id
 
         self._attr_name = name
         self._attr_unique_id = name
@@ -89,18 +88,18 @@ class RemehaTimeEntity(CoordinatorEntity[RemehaUpdateCoordinator], TimeEntity):
         if self._parent_device_id is None:
             return None
 
-        device_instance: DeviceInstance | None = self.coordinator.get_device(
-            id=self._parent_device_id
-        )
+        device_instance: DeviceBoard | None = self.coordinator.get_device(id=self._parent_device_id)
         return (
             DeviceInfo(
                 identifiers={(DOMAIN, str(device_instance.article_number))},
-                hw_version=f"HW{device_instance.hw_version[0]:02d}.{device_instance.hw_version[1]:02d}",
+                hw_version=f"HW{device_instance.hardware_version[0]:02d}.{device_instance.hardware_version[1]:02d}",
                 manufacturer="Remeha",
                 model=str(device_instance.board_category),
-                sw_version=f"SW{device_instance.sw_version[0]:02d}.{device_instance.sw_version[1]:02d}",
+                sw_version=f"SW{device_instance.software_version[0]:02d}.{device_instance.software_version[1]:02d}",
             )
             if device_instance is not None
+            and device_instance.hardware_version is not None
+            and device_instance.software_version is not None
             else None
         )
 
@@ -109,7 +108,7 @@ class SilentModeStartTimeEntity(RemehaTimeEntity):
     """Entity to expose the start time for the appliance silent mode."""
 
     @property
-    def native_value(self) -> time:
+    def native_value(self) -> time | None:
         """The silent mode start time."""
 
         return self.coordinator.get_appliance().silent_mode_start_time
@@ -117,12 +116,9 @@ class SilentModeStartTimeEntity(RemehaTimeEntity):
     async def async_set_value(self, value: time) -> None:
         """Set the silent mode start time."""
 
-        await self._api.async_write_variable(
-            variable=MetaRegisters.SILENT_MODE_START_TIME, value=SteppedTimeOfDay.to_steps(value)
-        )
+        await self.coordinator.get_appliance().async_set_silent_mode_start_time(value)
 
-        # Reflect update until current update
-        self.coordinator.get_appliance().silent_mode_start_time = value
+        # TODO Reflect update until next update
         self.async_write_ha_state()
 
 
@@ -130,7 +126,7 @@ class SilentModeEndTimeEntity(RemehaTimeEntity):
     """Entity to expose the end time for the appliance silent mode."""
 
     @property
-    def native_value(self) -> time:
+    def native_value(self) -> time | None:
         """The silent mode end time."""
 
         return self.coordinator.get_appliance().silent_mode_end_time
@@ -138,10 +134,7 @@ class SilentModeEndTimeEntity(RemehaTimeEntity):
     async def async_set_value(self, value: time) -> None:
         """Set the silent mode end time."""
 
-        await self._api.async_write_variable(
-            variable=MetaRegisters.SILENT_MODE_END_TIME, value=SteppedTimeOfDay.to_steps(value)
-        )
+        await self.coordinator.get_appliance().async_set_silent_mode_end_time(value)
 
-        # Reflect update until current update
-        self.coordinator.get_appliance().silent_mode_end_time = value
+        # TODO Reflect update until next update
         self.async_write_ha_state()

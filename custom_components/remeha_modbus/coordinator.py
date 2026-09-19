@@ -6,16 +6,13 @@ from datetime import timedelta
 from typing import Any, cast
 from uuid import UUID
 
-from aio_remeha_modbus.api.api import DeviceInstance, RemehaApi
+from aio_remeha_modbus.api import RemehaApi
 from aio_remeha_modbus.api.appliance import Appliance
 from aio_remeha_modbus.api.climate_zone import ClimateZone
 from aio_remeha_modbus.api.const import (
-    WEEKDAY_TO_MODBUS_VARIABLE,
     BoilerConfiguration,
     BoilerEnergyLabel,
     ClimateZoneScheduleId,
-    MetaRegisters,
-    ModbusVariableDescription,
     PVSystem,
     PVSystemOrientation,
 )
@@ -23,8 +20,10 @@ from aio_remeha_modbus.api.errors import (
     DiscoveryTableCorruptedError,
     InvalidZoneSchedule,
 )
+from aio_remeha_modbus.api.main_control_monitoring import MainControlMonitoring
 from aio_remeha_modbus.api.schedule import HourlyForecast, WeatherForecast, ZoneSchedule
 from aio_remeha_modbus.api.schedule import UnitOfTemperature as RemehaUnitOfTemperature
+from aio_remeha_modbus.api.system_discovery_table import DeviceBoard
 from dateutil.parser import parse
 from homeassistant.components.switch.const import DOMAIN as SwitchPlatform
 from homeassistant.config_entries import ConfigEntry
@@ -32,7 +31,7 @@ from homeassistant.const import UnitOfTemperature
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import issue_registry as ir
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
-from pymodbus import ModbusException
+from modbus_connection.exceptions import ModbusError
 
 from custom_components.remeha_modbus.api.store import RemehaModbusStorage, WaitingListEntry
 from custom_components.remeha_modbus.blend.scheduler.const import SchedulerLinkView, ZoneScheduleUID
@@ -55,7 +54,6 @@ from custom_components.remeha_modbus.const import (
     PV_NOMINAL_POWER_WP,
     PV_ORIENTATION,
     PV_TILT,
-    REMEHA_SENSORS,
     UnsubscribeCallback,
 )
 from custom_components.remeha_modbus.errors import (
@@ -144,7 +142,7 @@ class RemehaUpdateCoordinator(DataUpdateCoordinator):
 
         self._store: RemehaModbusStorage = store
         self._api: RemehaApi = api
-        self._device_instances: dict[int, DeviceInstance] = {}
+        self._device_boards: dict[int, DeviceBoard] = {}
 
         # This list is populated by the added_to_hass() callback of the climate entities.
         self._climate_entity_ids: list[str] = []
@@ -155,32 +153,17 @@ class RemehaUpdateCoordinator(DataUpdateCoordinator):
         return not self.data or "climates" not in self.data
 
     async def _async_setup(self):
-        try:
-            self._device_instances = {
-                instance.id: instance for instance in await self._api.async_read_device_instances()
-            }
-        except ModbusException as ex:
-            raise UpdateFailed("Error while communicating with modbus device.") from ex
-
         await self._store.async_load()
 
     async def _async_update_data(
         self,
-    ) -> dict[
-        str, Appliance | dict[int, ClimateZone] | bool | dict[ModbusVariableDescription, Any]
-    ]:
+    ) -> dict[str, Appliance | dict[int, ClimateZone] | bool | dict[str, Any]]:
         try:
             before_first_update = self._is_before_first_update()
-            zones: list[ClimateZone] = []
-            appliance: Appliance = await self._api.async_read_appliance()
-            sensors = await self._api.async_read_sensor_values(list(REMEHA_SENSORS.keys()))
-            if before_first_update:
-                zones = await self._api.async_read_zones(appliance)
-            else:
-                zones = [
-                    await self._api.async_read_zone_update(zone, appliance)
-                    for zone in list(self.data["climates"].values())
-                ]
+            await self._api.async_update()
+            self._device_boards = {
+                board.id: board for board in self._api.discovery_table.device_boards
+            }
 
             # Fire an event for each updated ZoneSchedule, but only after the
             # initial refresh.
@@ -190,7 +173,7 @@ class RemehaUpdateCoordinator(DataUpdateCoordinator):
             if not before_first_update:
                 await self._async_fire_dhw_schedule_update_events(
                     old_zones=self.data["climates"],
-                    new_zones={zone.id: zone for zone in zones},
+                    new_zones={zone.id: zone for zone in self._api.zones},
                 )
 
         except DiscoveryTableCorruptedError as ex:
@@ -208,11 +191,11 @@ class RemehaUpdateCoordinator(DataUpdateCoordinator):
             raise UpdateFailed(
                 translation_domain=DOMAIN, translation_key="update_failed_discovery_table_corrupted"
             ) from ex
-        except ModbusException as ex:
+        except ModbusError as ex:
             raise UpdateFailed(
                 translation_domain=DOMAIN,
                 translation_key="update_failed_modbus_exception",
-                translation_placeholders={"modbus_message": ex.string},
+                translation_placeholders={"modbus_message": str(ex)},
             ) from ex
         except InvalidZoneSchedule as ex:
             ir.async_create_issue(
@@ -241,9 +224,16 @@ class RemehaUpdateCoordinator(DataUpdateCoordinator):
             ) from ex
 
         return {
-            "appliance": appliance,
-            "climates": {zone.id: zone for zone in zones},
-            "sensors": sensors,
+            "appliance": self._api.appliance,
+            "climates": {zone.id: zone for zone in self._api.zones},
+            "sensors": {
+                field_name: getattr(self._api.appliance, field_name)
+                for field_name in self._api.appliance.resolved_fields
+            }
+            | {
+                field_name: getattr(self._api.main_control_monitoring, field_name)
+                for field_name in self._api.main_control_monitoring.resolved_fields
+            },
         }
 
     async def _async_fire_dhw_schedule_update_events(
@@ -260,7 +250,7 @@ class RemehaUpdateCoordinator(DataUpdateCoordinator):
                 else [
                     schedule
                     for zone in new_zones.values()
-                    if zone.is_domestic_hot_water()
+                    if zone.is_domestic_hot_water() and zone.current_schedule is not None
                     for schedule in zone.current_schedule.values()
                     if schedule is not None
                 ]
@@ -310,11 +300,9 @@ class RemehaUpdateCoordinator(DataUpdateCoordinator):
 
         """
 
-        await self._api.async_write_variable(
-            variable=MetaRegisters.RESET_DISCOVERY_TABLE, value=0x5A
-        )
+        await self._api.discovery_table.reset()
 
-    def get_device(self, id: int) -> DeviceInstance | None:
+    def get_device(self, id: int) -> DeviceBoard | None:
         """Return the device instance with `id` (0-based).
 
         Returns
@@ -322,22 +310,27 @@ class RemehaUpdateCoordinator(DataUpdateCoordinator):
 
         """
 
-        return self._device_instances.get(id, None)
+        return self._device_boards.get(id, None)
 
     def get_devices(
-        self, predicate: Callable[[DeviceInstance], bool] = lambda _: True
-    ) -> list[DeviceInstance]:
+        self, predicate: Callable[[DeviceBoard], bool] = lambda _: True
+    ) -> list[DeviceBoard]:
         """Return all device instances that match the given predicate.
 
         Args:
-            predicate (Callable[[DeviceInstance], bool]): The predicate to evaluate on all device instances. Defaults to `True`.
+            predicate (Callable[[DeviceBoard], bool]): The predicate to evaluate on all device instances. Defaults to `True`.
 
         Returns:
-            `list[DeviceInstance]`: The list of all matching device instances.
+            `list[DeviceBoard]`: The list of all matching device instances.
 
         """
 
-        return [d for d in self._device_instances.values() if predicate(d) is True]
+        return [d for d in self._device_boards.values() if predicate(d) is True]
+
+    def get_main_control_monitoring(self) -> MainControlMonitoring:
+        """Return the status- and control fields of the appliance."""
+
+        return self._api.main_control_monitoring
 
     def get_appliance(self) -> Appliance:
         """Return the appliance status info."""
@@ -359,10 +352,15 @@ class RemehaUpdateCoordinator(DataUpdateCoordinator):
 
         return [climate for climate in self.data["climates"].values() if predicate(climate) is True]
 
-    def get_sensor_value(self, variable: ModbusVariableDescription) -> Any:
-        """Get the current value of a sensor."""
+    def get_sensor_value(self, key: str) -> Any:
+        """Get the current value of a sensor.
 
-        return self.data["sensors"][variable]
+        Args:
+            key (str): The unique name of the sensor.
+
+        """
+
+        return self.data["sensors"].get(key)
 
     def enqueue_for_linking(self, uuid: UUID, zone_schedule_uid: ZoneScheduleUID):
         """Store the given identifiers, preparing them for linking a `ZoneSchedule` to a `scheduler.schedule`.
@@ -504,16 +502,11 @@ class RemehaUpdateCoordinator(DataUpdateCoordinator):
             schedule (ZoneSchedule): The schedule to write.
 
         Raises:
-            ModbusException: if writing `schedule` to the modbus interface fails.
+            ModbusError: if writing `schedule` to the modbus interface fails.
 
         """
 
-        await self._api.async_write_variable(
-            variable=WEEKDAY_TO_MODBUS_VARIABLE[schedule.day],
-            value=schedule,
-            offset=self._api.get_zone_register_offset(schedule.zone_id)
-            + self._api.get_schedule_register_offset(schedule.id),
-        )
+        await self._api.zones[schedule.zone_id - 1].async_set_single_schedule(schedule)
 
         # Update the current schedule state if the updated schedule
         # is the current schedule. Otherwise no update of current state
@@ -522,7 +515,7 @@ class RemehaUpdateCoordinator(DataUpdateCoordinator):
         if not self._is_before_first_update() and schedule.zone_id in self.data["climates"]:
             zone: ClimateZone = self.data["climates"][schedule.zone_id]
 
-            if zone.selected_schedule == schedule.id:
+            if zone.selected_schedule == schedule.id and zone.current_schedule is not None:
                 zone.current_schedule[schedule.day] = schedule
 
     async def async_read_registers(
@@ -545,14 +538,14 @@ class RemehaUpdateCoordinator(DataUpdateCoordinator):
         """
 
         return await self._api.async_read_registers(
-            start_register=start_register,
-            register_count=register_count,
+            address=start_register,
+            count=register_count,
             struct_format=struct_format,
         )
 
     async def async_dhw_auto_schedule(
         self,
-        hourly_forecasts: list[dict],
+        hourly_forecasts: list[dict[str, Any]],
         temperature_unit: UnitOfTemperature = UnitOfTemperature.CELSIUS,
     ) -> None:
         """Create a schedule for tomorrow based on the given forecast.
@@ -619,7 +612,7 @@ class RemehaUpdateCoordinator(DataUpdateCoordinator):
 
         try:
             await self.async_write_schedule(schedule)
-        except ModbusException as e:
+        except ModbusError as e:
             raise RemehaServiceError(
                 translation_domain=DOMAIN, translation_key="auto_schedule_modbus_error"
             ) from e
@@ -627,9 +620,3 @@ class RemehaUpdateCoordinator(DataUpdateCoordinator):
             raise RemehaServiceError(
                 translation_domain=DOMAIN, translation_key="auto_schedule_value_error"
             ) from e
-
-    async def async_shutdown(self):
-        """Shutdown this coordinator."""
-
-        await self._api.async_close()
-        return await super().async_shutdown()

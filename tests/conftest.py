@@ -8,10 +8,12 @@ from typing import Any, Final, cast
 from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import pytest
+import pytest_asyncio
 import voluptuous as vol
-from aio_remeha_modbus.api.api import ConnectionType, RemehaApi
+from aio_remeha_modbus.api.api import RemehaApi
 from aio_remeha_modbus.api.const import BoilerEnergyLabel, ZoneRegisters
 from dateutil import tz
+from homeassistant.components.modbus.const import RTUOVERTCP
 from homeassistant.components.weather import (
     SERVICE_GET_FORECASTS,
     Forecast,
@@ -26,7 +28,7 @@ from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.entity_component import EntityComponent
 from homeassistant.util import dt
 from homeassistant.util.json import JsonObjectType, JsonValueType
-from pymodbus.client import ModbusBaseClient
+from modbus_connection.mock import MockModbusUnit
 from pytest_homeassistant_custom_component.common import (
     MockConfigEntry,
     MockEntity,
@@ -38,7 +40,6 @@ from custom_components.remeha_modbus.api.store import RemehaModbusStore
 from custom_components.remeha_modbus.const import (
     AUTO_SCHEDULE_SELECTED_SCHEDULE,
     CONFIG_AUTO_SCHEDULE,
-    CONNECTION_RTU_OVER_TCP,
     DHW_BOILER_CONFIG_SECTION,
     DHW_BOILER_ENERGY_LABEL,
     DHW_BOILER_HEAT_LOSS_RATE,
@@ -83,27 +84,50 @@ class MockWeatherEntity(MockEntity, WeatherEntity):
         return cast(list[Forecast], load_json_value_fixture("weather_forecast.json"))
 
 
-def get_api(
-    mock_modbus_client: ModbusBaseClient,
-    name: str = "test_api",
-    device_address: int = 100,
-    time_zone: tzinfo | None = tz.gettz(TESTING_TIME_ZONE),
+@pytest_asyncio.fixture
+async def remeha_api(
+    request,
+    remeha_modbus_unit,
 ) -> RemehaApi:
     """Create a new RemehaApi instance with a mocked modbus client."""
 
     # mock_modbus_client MUST be a mock, otherwise a real connection might be made and mess up the appliance.
-    if not isinstance(mock_modbus_client, Mock):
+    if not isinstance(remeha_modbus_unit, MockModbusUnit):
         pytest.fail(
-            f"Trying to create RemehaApi with non-mocked modbus client type {type(mock_modbus_client).__qualname__}."
+            f"Cannot create RemehaApi with non-mocked modbus unit type {type(remeha_modbus_unit).__qualname__}."
         )
 
-    return RemehaApi(
+    require_update = (
+        request.param.get("require_update", True) if hasattr(request, "param") else True
+    )
+    name = request.param.get("name", "test_api") if hasattr(request, "param") else "test_api"
+    time_zone: tzinfo | None = (
+        tz.gettz(request.param.get("time_zone", TESTING_TIME_ZONE))
+        if hasattr(request, "param")
+        else tz.gettz(TESTING_TIME_ZONE)
+    )
+
+    api = RemehaApi(
         name=name,
-        connection_type=ConnectionType.RTU_OVER_TCP,
-        client=mock_modbus_client,
-        device_address=device_address,
+        unit=remeha_modbus_unit,
         time_zone=time_zone,
     )
+    if require_update:
+        await api.async_update()
+
+    return api
+
+
+@pytest.fixture
+def remeha_modbus_unit(request, mock_modbus_unit: MockModbusUnit, json_fixture) -> MockModbusUnit:
+    """Return a mocked modbus unit with registers loaded from the requested json file."""
+
+    store: dict[str, str] = json_fixture["server"]["registers"]
+    mock_modbus_unit.load_raw(
+        {"holding": {int(key): int(value, 16) for key, value in store.items()}}
+    )
+
+    return mock_modbus_unit
 
 
 @pytest.fixture
@@ -119,7 +143,8 @@ def finalizer():
 @pytest.fixture
 def json_fixture(request) -> JsonValueType:
     """Read a fixture and return it as a `JsonValueType`."""
-    return load_json_value_fixture(filename=request.param)
+    filename = request.param if hasattr(request, "param") else "modbus_store.json"
+    return load_json_value_fixture(filename=filename)
 
 
 @pytest.fixture(autouse=True)
@@ -144,7 +169,7 @@ def mock_setup_entry() -> Generator[AsyncMock]:
 
 
 @pytest.fixture
-def mock_modbus_client(request) -> Generator[AsyncMock]:
+def _disabled_mock_modbus_client(request) -> Generator[AsyncMock]:
     """Create a mocked pymodbus client.
 
     The registers for the modbus client are retrieved from the `request` and will be
@@ -366,7 +391,7 @@ def _create_config_entry(
     # v1.0
     entry_data = {
         CONF_NAME: hub_name,
-        CONF_TYPE: CONNECTION_RTU_OVER_TCP,
+        CONF_TYPE: RTUOVERTCP,
         MODBUS_DEVICE_ADDRESS: device_address,
         CONF_HOST: "does.not.matter",
         CONF_PORT: 8899,

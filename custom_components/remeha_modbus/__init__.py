@@ -6,16 +6,16 @@ from typing import TYPE_CHECKING
 from aio_remeha_modbus.api.api import RemehaApi
 from aio_remeha_modbus.api.const import ConnectionType
 from dateutil import tz
+from homeassistant.components.modbus import async_get_unit
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_NAME, CONF_TYPE, EVENT_HOMEASSISTANT_STARTED, Platform
 from homeassistant.core import Event, HomeAssistant
 from homeassistant.exceptions import ConfigEntryError, ConfigEntryNotReady
 from homeassistant.helpers.device_registry import DeviceEntry
 from homeassistant.helpers.typing import NoEventData
-from pymodbus import ModbusException
 
 from custom_components.remeha_modbus.api.store import RemehaModbusStorage
-from custom_components.remeha_modbus.helpers.config import to_api_configration
+from custom_components.remeha_modbus.helpers.config import to_modbus_params
 
 if TYPE_CHECKING:
     from custom_components.remeha_modbus.blend.blender import Blender
@@ -23,6 +23,7 @@ from custom_components.remeha_modbus.const import (
     AUTO_SCHEDULE_SELECTED_SCHEDULE,
     CONFIG_AUTO_SCHEDULE,
     DOMAIN,
+    ISSUE_CONFIG_ENTRY_KEY_ERROR,
     REMEHA_PRESET_SCHEDULE_1,
     SERVICE_BOOTSTRAP_BLENDERS,
 )
@@ -54,19 +55,22 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             f"{modbus_type} is not a valid connection type. Use one of [{connection_types}]"
         )
 
-    api: RemehaApi = RemehaApi.create(
+    try:
+        params, unit_id = to_modbus_params(entry.data)
+    except KeyError as e:
+        raise ConfigEntryNotReady(
+            translation_domain=DOMAIN,
+            translation_key=ISSUE_CONFIG_ENTRY_KEY_ERROR,
+            translation_placeholders={"key": str(e)},
+        ) from e
+
+    unit = async_get_unit(hass=hass, entry=entry, params=params, unit_id=unit_id)
+    # TODO unit.require_timeout(xxx)
+    api: RemehaApi = RemehaApi(
         name=modbus_hub_name,
-        config=to_api_configration(entry),
+        unit=unit,
         time_zone=await hass.async_add_executor_job(tz.gettz, hass.config.time_zone),
     )
-
-    # Ensure the modbus device is reachable and actually talking Modbus
-    # before forwarding setup to other platforms.
-    try:
-        await api.async_connect()
-        await api.async_health_check()
-    except ModbusException as ex:
-        raise ConfigEntryNotReady(f"Error while executing modbus health check: {ex}") from ex
 
     # Setup the coordinator
     coordinator = RemehaUpdateCoordinator(
@@ -110,6 +114,8 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     blenders: dict[str, Blender] = entry.runtime_data["blenders"]
     for blender in blenders.values():
         blender.unblend()
+
+    # TODO remove any automations related to our entities?
 
     return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
 
