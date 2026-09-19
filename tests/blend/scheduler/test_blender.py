@@ -10,15 +10,15 @@ from custom_components.remeha_modbus.blend.blender import BlenderState
 from custom_components.remeha_modbus.blend.scheduler.blender import SchedulerBlender
 from custom_components.remeha_modbus.blend.scheduler.event_dispatcher import EventDispatcher
 from custom_components.remeha_modbus.coordinator import RemehaUpdateCoordinator
-from tests.conftest import get_api, setup_platform
+from tests.conftest import remeha_api, setup_platform
 
 
 async def test_blender_creation(
-    hass: HomeAssistant, mock_modbus_client: ModbusBaseClient, mock_config_entry: MockConfigEntry
+    hass: HomeAssistant, remeha_modbus_unit: ModbusBaseClient, mock_config_entry: MockConfigEntry
 ):
     """Test that creating a new SchedulerBlender puts it in the expected state."""
 
-    api = get_api(mock_modbus_client=mock_modbus_client)
+    api = remeha_api(remeha_modbus_unit=remeha_modbus_unit)
     with patch(
         "aio_remeha_modbus.api.api.RemehaApi.create",
         new=lambda *args, **kwargs: api,
@@ -35,13 +35,13 @@ async def test_blender_creation(
 
 async def test_blender_async_blend(
     hass: HomeAssistant,
-    mock_modbus_client: ModbusBaseClient,
+    remeha_modbus_unit: ModbusBaseClient,
     mock_config_entry: MockConfigEntry,
     finalizer: list,
 ):
     """Test that blending a SchedulerBlender transitions it to the STARTED state."""
 
-    api = get_api(mock_modbus_client=mock_modbus_client)
+    api = remeha_api(remeha_modbus_unit=remeha_modbus_unit)
     with patch(
         "aio_remeha_modbus.api.api.RemehaApi.create",
         new=lambda *args, **kwargs: api,

@@ -2,9 +2,9 @@
 
 import logging
 
-from aio_remeha_modbus.api.api import DeviceInstance, RemehaApi, SilentMode
-from aio_remeha_modbus.api.const import MetaRegisters
-from aio_remeha_modbus.api.errors import RemehaModbusError
+from aio_remeha_modbus.api import RemehaApi
+from aio_remeha_modbus.api.appliance import SilentMode
+from aio_remeha_modbus.api.system_discovery_table import DeviceBoard
 from homeassistant.components.select import SelectEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
@@ -14,6 +14,7 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from custom_components.remeha_modbus.const import DOMAIN
 from custom_components.remeha_modbus.coordinator import RemehaUpdateCoordinator
+from custom_components.remeha_modbus.errors import RemehaModbusError
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -25,7 +26,7 @@ async def async_setup_entry(
 
     api: RemehaApi = entry.runtime_data["api"]
     coordinator: RemehaUpdateCoordinator = entry.runtime_data["coordinator"]
-    mainboards: list[DeviceInstance] = coordinator.get_devices(
+    mainboards: list[DeviceBoard] = coordinator.get_devices(
         predicate=lambda device: device.is_mainboard()
     )
     parent_device_id: int | None = mainboards[0].id if mainboards else None
@@ -58,8 +59,8 @@ class RemehaSelectEntity(CoordinatorEntity[RemehaUpdateCoordinator], SelectEntit
 
         if parent_device_id is None:
             _LOGGER.warning("Select entity [%s] not linked to a parent device.", name)
-        else:
-            self._parent_device_id = parent_device_id
+
+        self._parent_device_id = parent_device_id
 
         self._attr_name = name
         self._attr_unique_id = name
@@ -79,18 +80,18 @@ class RemehaSelectEntity(CoordinatorEntity[RemehaUpdateCoordinator], SelectEntit
         if self._parent_device_id is None:
             return None
 
-        device_instance: DeviceInstance | None = self.coordinator.get_device(
-            id=self._parent_device_id
-        )
+        device_instance: DeviceBoard | None = self.coordinator.get_device(id=self._parent_device_id)
         return (
             DeviceInfo(
                 identifiers={(DOMAIN, str(device_instance.article_number))},
-                hw_version=f"HW{device_instance.hw_version[0]:02d}.{device_instance.hw_version[1]:02d}",
+                hw_version=f"HW{device_instance.hardware_version[0]:02d}.{device_instance.hardware_version[1]:02d}",
                 manufacturer="Remeha",
                 model=str(device_instance.board_category),
-                sw_version=f"SW{device_instance.sw_version[0]:02d}.{device_instance.sw_version[1]:02d}",
+                sw_version=f"SW{device_instance.software_version[0]:02d}.{device_instance.software_version[1]:02d}",
             )
             if device_instance is not None
+            and device_instance.hardware_version is not None
+            and device_instance.software_version is not None
             else None
         )
 
@@ -117,7 +118,8 @@ class RemehaSilentModeEntity(RemehaSelectEntity):
     def current_option(self) -> str | None:
         """Return the currently selected option."""
 
-        return self.coordinator.get_appliance().silent_mode.name.lower()
+        appliance = self.coordinator.get_appliance()
+        return None if appliance.silent_mode is None else appliance.silent_mode.name.lower()
 
     async def async_select_option(self, option: str) -> None:
         """Set the current option.
@@ -134,10 +136,7 @@ class RemehaSilentModeEntity(RemehaSelectEntity):
             )
 
         selected_mode = SilentMode[option.upper()]
-        await self._api.async_write_variable(
-            variable=MetaRegisters.SILENT_MODE, value=selected_mode
-        )
+        await self.coordinator.get_appliance().async_set_silent_mode(selected_mode)
 
-        # Update current data to reflect changes immediately
-        self.coordinator.get_appliance().silent_mode = selected_mode
+        # TODO Update current data to reflect changes immediately
         self.async_write_ha_state()

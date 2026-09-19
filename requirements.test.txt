@@ -1,4 +1,4 @@
-aio-remeha-modbus==0.3.0
+aio-remeha-modbus==1.0.0b6
 aiodhcpwatcher
 aiodiscover
 aiofiles
@@ -13,7 +13,8 @@ ha-ffmpeg
 hassil
 home-assistant-frontend
 home-assistant-intents
-homeassistant>=2026.8.0
+homeassistant>=2026.9.2
+modbus-connection[tmodbus]>=4.12.1
 mutagen
 pre-commit
 propcache
@@ -29,3 +30,4 @@ pytest-asyncio
 pytest-cov
 pytest-homeassistant-custom-component
 serialx
+tenacity

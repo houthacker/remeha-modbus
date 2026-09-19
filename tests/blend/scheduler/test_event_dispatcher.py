@@ -6,15 +6,15 @@ from homeassistant.core import HomeAssistant
 
 from custom_components.remeha_modbus.blend.scheduler.event_dispatcher import EventDispatcher
 from custom_components.remeha_modbus.coordinator import RemehaUpdateCoordinator
-from tests.conftest import get_api, setup_platform
+from tests.conftest import remeha_api, setup_platform
 
 
 async def test_subscribe_to_entity_updates(
-    hass: HomeAssistant, mock_modbus_client, mock_config_entry
+    hass: HomeAssistant, remeha_modbus_unit, mock_config_entry
 ):
     """Test that registering a new listener returns a unique unsubsribe function."""
 
-    api = get_api(mock_modbus_client=mock_modbus_client)
+    api = remeha_api(remeha_modbus_unit=remeha_modbus_unit)
     with patch(
         "aio_remeha_modbus.api.api.RemehaApi.create",
         new=lambda *args, **kwargs: api,
@@ -40,11 +40,11 @@ async def test_subscribe_to_entity_updates(
 
 
 async def test_entity_update_listener_gets_called(
-    hass: HomeAssistant, mock_modbus_client, mock_config_entry
+    hass: HomeAssistant, remeha_modbus_unit, mock_config_entry
 ):
     """Test that subscribers to entity updates are notified of updates."""
 
-    api = get_api(mock_modbus_client=mock_modbus_client)
+    api = remeha_api(remeha_modbus_unit=remeha_modbus_unit)
     with patch(
         "aio_remeha_modbus.api.api.RemehaApi.create",
         new=lambda *args, **kwargs: api,

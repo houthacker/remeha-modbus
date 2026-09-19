@@ -3,107 +3,71 @@
 The voluptuous helpers are those that don't exist in HA.
 """
 
+from types import MappingProxyType
 from typing import Any
 
-from aio_remeha_modbus.api.config import (
-    Configuration,
-    SerialConfiguration,
-    TcpConfiguration,
-    UdpConfiguration,
+from aio_remeha_modbus.api import RemehaApi
+from homeassistant.components.modbus.connection import ModbusParams, async_get_temporary_unit
+from homeassistant.components.modbus.const import (
+    CONF_BAUDRATE,
+    CONF_BYTESIZE,
+    CONF_PARITY,
+    CONF_STOPBITS,
+    RTUOVERTCP,
+    SERIAL,
+    TCP,
+    UDP,
 )
-from aio_remeha_modbus.api.const import ConnectionType
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_HOST, CONF_PORT, CONF_TIMEOUT, CONF_TYPE
-from homeassistant.exceptions import ConfigEntryError
-from pydantic import TypeAdapter
+from homeassistant.const import CONF_HOST, CONF_PORT, CONF_TYPE
+from homeassistant.core import HomeAssistant
+from modbus_connection import ModbusSerialParams, ModbusTcpParams, ModbusUdpParams
 
 from custom_components.remeha_modbus.const import (
-    DOMAIN,
-    ISSUE_CONFIG_ENTRY_CONNECTION_TYPE,
-    ISSUE_CONFIG_ENTRY_KEY_ERROR,
+    CONF_FRAMER,
     MODBUS_DEVICE_ADDRESS,
-    MODBUS_SERIAL_BAUDRATE,
-    MODBUS_SERIAL_BYTESIZE,
-    MODBUS_SERIAL_PARITY,
-    MODBUS_SERIAL_STOPBITS,
 )
 
 
-def _to_api_dict(entry: ConfigEntry) -> dict[str, Any]:
-    d = {
-        "connection_type": entry.data[CONF_TYPE],
-        "device_address": entry.data[MODBUS_DEVICE_ADDRESS],
-        CONF_PORT: entry.data[CONF_PORT],
-    }
-
-    match ConnectionType(entry.data[CONF_TYPE]):
-        case ConnectionType.SERIAL:
-            d = d | {
-                "framer": entry.data["framer"],
-            }
-
-            for key in [
-                MODBUS_SERIAL_BAUDRATE,
-                MODBUS_SERIAL_BYTESIZE,
-                MODBUS_SERIAL_PARITY,
-                MODBUS_SERIAL_STOPBITS,
-            ]:
-                if key in entry.data:
-                    d[key] = entry.data[key]
-        case ConnectionType.TCP | ConnectionType.UDP:
-            d["framer"] = "socket"
-            d[CONF_HOST] = entry.data[CONF_HOST]
-
-            if CONF_TIMEOUT in entry.data:
-                d[CONF_TIMEOUT] = entry.data[CONF_TIMEOUT]
-        case ConnectionType.RTU_OVER_TCP:
-            d["framer"] = "rtu"
-            d[CONF_HOST] = entry.data[CONF_HOST]
-
-            if CONF_TIMEOUT in entry.data:
-                d[CONF_TIMEOUT] = entry.data[CONF_TIMEOUT]
-
-    return d
-
-
-def to_api_configration(entry: ConfigEntry) -> Configuration:
-    """Create a `Configuration` instance based on a `ConfigEntry`.
+def to_modbus_params(config: MappingProxyType[str, Any]) -> tuple[ModbusParams, int]:
+    """Convert the given config to modbus connection parameters.
 
     Args:
-        entry (ConfigEntry): The HA configuration entry.
+        config (MappingProxy[str, Any]): The configuration map.
 
     Returns:
-        Configuration: The API configuration instance.
+        A tuple of the configuration params and the modbus device address.
+
+    """
+    params: ModbusParams | None = None
+    if config[CONF_TYPE] == SERIAL:
+        params = ModbusSerialParams(
+            device=config[CONF_PORT],
+            baudrate=config.get(CONF_BAUDRATE, 9600),
+            bytesize=config.get(CONF_BYTESIZE, 8),
+            parity=config.get(CONF_PARITY, "N"),
+            stopbits=config.get(CONF_STOPBITS, 1),
+            framer=config[CONF_FRAMER],
+        )
+    elif config[CONF_TYPE] == TCP:
+        params = ModbusTcpParams(host=config[CONF_HOST], port=config[CONF_PORT], framer="socket")
+    elif config[CONF_TYPE] == UDP:
+        params = ModbusUdpParams(host=config[CONF_HOST], port=config[CONF_PORT], framer="socket")
+    elif config[CONF_TYPE] == RTUOVERTCP:
+        params = ModbusTcpParams(host=config[CONF_HOST], port=config[CONF_PORT], framer="rtu")
+    else:
+        raise KeyError(config[CONF_TYPE])
+
+    return (params, config[MODBUS_DEVICE_ADDRESS])
+
+
+async def async_probe_connection(hass: HomeAssistant, data: MappingProxyType[str, Any]) -> None:
+    """Verify the configured connection parameters.
 
     Raises:
-        ConfigEntryError: If the configuration is invalid.
+        RemehaModbusError if the health check fails.
 
     """
 
-    connection_type = entry.data[CONF_TYPE]
-    if connection_type not in ConnectionType:
-        connection_types: str = ", ".join(e.value for e in ConnectionType)
-        raise ConfigEntryError(
-            translation_domain=DOMAIN,
-            translation_key=ISSUE_CONFIG_ENTRY_CONNECTION_TYPE,
-            translation_placeholders={
-                "connection_type": connection_type,
-                "connection_types": connection_types,
-            },
-        )
-
-    try:
-        api_dict = _to_api_dict(entry)
-        match ConnectionType(connection_type):
-            case ConnectionType.SERIAL:
-                return TypeAdapter(SerialConfiguration).validate_python(api_dict)
-            case ConnectionType.TCP | ConnectionType.RTU_OVER_TCP:
-                return TypeAdapter(TcpConfiguration).validate_python(api_dict)
-            case ConnectionType.UDP:
-                return TypeAdapter(UdpConfiguration).validate_python(api_dict)
-    except KeyError as e:
-        raise ConfigEntryError(
-            translation_domain=DOMAIN,
-            translation_key=ISSUE_CONFIG_ENTRY_KEY_ERROR,
-            translation_placeholders={"key": str(e)},
-        ) from e
+    params, unit_id = to_modbus_params(config=MappingProxyType(data))
+    async with async_get_temporary_unit(hass=hass, params=params, unit_id=unit_id) as unit:
+        await RemehaApi.async_health_check(unit=unit)

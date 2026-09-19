@@ -6,14 +6,14 @@ import pytest
 from homeassistant.components.number.const import DOMAIN as NumberDomain
 from homeassistant.core import HomeAssistant
 
-from .conftest import get_api, setup_platform
+from .conftest import remeha_api, setup_platform
 
 
-@pytest.mark.parametrize("mock_modbus_client", ["modbus_store.json"], indirect=True)
-async def test_climates(hass: HomeAssistant, mock_modbus_client, mock_config_entry):
+@pytest.mark.parametrize("remeha_modbus_unit", ["modbus_store.json"], indirect=True)
+async def test_climates(hass: HomeAssistant, remeha_modbus_unit, mock_config_entry):
     """Test climates."""
 
-    api = get_api(mock_modbus_client=mock_modbus_client)
+    api = remeha_api(remeha_modbus_unit=remeha_modbus_unit)
     with patch(
         "aio_remeha_modbus.api.api.RemehaApi.create",
         new=lambda *args, **kwargs: api,
@@ -25,11 +25,11 @@ async def test_climates(hass: HomeAssistant, mock_modbus_client, mock_config_ent
         assert len(hass.states.async_all(domain_filter="number")) == 3
 
 
-@pytest.mark.parametrize("mock_modbus_client", ["modbus_store.json"], indirect=True)
-async def test_dhw_hysteresis(hass: HomeAssistant, mock_modbus_client, mock_config_entry):
+@pytest.mark.parametrize("remeha_modbus_unit", ["modbus_store.json"], indirect=True)
+async def test_dhw_hysteresis(hass: HomeAssistant, remeha_modbus_unit, mock_config_entry):
     """Test a single DhwHysteresisEntity."""
 
-    api = get_api(mock_modbus_client=mock_modbus_client)
+    api = remeha_api(remeha_modbus_unit=remeha_modbus_unit)
     with patch(
         "aio_remeha_modbus.api.api.RemehaApi.create",
         new=lambda *args, **kwargs: api,
@@ -60,11 +60,11 @@ async def test_dhw_hysteresis(hass: HomeAssistant, mock_modbus_client, mock_conf
         assert hysteresis.state == "20.0"
 
 
-@pytest.mark.parametrize("mock_modbus_client", ["modbus_store.json"], indirect=True)
-async def test_summer_winter(hass: HomeAssistant, mock_modbus_client, mock_config_entry):
+@pytest.mark.parametrize("remeha_modbus_unit", ["modbus_store.json"], indirect=True)
+async def test_summer_winter(hass: HomeAssistant, remeha_modbus_unit, mock_config_entry):
     """Test the appliance summer/winter threshold number entity (AP073)."""
 
-    api = get_api(mock_modbus_client=mock_modbus_client)
+    api = remeha_api(remeha_modbus_unit=remeha_modbus_unit)
     with patch(
         "aio_remeha_modbus.api.api.RemehaApi.create",
         new=lambda *args, **kwargs: api,
@@ -92,11 +92,11 @@ async def test_summer_winter(hass: HomeAssistant, mock_modbus_client, mock_confi
         assert summer_winter.state == "25.0"
 
 
-@pytest.mark.parametrize("mock_modbus_client", ["modbus_store.json"], indirect=True)
-async def test_neutral_band(hass: HomeAssistant, mock_modbus_client, mock_config_entry):
+@pytest.mark.parametrize("remeha_modbus_unit", ["modbus_store.json"], indirect=True)
+async def test_neutral_band(hass: HomeAssistant, remeha_modbus_unit, mock_config_entry):
     """Test the appliance neutral-band number entity (AP075)."""
 
-    api = get_api(mock_modbus_client=mock_modbus_client)
+    api = remeha_api(remeha_modbus_unit=remeha_modbus_unit)
     with patch(
         "aio_remeha_modbus.api.api.RemehaApi.create",
         new=lambda *args, **kwargs: api,
@@ -120,13 +120,13 @@ async def test_neutral_band(hass: HomeAssistant, mock_modbus_client, mock_config
         assert neutral_band.state == "5.0"
 
 
-@pytest.mark.parametrize("mock_modbus_client", ["modbus_store_no_dhw_climate.json"], indirect=True)
+@pytest.mark.parametrize("remeha_modbus_unit", ["modbus_store_no_dhw_climate.json"], indirect=True)
 async def test_dhw_hysteresis_unavailable(
-    hass: HomeAssistant, mock_modbus_client, mock_config_entry
+    hass: HomeAssistant, remeha_modbus_unit, mock_config_entry
 ):
     """Test a single DhwHysteresisEntity."""
 
-    api = get_api(mock_modbus_client=mock_modbus_client)
+    api = remeha_api(remeha_modbus_unit=remeha_modbus_unit)
     with patch(
         "aio_remeha_modbus.api.api.RemehaApi.create",
         new=lambda *args, **kwargs: api,

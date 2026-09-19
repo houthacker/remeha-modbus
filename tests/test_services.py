@@ -26,15 +26,15 @@ from custom_components.remeha_modbus.errors import (
     RemehaServiceError,
 )
 
-from .conftest import get_api, setup_platform
+from .conftest import remeha_api, setup_platform
 
 
-@pytest.mark.parametrize("mock_modbus_client", ["modbus_store.json"], indirect=True)
+@pytest.mark.parametrize("remeha_modbus_unit", ["modbus_store.json"], indirect=True)
 @pytest.mark.parametrize("mock_config_entry", [{"auto_scheduling": True}], indirect=True)
-async def test_scheduling_service(hass: HomeAssistant, mock_modbus_client, mock_config_entry):
+async def test_scheduling_service(hass: HomeAssistant, remeha_modbus_unit, mock_config_entry):
     """Test of the auto scheduling service."""
 
-    api = get_api(mock_modbus_client=mock_modbus_client)
+    api = remeha_api(remeha_modbus_unit=remeha_modbus_unit)
     with patch(
         "aio_remeha_modbus.api.api.RemehaApi.create",
         new=lambda *args, **kwargs: api,
@@ -69,10 +69,10 @@ async def test_scheduling_service(hass: HomeAssistant, mock_modbus_client, mock_
 
 
 @pytest.mark.parametrize("mock_config_entry", [{"auto_scheduling": True}], indirect=True)
-async def test_read_registers_service(hass: HomeAssistant, mock_modbus_client, mock_config_entry):
+async def test_read_registers_service(hass: HomeAssistant, remeha_modbus_unit, mock_config_entry):
     """Test of the auto scheduling service."""
 
-    api = get_api(mock_modbus_client=mock_modbus_client)
+    api = remeha_api(remeha_modbus_unit=remeha_modbus_unit)
     with patch(
         "aio_remeha_modbus.api.api.RemehaApi.create",
         new=lambda *args, **kwargs: api,
@@ -96,10 +96,10 @@ async def test_read_registers_service(hass: HomeAssistant, mock_modbus_client, m
 
 @pytest.mark.parametrize("mock_config_entry", [{"auto_scheduling": True}], indirect=True)
 async def test_read_registers_service_exceptions(
-    hass: HomeAssistant, mock_modbus_client, mock_config_entry
+    hass: HomeAssistant, remeha_modbus_unit, mock_config_entry
 ):
     """Test modbus errors raised from the read_registers service."""
-    api = get_api(mock_modbus_client=mock_modbus_client)
+    api = remeha_api(remeha_modbus_unit=remeha_modbus_unit)
     with (
         patch(
             "aio_remeha_modbus.api.api.RemehaApi.create",

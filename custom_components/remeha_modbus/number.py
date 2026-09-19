@@ -3,8 +3,10 @@
 import logging
 from typing import cast
 
-from aio_remeha_modbus.api.api import DeviceInstance, MetaRegisters, RemehaApi, ZoneRegisters
+from aio_remeha_modbus.api import RemehaApi
 from aio_remeha_modbus.api.climate_zone import ClimateZone
+from aio_remeha_modbus.api.const import Limits
+from aio_remeha_modbus.api.system_discovery_table import DeviceBoard
 from homeassistant.components.number import NumberDeviceClass, NumberEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
@@ -15,7 +17,6 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from custom_components.remeha_modbus.const import (
     DOMAIN,
     TEMPERATURE_STEP,
-    Limits,
 )
 from custom_components.remeha_modbus.coordinator import RemehaUpdateCoordinator
 
@@ -32,7 +33,8 @@ async def async_setup_entry(
 
     entities: list[NumberEntity] = []
 
-    mainboards: list[DeviceInstance] = coordinator.get_devices(lambda device: device.is_mainboard())
+    # TODO Is this the correct parent device board?
+    mainboards: list[DeviceBoard] = coordinator.get_devices(lambda device: device.is_mainboard())
     if mainboards:
         entities.append(
             RemehaSummerWinterNumber(
@@ -94,13 +96,9 @@ class DhwHysteresisEntity(CoordinatorEntity[RemehaUpdateCoordinator], NumberEnti
         """Update the current hysteris value."""
 
         zone: ClimateZone = self._zone
-        offset: int = self._api.get_zone_register_offset(zone=zone)
-        await self._api.async_write_variable(
-            variable=ZoneRegisters.DHW_CALORIFIER_HYSTERESIS, value=value, offset=offset
-        )
+        await zone.async_set_dhw_calorifier_hysteresis(value)
 
-        # Update the value so users don't have to wait until the next sync.
-        zone.dhw_calorifier_hysteresis = value
+        # TODO Update the value so users don't have to wait until the next sync.
 
         self.async_write_ha_state()
 
@@ -117,16 +115,18 @@ class DhwHysteresisEntity(CoordinatorEntity[RemehaUpdateCoordinator], NumberEnti
         if zone.owning_device is None:
             return None
 
-        device_instance: DeviceInstance | None = self.coordinator.get_device(id=zone.owning_device)
+        device_instance: DeviceBoard | None = self.coordinator.get_device(id=zone.owning_device)
         return (
             DeviceInfo(
                 identifiers={(DOMAIN, str(device_instance.article_number))},
-                hw_version=f"HW{device_instance.hw_version[0]:02d}.{device_instance.hw_version[1]:02d}",
+                hw_version=f"HW{device_instance.hardware_version[0]:02d}.{device_instance.hardware_version[1]:02d}",
                 manufacturer="Remeha",
                 model=str(device_instance.board_category),
-                sw_version=f"SW{device_instance.sw_version[0]:02d}.{device_instance.sw_version[1]:02d}",
+                sw_version=f"SW{device_instance.software_version[0]:02d}.{device_instance.software_version[1]:02d}",
             )
             if device_instance is not None
+            and device_instance.hardware_version is not None
+            and device_instance.software_version is not None
             else None
         )
 
@@ -167,10 +167,9 @@ class RemehaSummerWinterNumber(CoordinatorEntity[RemehaUpdateCoordinator], Numbe
     async def async_set_native_value(self, value: float) -> None:
         """Update the summer/winter threshold."""
 
-        await self._api.async_write_variable(variable=MetaRegisters.SUMMER_WINTER, value=value)
+        await self.coordinator.get_appliance().async_set_summer_winter(value)
 
-        # Update the value so users don't have to wait until the next sync.
-        self.coordinator.get_appliance().summer_winter = value
+        # TODO Update the value so users don't have to wait until the next sync.
         self.async_write_ha_state()
 
     @property
@@ -185,18 +184,18 @@ class RemehaSummerWinterNumber(CoordinatorEntity[RemehaUpdateCoordinator], Numbe
         if self._parent_device_id is None:
             return None
 
-        device_instance: DeviceInstance | None = self.coordinator.get_device(
-            id=self._parent_device_id
-        )
+        device_instance: DeviceBoard | None = self.coordinator.get_device(id=self._parent_device_id)
         return (
             DeviceInfo(
                 identifiers={(DOMAIN, str(device_instance.article_number))},
-                hw_version=f"HW{device_instance.hw_version[0]:02d}.{device_instance.hw_version[1]:02d}",
+                hw_version=f"HW{device_instance.hardware_version[0]:02d}.{device_instance.hardware_version[1]:02d}",
                 manufacturer="Remeha",
                 model=str(device_instance.board_category),
-                sw_version=f"SW{device_instance.sw_version[0]:02d}.{device_instance.sw_version[1]:02d}",
+                sw_version=f"SW{device_instance.software_version[0]:02d}.{device_instance.software_version[1]:02d}",
             )
             if device_instance is not None
+            and device_instance.hardware_version is not None
+            and device_instance.software_version is not None
             else None
         )
 
@@ -237,12 +236,9 @@ class RemehaNeutralBandNumber(CoordinatorEntity[RemehaUpdateCoordinator], Number
     async def async_set_native_value(self, value: float) -> None:
         """Update the neutral band."""
 
-        await self._api.async_write_variable(
-            variable=MetaRegisters.NEUTRAL_BAND_SUMMER_WINTER, value=value
-        )
+        await self.coordinator.get_appliance().async_set_neutral_band_summer_winter(value)
 
-        # Update the value so users don't have to wait until the next sync.
-        self.coordinator.get_appliance().neutral_band_summer_winter = value
+        # TODO Update the value so users don't have to wait until the next sync.
         self.async_write_ha_state()
 
     @property
@@ -257,17 +253,17 @@ class RemehaNeutralBandNumber(CoordinatorEntity[RemehaUpdateCoordinator], Number
         if self._parent_device_id is None:
             return None
 
-        device_instance: DeviceInstance | None = self.coordinator.get_device(
-            id=self._parent_device_id
-        )
+        device_instance: DeviceBoard | None = self.coordinator.get_device(id=self._parent_device_id)
         return (
             DeviceInfo(
                 identifiers={(DOMAIN, str(device_instance.article_number))},
-                hw_version=f"HW{device_instance.hw_version[0]:02d}.{device_instance.hw_version[1]:02d}",
+                hw_version=f"HW{device_instance.hardware_version[0]:02d}.{device_instance.hardware_version[1]:02d}",
                 manufacturer="Remeha",
                 model=str(device_instance.board_category),
-                sw_version=f"SW{device_instance.sw_version[0]:02d}.{device_instance.sw_version[1]:02d}",
+                sw_version=f"SW{device_instance.software_version[0]:02d}.{device_instance.software_version[1]:02d}",
             )
             if device_instance is not None
+            and device_instance.hardware_version is not None
+            and device_instance.software_version is not None
             else None
         )

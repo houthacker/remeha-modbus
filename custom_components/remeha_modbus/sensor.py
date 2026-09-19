@@ -3,7 +3,7 @@
 import logging
 from typing import cast
 
-from aio_remeha_modbus.api import DeviceInstance
+from aio_remeha_modbus.api.system_discovery_table import DeviceBoard
 from homeassistant.components.sensor import (
     SensorEntity,
     SensorEntityDescription,
@@ -18,7 +18,6 @@ from custom_components.remeha_modbus.const import (
     DOMAIN,
     REMEHA_ENUM_SENSOR_OPTIONS,
     REMEHA_SENSORS,
-    ModbusVariableDescription,
 )
 from custom_components.remeha_modbus.coordinator import RemehaUpdateCoordinator
 
@@ -31,7 +30,7 @@ async def async_setup_entry(
     """Create the sensor entities based on the given config entry."""
 
     coordinator: RemehaUpdateCoordinator = entry.runtime_data["coordinator"]
-    mainboards: list[DeviceInstance] = coordinator.get_devices(lambda device: device.is_mainboard())
+    mainboards: list[DeviceBoard] = coordinator.get_devices(lambda device: device.is_mainboard())
 
     async_add_entities(
         [
@@ -39,9 +38,8 @@ async def async_setup_entry(
                 coordinator=coordinator,
                 parent_device_id=mainboards[0].id if mainboards else None,
                 description=sensor_description,
-                variable=modbus_description,
             )
-            for modbus_description, sensor_description in REMEHA_SENSORS.items()
+            for sensor_description in REMEHA_SENSORS
         ]
     )
 
@@ -61,19 +59,21 @@ class RemehaSensorEntity(CoordinatorEntity[RemehaUpdateCoordinator], SensorEntit
         coordinator: RemehaUpdateCoordinator,
         parent_device_id: int | None,
         description: SensorEntityDescription,
-        variable: ModbusVariableDescription,
     ):
         """Create a new sensor entity."""
 
         super().__init__(coordinator=coordinator)
 
-        if parent_device_id is None:
-            _LOGGER.warning("Sensor [%s] not attached to a parent device.", variable.name)
-        else:
-            self._parent_device_id = parent_device_id
+        if not isinstance(description.name, str):
+            raise TypeError(
+                f"The sensor name must be a string, got {type(description.name).__qualname__}"
+            )
 
-        self._variable = variable
-        self._attr_name = str(description.name)
+        if parent_device_id is None:
+            _LOGGER.warning("Sensor [%s] not attached to a parent device.", description.name)
+
+        self._parent_device_id = parent_device_id
+        self._attr_name = description.name
         self._attr_unique_id = str(description.name)
         self._attr_device_class = description.device_class
         self._attr_native_unit_of_measurement = description.native_unit_of_measurement
@@ -88,15 +88,13 @@ class RemehaSensorEntity(CoordinatorEntity[RemehaUpdateCoordinator], SensorEntit
     def native_value(self):
         """Return the value of this sensor."""
 
-        value = cast(RemehaUpdateCoordinator, self.coordinator).get_sensor_value(
-            variable=self._variable
-        )
+        value = self.coordinator.get_sensor_value(cast(str, self._attr_name))
 
         if value is None:
             return None
 
         # For ENUM sensors, map the raw register value to a (translatable) option key.
-        options = REMEHA_ENUM_SENSOR_OPTIONS.get(self._variable)
+        options = REMEHA_ENUM_SENSOR_OPTIONS.get(cast(str, self._attr_name))
         if options is not None:
             return options.get(int(value))
 
@@ -114,17 +112,17 @@ class RemehaSensorEntity(CoordinatorEntity[RemehaUpdateCoordinator], SensorEntit
         if self._parent_device_id is None:
             return None
 
-        device_instance: DeviceInstance | None = self.coordinator.get_device(
-            id=self._parent_device_id
-        )
+        device_instance: DeviceBoard | None = self.coordinator.get_device(id=self._parent_device_id)
         return (
             DeviceInfo(
                 identifiers={(DOMAIN, str(device_instance.article_number))},
-                hw_version=f"HW{device_instance.hw_version[0]:02d}.{device_instance.hw_version[1]:02d}",
+                hw_version=f"HW{device_instance.hardware_version[0]:02d}.{device_instance.hardware_version[1]:02d}",
                 manufacturer="Remeha",
                 model=str(device_instance.board_category),
-                sw_version=f"SW{device_instance.sw_version[0]:02d}.{device_instance.sw_version[1]:02d}",
+                sw_version=f"SW{device_instance.software_version[0]:02d}.{device_instance.software_version[1]:02d}",
             )
             if device_instance is not None
+            and device_instance.hardware_version is not None
+            and device_instance.software_version is not None
             else None
         )

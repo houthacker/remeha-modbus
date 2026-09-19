@@ -1,12 +1,12 @@
 """Errors for the remeha_modbus integration."""
 
-from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
+from homeassistant.exceptions import IntegrationError, ServiceValidationError
 from pymodbus import ModbusException
 
 from custom_components.remeha_modbus.const import ClimateZoneScheduleId
 
 
-class RemehaModbusError(HomeAssistantError):
+class RemehaModbusError(IntegrationError):
     """Base error for remeha_modbus integration."""
 
 

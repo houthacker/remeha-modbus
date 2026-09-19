@@ -24,7 +24,7 @@ from custom_components.remeha_modbus.blend.scheduler.const import (
 )
 from custom_components.remeha_modbus.const import ClimateZoneScheduleId, Weekday, ZoneScheduleUID
 from custom_components.remeha_modbus.errors import ParseError, RemehaModbusError
-from tests.conftest import get_api, setup_platform
+from tests.conftest import remeha_api, setup_platform
 from tests.util.util import replace_tag_template
 
 
@@ -119,14 +119,14 @@ def test_to_zone_schedule_invalid(json_fixture: dict[str, Any]):
         helpers.to_zone_schedule(scheduler_state, uid)
 
 
-@pytest.mark.parametrize("mock_modbus_client", ["modbus_store.json"], indirect=True)
+@pytest.mark.parametrize("remeha_modbus_unit", ["modbus_store.json"], indirect=True)
 @pytest.mark.parametrize("json_fixture", ["scheduler_schedule.json"], indirect=True)
 async def test_to_scheduler_schedule(
-    hass: HomeAssistant, mock_modbus_client, mock_config_entry, json_fixture: dict[str, Any]
+    hass: HomeAssistant, remeha_modbus_unit, mock_config_entry, json_fixture: dict[str, Any]
 ):
     """Test that to_scheduler_schedule converts a ZoneSchedule correctly."""
 
-    api = get_api(mock_modbus_client=mock_modbus_client)
+    api = remeha_api(remeha_modbus_unit=remeha_modbus_unit)
     with patch(
         "aio_remeha_modbus.api.api.RemehaApi.create",
         new=lambda *args, **kwargs: api,
@@ -149,14 +149,14 @@ async def test_to_scheduler_schedule(
         assert scheduler_schedule == json_fixture
 
 
-@pytest.mark.parametrize("mock_modbus_client", ["modbus_store.json"], indirect=True)
+@pytest.mark.parametrize("remeha_modbus_unit", ["modbus_store.json"], indirect=True)
 @pytest.mark.parametrize("json_fixture", ["remeha.schedulerstate.json"], indirect=True)
 async def test_links_exclusively_to_remeha_climate(
-    hass: HomeAssistant, mock_modbus_client, mock_config_entry, json_fixture: SchedulerState
+    hass: HomeAssistant, remeha_modbus_unit, mock_config_entry, json_fixture: SchedulerState
 ):
     """Test whether a given scheduler.State links exclusively to a remeha climate entity."""
 
-    api = get_api(mock_modbus_client=mock_modbus_client)
+    api = remeha_api(remeha_modbus_unit=remeha_modbus_unit)
     with patch(
         "aio_remeha_modbus.api.api.RemehaApi.create",
         new=lambda *args, **kwargs: api,
@@ -167,16 +167,16 @@ async def test_links_exclusively_to_remeha_climate(
         assert helpers.links_exclusively_to_remeha_climate(hass, json_fixture)
 
 
-@pytest.mark.parametrize("mock_modbus_client", ["modbus_store.json"], indirect=True)
+@pytest.mark.parametrize("remeha_modbus_unit", ["modbus_store.json"], indirect=True)
 @pytest.mark.parametrize(
     "json_fixture", ["remeha.schedulerstate.multiple-climates.json"], indirect=True
 )
 async def test_links_exclusively_to_remeha_climate_invalid(
-    hass: HomeAssistant, mock_modbus_client, mock_config_entry, json_fixture: SchedulerState
+    hass: HomeAssistant, remeha_modbus_unit, mock_config_entry, json_fixture: SchedulerState
 ):
     """Test that the helper returns False when a SchedulerState links to at least two entities."""
 
-    api = get_api(mock_modbus_client=mock_modbus_client)
+    api = remeha_api(remeha_modbus_unit=remeha_modbus_unit)
     with patch(
         "aio_remeha_modbus.api.api.RemehaApi.create",
         new=lambda *args, **kwargs: api,
@@ -187,11 +187,11 @@ async def test_links_exclusively_to_remeha_climate_invalid(
         assert not helpers.links_exclusively_to_remeha_climate(hass, json_fixture)
 
 
-@pytest.mark.parametrize("mock_modbus_client", ["modbus_store.json"], indirect=True)
-async def test_get_updated_dhw_schedules(mock_modbus_client):
+@pytest.mark.parametrize("remeha_modbus_unit", ["modbus_store.json"], indirect=True)
+async def test_get_updated_dhw_schedules(remeha_modbus_unit):
     """Test calculating updated DHW schedules between two schedule sets."""
 
-    api = get_api(mock_modbus_client=mock_modbus_client)
+    api = remeha_api(remeha_modbus_unit=remeha_modbus_unit)
     climates = [
         climate
         for climate in await api.async_read_zones(await api.async_read_appliance())

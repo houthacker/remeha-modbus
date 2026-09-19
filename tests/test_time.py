@@ -11,14 +11,14 @@ from custom_components.remeha_modbus.const import (
     TIME_SILENT_MODE_START_TIME,
 )
 
-from .conftest import get_api, setup_platform
+from .conftest import remeha_api, setup_platform
 
 
-@pytest.mark.parametrize("mock_modbus_client", ["modbus_store.json"], indirect=True)
-async def test_time_entities(hass: HomeAssistant, mock_modbus_client, mock_config_entry):
+@pytest.mark.parametrize("remeha_modbus_unit", ["modbus_store.json"], indirect=True)
+async def test_time_entities(hass: HomeAssistant, remeha_modbus_unit, mock_config_entry):
     """Test available time entities."""
 
-    api = get_api(mock_modbus_client=mock_modbus_client)
+    api = remeha_api(remeha_modbus_unit=remeha_modbus_unit)
     with patch(
         "aio_remeha_modbus.api.api.RemehaApi.create",
         new=lambda *args, **kwargs: api,
