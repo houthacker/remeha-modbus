@@ -509,7 +509,7 @@ class RemehaUpdateCoordinator(DataUpdateCoordinator):
 
         """
 
-        await self._api.zones[schedule.zone_id - 1].async_set_single_schedule(schedule)
+        await self._api.async_overwrite_zone_schedule(schedule)
 
         # Update the current schedule state if the updated schedule
         # is the current schedule. Otherwise no update of current state
