@@ -2,22 +2,20 @@
 
 from unittest.mock import patch
 
+from homeassistant.components.climate.const import PRESET_COMFORT
 from homeassistant.core import HomeAssistant
 
 from custom_components.remeha_modbus.blend.scheduler.event_dispatcher import EventDispatcher
 from custom_components.remeha_modbus.coordinator import RemehaUpdateCoordinator
-from tests.conftest import remeha_api, setup_platform
+from tests.conftest import setup_platform
 
 
-async def test_subscribe_to_entity_updates(
-    hass: HomeAssistant, remeha_modbus_unit, mock_config_entry
-):
+async def test_subscribe_to_entity_updates(hass: HomeAssistant, remeha_api, mock_config_entry):
     """Test that registering a new listener returns a unique unsubsribe function."""
 
-    api = remeha_api(remeha_modbus_unit=remeha_modbus_unit)
     with patch(
-        "aio_remeha_modbus.api.api.RemehaApi.create",
-        new=lambda *args, **kwargs: api,
+        "custom_components.remeha_modbus.RemehaApi",
+        new=lambda *args, **kwargs: remeha_api,
     ):
         await setup_platform(hass=hass, config_entry=mock_config_entry)
         await hass.async_block_till_done()
@@ -40,18 +38,18 @@ async def test_subscribe_to_entity_updates(
 
 
 async def test_entity_update_listener_gets_called(
-    hass: HomeAssistant, remeha_modbus_unit, mock_config_entry
+    hass: HomeAssistant, remeha_api, mock_config_entry
 ):
     """Test that subscribers to entity updates are notified of updates."""
 
-    api = remeha_api(remeha_modbus_unit=remeha_modbus_unit)
     with patch(
-        "aio_remeha_modbus.api.api.RemehaApi.create",
-        new=lambda *args, **kwargs: api,
+        "custom_components.remeha_modbus.RemehaApi",
+        new=lambda *args, **kwargs: remeha_api,
     ):
         await setup_platform(hass=hass, config_entry=mock_config_entry)
         await hass.async_block_till_done()
 
+        coordinator: RemehaUpdateCoordinator = mock_config_entry.runtime_data["coordinator"]
         entity_id: str = "climate.remeha_modbus_test_hub_dhw"
         dispatcher: EventDispatcher = EventDispatcher(hass=hass)
 
@@ -67,13 +65,13 @@ async def test_entity_update_listener_gets_called(
         assert dhw_zone is not None
         assert dhw_zone.current_setpoint is not None
 
-        # Update the DHW climate by setting a new setpoint.
+        # Update the DHW climate by putting it in manual mode.
         await hass.services.async_call(
             domain="climate",
-            service="set_temperature",
-            service_data={"entity_id": entity_id, "temperature": dhw_zone.current_setpoint + 1},
-            blocking=False,
+            service="set_preset_mode",
+            service_data={"entity_id": entity_id, "preset_mode": PRESET_COMFORT},
         )
+
         await hass.async_block_till_done(wait_background_tasks=True)
 
         assert parameters["dhw_listener_calls"] == 1
