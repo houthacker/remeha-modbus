@@ -1,6 +1,7 @@
 """Module for event listening and -dispatching."""
 
 import logging
+from types import MappingProxyType
 from typing import Final, Literal
 
 from homeassistant.components.climate.const import DOMAIN as ClimateEntityPlatform
@@ -16,7 +17,6 @@ from homeassistant.helpers.event import (
 from custom_components.remeha_modbus.blend.scheduler.const import SchedulerDomain
 from custom_components.remeha_modbus.const import DOMAIN, EntityEventCallback, UnsubscribeCallback
 from custom_components.remeha_modbus.helpers.entities import integration_entities
-from custom_components.remeha_modbus.helpers.iterators import UnmodifiableDict
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -41,39 +41,37 @@ class EventDispatcher:
 
         self._hass: HomeAssistant = hass
 
-        self._domain_subscriptions: UnmodifiableDict[str, HomeAssistantCallback] = (
-            UnmodifiableDict.create(
-                {
-                    ATTR_SCHEDULER_ENTITY_ADDED: async_track_state_added_domain(
-                        hass=hass,
-                        domains=SchedulerEntityPlatform,
-                        action=lambda event: self._dispatch_entity_added_event(
-                            domain=SchedulerEntityPlatform, event=event
-                        ),
+        self._domain_subscriptions: MappingProxyType[str, HomeAssistantCallback] = MappingProxyType(
+            {
+                ATTR_SCHEDULER_ENTITY_ADDED: async_track_state_added_domain(
+                    hass=hass,
+                    domains=SchedulerEntityPlatform,
+                    action=lambda event: self._dispatch_entity_added_event(
+                        domain=SchedulerEntityPlatform, event=event
                     ),
-                    ATTR_SCHEDULER_ENTITY_REMOVED: async_track_state_removed_domain(
-                        hass=hass,
-                        domains=SchedulerEntityPlatform,
-                        action=lambda event: self._dispatch_entity_removed_event(
-                            domain=SchedulerEntityPlatform, event=event
-                        ),
+                ),
+                ATTR_SCHEDULER_ENTITY_REMOVED: async_track_state_removed_domain(
+                    hass=hass,
+                    domains=SchedulerEntityPlatform,
+                    action=lambda event: self._dispatch_entity_removed_event(
+                        domain=SchedulerEntityPlatform, event=event
                     ),
-                    ATTR_CLIMATE_ENTITY_ADDED: async_track_state_added_domain(
-                        hass=hass,
-                        domains=ClimateEntityPlatform,
-                        action=lambda event: self._dispatch_entity_added_event(
-                            domain=ClimateEntityPlatform, event=event
-                        ),
+                ),
+                ATTR_CLIMATE_ENTITY_ADDED: async_track_state_added_domain(
+                    hass=hass,
+                    domains=ClimateEntityPlatform,
+                    action=lambda event: self._dispatch_entity_added_event(
+                        domain=ClimateEntityPlatform, event=event
                     ),
-                    ATTR_CLIMATE_ENTITY_REMOVED: async_track_state_removed_domain(
-                        hass=hass,
-                        domains=ClimateEntityPlatform,
-                        action=lambda event: self._dispatch_entity_removed_event(
-                            domain=ClimateEntityPlatform, event=event
-                        ),
+                ),
+                ATTR_CLIMATE_ENTITY_REMOVED: async_track_state_removed_domain(
+                    hass=hass,
+                    domains=ClimateEntityPlatform,
+                    action=lambda event: self._dispatch_entity_removed_event(
+                        domain=ClimateEntityPlatform, event=event
                     ),
-                }
-            )
+                ),
+            }
         )
         """Subscriptions to entities added/removed from either the `switch` or the `climate` domain."""
 
