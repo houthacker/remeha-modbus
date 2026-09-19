@@ -7,16 +7,15 @@ from homeassistant.core import HomeAssistant
 
 from custom_components.remeha_modbus.const import HEATPUMP_MANAGED_SCHEDULES, SWITCH_SCHEDULE_SYNC
 
-from .conftest import remeha_api, setup_platform
+from .conftest import setup_platform
 
 
-async def test_switch(hass: HomeAssistant, remeha_modbus_unit, mock_config_entry):
+async def test_switch(hass: HomeAssistant, remeha_api, mock_config_entry):
     """Test a single DhwHysteresisEntity."""
 
-    api = remeha_api(remeha_modbus_unit=remeha_modbus_unit)
     with patch(
-        "aio_remeha_modbus.api.api.RemehaApi.create",
-        new=lambda *args, **kwargs: api,
+        "custom_components.remeha_modbus.RemehaApi",
+        new=lambda *args, **kwargs: remeha_api,
     ):
         await setup_platform(hass=hass, config_entry=mock_config_entry)
         await hass.async_block_till_done()
@@ -27,13 +26,12 @@ async def test_switch(hass: HomeAssistant, remeha_modbus_unit, mock_config_entry
             assert state.name == unique_id
 
 
-async def test_appliance_switches(hass: HomeAssistant, remeha_modbus_unit, mock_config_entry):
+async def test_appliance_switches(hass: HomeAssistant, remeha_api, mock_config_entry):
     """Test the appliance-level modbus switches (AP016 / AP028)."""
 
-    api = remeha_api(remeha_modbus_unit=remeha_modbus_unit)
     with patch(
-        "aio_remeha_modbus.api.api.RemehaApi.create",
-        new=lambda *args, **kwargs: api,
+        "custom_components.remeha_modbus.RemehaApi",
+        new=lambda *args, **kwargs: remeha_api,
     ):
         await setup_platform(hass=hass, config_entry=mock_config_entry)
         await hass.async_block_till_done()
@@ -60,13 +58,12 @@ async def test_appliance_switches(hass: HomeAssistant, remeha_modbus_unit, mock_
         assert ch_enabled.state == "off"
 
 
-async def test_force_summer_switch(hass: HomeAssistant, remeha_modbus_unit, mock_config_entry):
+async def test_force_summer_switch(hass: HomeAssistant, remeha_api, mock_config_entry):
     """Test the appliance force-summer switch (AP074)."""
 
-    api = remeha_api(remeha_modbus_unit=remeha_modbus_unit)
     with patch(
-        "aio_remeha_modbus.api.api.RemehaApi.create",
-        new=lambda *args, **kwargs: api,
+        "custom_components.remeha_modbus.RemehaApi",
+        new=lambda *args, **kwargs: remeha_api,
     ):
         await setup_platform(hass=hass, config_entry=mock_config_entry)
         await hass.async_block_till_done()
