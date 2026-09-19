@@ -84,6 +84,7 @@ async def test_discovery_table_corrupted_repair(
 
 
 @pytest.mark.parametrize("json_fixture", ["modbus_store_invalid_timeslot.json"], indirect=True)
+@pytest.mark.parametrize("remeha_api", [{"require_update": False}], indirect=True)
 async def test_invalid_zone_schedule_repair(
     hass: HomeAssistant, remeha_api: RemehaApi, mock_config_entry, hass_client, hass_ws_client
 ):
@@ -94,6 +95,7 @@ async def test_invalid_zone_schedule_repair(
         new=lambda *args, **kwargs: remeha_api,
     ):
         # Start remeha_modbus
+        # with pytest.raises(UpdateFailed):
         await setup_platform(hass=hass, config_entry=mock_config_entry)
         await hass.async_block_till_done()
 
