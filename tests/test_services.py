@@ -12,7 +12,6 @@ from aio_remeha_modbus.api.climate_zone import (
 )
 from homeassistant.core import HomeAssistant
 from pymodbus import ModbusException
-from remeha_modbus.coordinator import RemehaUpdateCoordinator
 
 from custom_components.remeha_modbus.const import (
     DOMAIN,
@@ -22,6 +21,7 @@ from custom_components.remeha_modbus.const import (
     SERVICE_AUTO_SCHEDULE,
     SERVICE_READ_REGISTERS,
 )
+from custom_components.remeha_modbus.coordinator import RemehaUpdateCoordinator
 from custom_components.remeha_modbus.errors import (
     RemehaServiceError,
 )

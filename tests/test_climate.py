@@ -15,7 +15,6 @@ from homeassistant.components.climate.const import (
 from homeassistant.const import STATE_OFF
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ServiceNotSupported, ServiceValidationError
-from remeha_modbus.coordinator import RemehaUpdateCoordinator
 
 from custom_components.remeha_modbus.climate import InvalidClimateContext
 from custom_components.remeha_modbus.const import (
@@ -25,6 +24,7 @@ from custom_components.remeha_modbus.const import (
     REMEHA_PRESET_SCHEDULE_4,
     ClimateZoneMode,
 )
+from custom_components.remeha_modbus.coordinator import RemehaUpdateCoordinator
 
 from .conftest import setup_platform
 
