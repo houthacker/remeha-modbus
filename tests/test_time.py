@@ -2,7 +2,6 @@
 
 from unittest.mock import patch
 
-import pytest
 from homeassistant.components.time.const import DOMAIN as TimeDomain
 from homeassistant.core import HomeAssistant
 
@@ -11,17 +10,15 @@ from custom_components.remeha_modbus.const import (
     TIME_SILENT_MODE_START_TIME,
 )
 
-from .conftest import remeha_api, setup_platform
+from .conftest import setup_platform
 
 
-@pytest.mark.parametrize("remeha_modbus_unit", ["modbus_store.json"], indirect=True)
-async def test_time_entities(hass: HomeAssistant, remeha_modbus_unit, mock_config_entry):
+async def test_time_entities(hass: HomeAssistant, remeha_api, mock_config_entry):
     """Test available time entities."""
 
-    api = remeha_api(remeha_modbus_unit=remeha_modbus_unit)
     with patch(
-        "aio_remeha_modbus.api.api.RemehaApi.create",
-        new=lambda *args, **kwargs: api,
+        "custom_components.remeha_modbus.RemehaApi",
+        new=lambda *args, **kwargs: remeha_api,
     ):
         await setup_platform(hass=hass, config_entry=mock_config_entry)
         await hass.async_block_till_done()
