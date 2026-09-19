@@ -340,7 +340,10 @@ class RemehaUpdateCoordinator(DataUpdateCoordinator):
     def get_climate(self, id: int) -> ClimateZone | None:
         """Return the climate instance with `id`.
 
-        Returns
+        Args:
+            id (int): The one-based climate zone id.
+
+        Returns:
             `ClimateZone | None`: The climate instance, or `None` if no climate has the given `id`.
 
         """
