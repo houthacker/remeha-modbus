@@ -229,7 +229,7 @@
         "name": "Substatus",
         "state": {
           "standby": "Stand-by",
-          "pause_time": "Pauzetijd / kortcyclusbeveiliging",
+          "anti_cyclus": "Pauzetijd / kortcyclusbeveiliging",
           "close_hydraulic_valve": "Hydraulische klep sluiten",
           "stop_pump": "Pomp stoppen",
           "wait_start_release": "Wachten op startvrijgave",
