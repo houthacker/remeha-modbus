@@ -3,8 +3,9 @@
 import logging
 from typing import TYPE_CHECKING
 
-from aio_remeha_modbus.api.api import RemehaApi
+from aio_remeha_modbus.api import RemehaApi
 from aio_remeha_modbus.api.const import ConnectionType
+from aio_remeha_modbus.helpers.modbus import ModbusUnit, RetryingModbusUnit
 from dateutil import tz
 from homeassistant.components.modbus import async_get_unit
 from homeassistant.config_entries import ConfigEntry
@@ -43,6 +44,15 @@ PLATFORMS: list[Platform] = [
 _LOGGER = logging.getLogger(__name__)
 
 
+def _set_connection_timeout(unit: ModbusUnit, seconds: int = 10):
+
+    # Until modbus-connection==4.12.1 has landed in HA, use this monstrosity.
+    conn = getattr(unit, "_conn")
+    setattr(conn, "_base_timeout", seconds)
+    setattr(conn, "_timeout", seconds)
+    setattr(conn, "_client_timeout", seconds)
+
+
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Remeha Modbus based on a config entry."""
 
@@ -65,10 +75,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         ) from e
 
     unit = async_get_unit(hass=hass, entry=entry, params=params, unit_id=unit_id)
-    # TODO unit.require_timeout(xxx)
+    _set_connection_timeout(unit)
+
+    unit.set_message_spacing(0.00175)
+
     api: RemehaApi = RemehaApi(
         name=modbus_hub_name,
-        unit=unit,
+        unit=RetryingModbusUnit(unit),
         time_zone=await hass.async_add_executor_job(tz.gettz, hass.config.time_zone),
     )
 
