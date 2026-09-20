@@ -8,7 +8,7 @@ from uuid import UUID
 
 from aio_remeha_modbus.api import RemehaApi
 from aio_remeha_modbus.api.appliance import Appliance
-from aio_remeha_modbus.api.climate_zone import ClimateZone
+from aio_remeha_modbus.api.climate_zone import ClimateZone, ClimateZoneType
 from aio_remeha_modbus.api.const import (
     BoilerConfiguration,
     BoilerEnergyLabel,
@@ -173,7 +173,11 @@ class RemehaUpdateCoordinator(DataUpdateCoordinator):
             if not before_first_update:
                 await self._async_fire_dhw_schedule_update_events(
                     old_zones=self.data["climates"],
-                    new_zones={zone.id: zone for zone in self._api.zones},
+                    new_zones={
+                        zone.id: zone
+                        for zone in self._api.zones
+                        if zone.type is not ClimateZoneType.NOT_PRESENT
+                    },
                 )
 
         except DiscoveryTableCorruptedError as ex:
@@ -223,9 +227,17 @@ class RemehaUpdateCoordinator(DataUpdateCoordinator):
                 },
             ) from ex
 
+        # Log ignored zones
+        for zone in [zone for zone in self._api.zones if zone.type is ClimateZoneType.NOT_PRESENT]:
+            _LOGGER.debug("Ignoring ClimateZone(%s) because its type is NOT_PRESENT", zone.id)
+
         return {
             "appliance": self._api.appliance,
-            "climates": {zone.id: zone for zone in self._api.zones},
+            "climates": {
+                zone.id: zone
+                for zone in self._api.zones
+                if zone.type is not ClimateZoneType.NOT_PRESENT
+            },
             "sensors": {
                 field_name: getattr(self._api.appliance, field_name)
                 for field_name in self._api.appliance.resolved_fields
