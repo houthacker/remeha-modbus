@@ -1,4 +1,4 @@
-aio-remeha-modbus==1.0.0b8
+aio-remeha-modbus==1.0.0b9
 aiodhcpwatcher
 aiodiscover
 aiofiles
@@ -8,6 +8,7 @@ av
 colorlog
 ffmpeg
 freezegun~=1.5.5
+gazetteer-matcher
 go2rtc-client
 ha-ffmpeg
 hassil
