@@ -238,13 +238,18 @@ class RemehaUpdateCoordinator(DataUpdateCoordinator):
                 for zone in self._api.zones
                 if zone.type is not ClimateZoneType.NOT_PRESENT
             },
+            # `Appliance` and `MainControlMonitoring` both define `status`, but they read
+            # different registers (411 resp. 279). The `status` sensor is varApStatus, so
+            # the appliance value must win: merge the appliance last. The monitoring
+            # status is not used through this mapping; binary sensors read the component
+            # directly via `get_main_control_monitoring()`.
             "sensors": {
-                field_name: getattr(self._api.appliance, field_name)
-                for field_name in self._api.appliance.resolved_fields
-            }
-            | {
                 field_name: getattr(self._api.main_control_monitoring, field_name)
                 for field_name in self._api.main_control_monitoring.resolved_fields
+            }
+            | {
+                field_name: getattr(self._api.appliance, field_name)
+                for field_name in self._api.appliance.resolved_fields
             },
         }
 
