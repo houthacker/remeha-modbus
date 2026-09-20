@@ -18,6 +18,7 @@ from custom_components.remeha_modbus.const import (
     DOMAIN,
     REMEHA_ENUM_SENSOR_OPTIONS,
     REMEHA_SENSORS,
+    SENSOR_FIELD_OVERRIDES,
 )
 from custom_components.remeha_modbus.coordinator import RemehaUpdateCoordinator
 
@@ -88,13 +89,14 @@ class RemehaSensorEntity(CoordinatorEntity[RemehaUpdateCoordinator], SensorEntit
     def native_value(self):
         """Return the value of this sensor."""
 
-        value = self.coordinator.get_sensor_value(cast(str, self._attr_name))
+        name = cast(str, self._attr_name)
+        value = self.coordinator.get_sensor_value(SENSOR_FIELD_OVERRIDES.get(name, name))
 
         if value is None:
             return None
 
         # For ENUM sensors, map the raw register value to a (translatable) option key.
-        options = REMEHA_ENUM_SENSOR_OPTIONS.get(cast(str, self._attr_name))
+        options = REMEHA_ENUM_SENSOR_OPTIONS.get(name)
         if options is not None:
             return options.get(int(value))
 

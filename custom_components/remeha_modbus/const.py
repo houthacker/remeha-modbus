@@ -345,6 +345,13 @@ REMEHA_ENUM_SENSOR_OPTIONS: Final[dict[str, dict[int, str]]] = {
     "substatus": SUBSTATUS_OPTIONS,
 }
 
+SENSOR_FIELD_OVERRIDES: Final[dict[str, str]] = {
+    # Sensor values are looked up by entity name, which usually equals the name of the
+    # `aio-remeha-modbus` field holding the value. Map the exceptions here, so the entity
+    # names -- and with them the entity ids -- can stay as they are.
+    "water_pressure": "actual_water_pressure",
+}
+
 REMEHA_SENSORS: tuple[SensorEntityDescription, ...] = (
     SensorEntityDescription(  # 277
         key="applianceCurrentError", name="current_error"
