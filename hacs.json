@@ -4,6 +4,6 @@
   "zip_release": true,
   "filename": "remeha_modbus.zip",
   "country": "NL",
-  "homeassistant": "2026.9.2",
+  "homeassistant": "2026.9.3",
   "hacs": "2.0.5"
 }
