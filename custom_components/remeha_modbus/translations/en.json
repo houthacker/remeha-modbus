@@ -230,7 +230,7 @@
         "name": "Substatus",
         "state": {
           "standby": "Standby",
-          "pause_time": "Pause time / short-cycle protection",
+          "anti_cyclus": "Pause time / short-cycle protection",
           "close_hydraulic_valve": "Closing hydraulic valve",
           "stop_pump": "Stopping pump",
           "wait_start_release": "Waiting for start release",

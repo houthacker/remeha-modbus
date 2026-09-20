@@ -289,7 +289,7 @@ STATUS_OPTIONS: Final[dict[int, str]] = {
 
 SUBSTATUS_OPTIONS: Final[dict[int, str]] = {
     0: "standby",
-    1: "pause_time",
+    1: "anti_cyclus",
     2: "close_hydraulic_valve",
     3: "stop_pump",
     4: "wait_start_release",
@@ -397,7 +397,7 @@ REMEHA_SENSORS: tuple[SensorEntityDescription, ...] = (
     SensorEntityDescription(  # 409
         key="varApWaterPressure",
         device_class=SensorDeviceClass.PRESSURE,
-        name="water_pressure",
+        name="actual_water_pressure",
         native_unit_of_measurement="bar",
         state_class=SensorStateClass.MEASUREMENT,
     ),

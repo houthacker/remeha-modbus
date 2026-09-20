@@ -45,7 +45,7 @@
         "name": "Substatus",
         "state": {
           "standby": "Standby",
-          "pause_time": "Pausenzeit / Kurzzyklus-Sicherung",
+          "anti_cyclus": "Pausenzeit / Kurzzyklus-Sicherung",
           "close_hydraulic_valve": "Hydraulikventil schließen",
           "stop_pump": "Pumpe stoppen",
           "wait_start_release": "Warte auf Startfreigabe",
