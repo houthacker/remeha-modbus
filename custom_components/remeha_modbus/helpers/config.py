@@ -57,8 +57,7 @@ def to_modbus_params(config: MappingProxyType[str, Any]) -> tuple[ModbusParams, 
     elif config[CONF_TYPE] == UDP:
         params = ModbusUdpParams(host=config[CONF_HOST], port=config[CONF_PORT], framer="socket")
     elif config[CONF_TYPE] == RTUOVERTCP:
-        # TODO modbus TCP with framer is deprecated
-        params = ModbusTcpParams(host=config[CONF_HOST], port=config[CONF_PORT], framer="rtu")
+        params = ModbusSerialParams(device=f"socket://{config[CONF_HOST]}:{config[CONF_PORT]}")
     else:
         raise KeyError(config[CONF_TYPE])
 
