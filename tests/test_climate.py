@@ -268,7 +268,7 @@ async def test_ch_climate_forced_cooling_writes_appliance_register(
 ):
     """Forced cooling must write the appliance-wide COOLING_FORCED register, not an offset copy.
 
-    ``MetaRegisters.COOLING_FORCED`` (AP015, register 503) is appliance-scoped and must be
+    ``Appliance.forced_cooling_mode`` (AP015, register 503) is appliance-scoped and must be
     written without a zone offset. Writing it with the zone offset targets ``503 + offset``,
     which is an invalid address for any non-primary zone (e.g. 1015 for zone 2) and makes the
     appliance reject the write. This fixture exposes a CH zone ``circb1`` at zone id 2

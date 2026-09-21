@@ -5,8 +5,8 @@
         "name": "Jahreszeit",
         "state": {
           "winter": "Winter",
-          "frost_protection": "Frostschutz",
-          "transition_season": "Übergangszeit",
+          "winter_frost_protection": "Frostschutz",
+          "summer_neutral_band": "Übergangszeit",
           "summer": "Sommer"
         }
       },

@@ -5,13 +5,13 @@ import uuid
 from collections.abc import Callable, Generator, Iterable
 from datetime import timedelta, tzinfo
 from typing import Any, Final, cast
-from unittest.mock import AsyncMock, MagicMock, Mock, patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 import pytest_asyncio
 import voluptuous as vol
 from aio_remeha_modbus.api.api import RemehaApi
-from aio_remeha_modbus.api.const import BoilerEnergyLabel, ZoneRegisters
+from aio_remeha_modbus.api.const import BoilerEnergyLabel
 from dateutil import tz
 from homeassistant.components.modbus.const import RTUOVERTCP
 from homeassistant.components.weather import (
@@ -27,12 +27,11 @@ from homeassistant.core import HomeAssistant, SupportsResponse
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.entity_component import EntityComponent
 from homeassistant.util import dt
-from homeassistant.util.json import JsonObjectType, JsonValueType
+from homeassistant.util.json import JsonValueType
 from modbus_connection.mock import MockModbusUnit
 from pytest_homeassistant_custom_component.common import (
     MockConfigEntry,
     MockEntity,
-    load_json_object_fixture,
     load_json_value_fixture,
 )
 
@@ -55,7 +54,6 @@ from custom_components.remeha_modbus.const import (
     PV_ORIENTATION,
     PV_TILT,
     REMEHA_PRESET_SCHEDULE_1,
-    REMEHA_ZONE_RESERVED_REGISTERS,
     WEATHER_ENTITY_ID,
 )
 from custom_components.remeha_modbus.services import register_services
@@ -174,70 +172,6 @@ def mock_setup_entry() -> Generator[AsyncMock]:
         "custom_components.remeha_modbus.async_setup_entry", return_value=True
     ) as mock_setup_entry:
         yield mock_setup_entry
-
-
-@pytest.fixture
-def _disabled_mock_modbus_client(request) -> Generator[AsyncMock]:
-    """Create a mocked pymodbus client.
-
-    The registers for the modbus client are retrieved from the `request` and will be
-    looked up using `load_json_object_fixture`. See `fixtures/modbus_store.json` as an example.
-    """
-
-    with (
-        patch("pymodbus.client.AsyncModbusTcpClient", autospec=True) as mock,
-        patch(
-            "pymodbus.pdu.register_message.ReadHoldingRegistersResponse", autospec=True
-        ) as read_pdu,
-        patch(
-            "pymodbus.pdu.register_message.WriteMultipleRegistersRequest", autospec=True
-        ) as write_pdu,
-    ):
-        store: JsonObjectType = load_json_object_fixture(
-            request.param if hasattr(request, "param") else "modbus_store.json"
-        )
-
-        def get_registers(address: int, count: int) -> list[int]:
-            return [
-                int(store["server"]["registers"][str(r)], 16)  # type: ignore  # noqa: PGH003
-                for r in range(address, address + count)
-            ]
-
-        async def get_from_store(address: int, count: int, **kwargs):
-            read_pdu.side_effect = AsyncMock()
-            read_pdu.isError = Mock(return_value=False)
-            read_pdu.registers = get_registers(address, count)
-            read_pdu.dev_id = 100
-
-            return read_pdu
-
-        def close():
-            return Mock()
-
-        async def write_to_store(address: int, values: list[int], **kwargs):
-            for idx, r in enumerate(values):
-                store["server"]["registers"][str(address + idx)] = int(r).to_bytes(2).hex()  # type: ignore  # noqa: PGH003
-
-            write_pdu.side_effect = AsyncMock()
-            write_pdu.isError = Mock(return_value=False)
-            write_pdu.dev_id = 100
-
-            return write_pdu
-
-        async def set_pump_state(zone_id: int, state: bool = False):
-            return await write_to_store(
-                address=ZoneRegisters.PUMP_RUNNING.start_address
-                + (REMEHA_ZONE_RESERVED_REGISTERS * (zone_id - 1)),
-                values=[int(state)],
-            )
-
-        mock.connected = MagicMock(return_value=True)
-        mock.read_holding_registers.side_effect = get_from_store
-        mock.write_registers = write_to_store
-        mock.set_zone_pump_state = set_pump_state
-        mock.close = close
-
-        yield mock
 
 
 @pytest.fixture

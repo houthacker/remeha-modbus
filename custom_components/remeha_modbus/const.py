@@ -5,6 +5,7 @@ from enum import StrEnum
 from typing import Final, Literal, NamedTuple
 
 import voluptuous as vol
+from aio_remeha_modbus.api.appliance import ApplianceStatus, ApplianceSubStatus, SeasonalMode
 from aio_remeha_modbus.api.climate_zone import ClimateZoneMode
 from aio_remeha_modbus.api.const import (
     ClimateZoneScheduleId,
@@ -252,91 +253,13 @@ REMEHA_TIME_STEP_MINUTES: Final[int] = 10
 # Option keys for the ENUM status sensors. The human-readable values are provided
 # as translations (see the `entity.sensor` section in the translation files).
 SEASON_MODE_OPTIONS: Final[dict[int, str]] = {
-    0: "winter",
-    1: "frost_protection",
-    2: "transition_season",
-    3: "summer",
+    mode.value: mode.name.lower() for mode in SeasonalMode
 }
 
-STATUS_OPTIONS: Final[dict[int, str]] = {
-    0: "standby",
-    1: "heat_demand",
-    2: "generator_start",
-    3: "generator_heating",
-    4: "generator_dhw",
-    5: "generator_stop",
-    6: "pump_post_run",
-    7: "cooling",
-    8: "controlled_shutdown",
-    9: "start_prevention",
-    10: "locking_mode",
-    11: "load_test_min",
-    12: "load_test_heating_max",
-    13: "load_test_dhw_max",
-    15: "manual_heat_demand",
-    16: "frost_protection",
-    17: "venting",
-    18: "control_unit_cooling",
-    19: "resetting",
-    20: "automatic_filling",
-    21: "stopped",
-    22: "calibration",
-    23: "factory_test",
-    24: "hydraulic_balancing",
-    200: "device_mode",
-    254: "unknown",
-}
+STATUS_OPTIONS: Final[dict[int, str]] = {status.value: status.name for status in ApplianceStatus}
 
 SUBSTATUS_OPTIONS: Final[dict[int, str]] = {
-    0: "standby",
-    1: "anti_cyclus",
-    2: "close_hydraulic_valve",
-    3: "stop_pump",
-    4: "wait_start_release",
-    21: "generator_starting",
-    30: "internal_setpoint",
-    31: "limited_internal_setpoint",
-    32: "power_controlled",
-    60: "pump_post_run",
-    61: "start_pump",
-    63: "start_pause_time",
-    65: "compressor_unloaded",
-    66: "hp_tmax_backup_on",
-    67: "outside_temp_limit_hp_off",
-    68: "hp_stop_by_hybrid",
-    69: "defrost_with_heat_pump",
-    70: "defrost_with_backup",
-    71: "defrost_hp_and_backup",
-    73: "hp_flow_above_tmax",
-    75: "hp_off_high_humidity",
-    76: "hp_off_flow",
-    79: "generator_unloaded",
-    80: "hp_unloaded_cooling",
-    81: "hp_stop_outside_temp",
-    82: "hp_off_flow_tmax",
-    88: "bl_backup_off",
-    89: "bl_heat_pump_off",
-    90: "bl_hp_and_backup_off",
-    91: "low_tariff",
-    92: "pv_with_heat_pump",
-    93: "pv_hp_and_backup",
-    94: "smart_grid",
-    95: "wait_water_pressure",
-    96: "no_generator_available",
-    102: "free_cooling_pump_off",
-    103: "free_cooling_pump_on",
-    106: "blocking_active",
-    107: "warming_up",
-    108: "curative_defrost",
-    109: "preventive_defrost",
-    200: "init_completed",
-    201: "init_csu",
-    202: "init_identification",
-    203: "init_blocking_parameters",
-    204: "init_safety_unit",
-    205: "init_blocking",
-    254: "unknown",
-    255: "safety_shutdown",
+    status.value: status.name for status in ApplianceSubStatus
 }
 
 REMEHA_ENUM_SENSOR_OPTIONS: Final[dict[str, dict[int, str]]] = {
