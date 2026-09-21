@@ -189,8 +189,8 @@
         "name": "Seizoen",
         "state": {
           "winter": "Winter",
-          "frost_protection": "Vorstbeveiliging",
-          "transition_season": "Overgangsseizoen",
+          "winter_frost_protection": "Vorstbeveiliging",
+          "summer_neutral_band": "Overgangsseizoen",
           "summer": "Zomer"
         }
       },

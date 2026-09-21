@@ -190,8 +190,8 @@
         "name": "Season",
         "state": {
           "winter": "Winter",
-          "frost_protection": "Frost protection",
-          "transition_season": "Transition season",
+          "winter_frost_protection": "Frost protection",
+          "summer_neutral_band": "Transition season",
           "summer": "Summer"
         }
       },

@@ -4,7 +4,6 @@ from unittest.mock import patch
 
 import pytest
 from aio_remeha_modbus.api import RemehaApi
-from aio_remeha_modbus.api.const import MetaRegisters, ZoneRegisters
 from aio_remeha_modbus.api.errors import DiscoveryTableCorruptedError
 from homeassistant.components.climate.const import ATTR_PRESET_MODE, PRESET_ECO
 from homeassistant.components.switch.const import DOMAIN as SwitchDomain
@@ -49,7 +48,7 @@ async def test_discovery_table_corrupted_repair(
     ):
         # Modbus recovery register must be zero
         (discovery_register,) = await remeha_api.async_read_registers(
-            MetaRegisters.RESET_DISCOVERY_TABLE.start_address,
+            200,  # reset discovery table
         )
         assert discovery_register == 0x0000
 
@@ -77,9 +76,7 @@ async def test_discovery_table_corrupted_repair(
         assert issue_registry.async_get_issue(DOMAIN, ISSUE_DISCOVERY_TABLE_CORRUPTED) is None
 
         # And modbus register 200 must contain 0x5a
-        (discovery_register,) = await remeha_api.async_read_registers(
-            MetaRegisters.RESET_DISCOVERY_TABLE.start_address,
-        )
+        (discovery_register,) = await remeha_api.async_read_registers(200)  # reset discovery table
         assert discovery_register == 0x5A00
 
 
@@ -101,7 +98,7 @@ async def test_invalid_zone_schedule_repair(
 
         # And modbus register 1201 must contain 0x05a0
         (timeslot_activity_register,) = await remeha_api.async_read_registers(
-            ZoneRegisters.TIME_PROGRAM_MONDAY.start_address + REMEHA_ZONE_RESERVED_REGISTERS,
+            689 + REMEHA_ZONE_RESERVED_REGISTERS,
         )
         assert timeslot_activity_register == 0xA005
 
@@ -126,7 +123,7 @@ async def test_invalid_zone_schedule_repair(
 
         # And modbus register 1201 must contain 0x0100 (was 0x05a0)
         (timeslot_activity_register,) = await remeha_api.async_read_registers(
-            ZoneRegisters.TIME_PROGRAM_MONDAY.start_address + REMEHA_ZONE_RESERVED_REGISTERS,
+            689 + REMEHA_ZONE_RESERVED_REGISTERS,
         )
         assert timeslot_activity_register == 0x0001
 
