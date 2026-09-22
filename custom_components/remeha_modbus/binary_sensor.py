@@ -5,7 +5,7 @@ from collections.abc import Callable
 from enum import IntFlag
 from typing import cast
 
-from aio_remeha_modbus.api.main_control_monitoring import ApplianceDemandStatus, ApplianceStatus
+from aio_remeha_modbus.api.main_control_monitoring import ApplianceDemandStatus, MonitoringStatus
 from aio_remeha_modbus.api.system_discovery_table import DeviceBoard
 from homeassistant.components.binary_sensor import BinarySensorDeviceClass, BinarySensorEntity
 from homeassistant.config_entries import ConfigEntry
@@ -66,9 +66,11 @@ async def async_setup_entry(
                     parent_device_id=parent_device_id,
                     name=cast(str, status.name).lower(),
                     device_class=None,
-                    state_func=_state_fn(coordinator.get_main_control_monitoring().status, status),
+                    state_func=_state_fn(
+                        coordinator.get_main_control_monitoring().monitoring_status, status
+                    ),
                 )
-                for status in ApplianceStatus
+                for status in MonitoringStatus
             ],
         ]
     )
