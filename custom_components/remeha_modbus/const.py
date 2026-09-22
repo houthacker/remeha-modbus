@@ -83,12 +83,6 @@ ISSUE_DISCOVERY_TABLE_CORRUPTED_LEARN_MORE_URL: Final[str] = (
 ISSUE_RESTART_REQUIRED_REDISCOVERY: Final[str] = "restart_required_force_system_rediscovery"
 
 
-PV_MIN_TILT_DEGREES: Final[int] = 10
-"""The minimum supported PV system tilt"""
-
-PV_MAX_TILT_DEGREES: Final[int] = 90
-"""The maximum supported PV system tilt"""
-
 ATTR_ZONE_ID: Final[str] = "zone_id"
 """Attribute in `climate` entities containing the related `ClimateZone` id."""
 
@@ -241,31 +235,24 @@ HA_CLIMATE_PRESET_TO_REMEHA_ZONE_MODE: Final[dict[str, ClimateZoneMode]] = {
     PRESET_ECO: ClimateZoneMode.ANTI_FROST,
 }
 
-
-# Base register information for zones, device info, time schedules
-REMEHA_ZONE_RESERVED_REGISTERS: Final[int] = 512
-REMEHA_DEVICE_INSTANCE_RESERVED_REGISTERS: Final[int] = 6
-REMEHA_TIME_PROGRAM_RESERVED_REGISTERS: Final[int] = 70
-REMEHA_TIME_PROGRAM_BYTE_SIZE: Final[int] = 20
-REMEHA_TIME_PROGRAM_SLOT_SIZE: Final[int] = 3
-REMEHA_TIME_STEP_MINUTES: Final[int] = 10
-
 # Option keys for the ENUM status sensors. The human-readable values are provided
 # as translations (see the `entity.sensor` section in the translation files).
 SEASON_MODE_OPTIONS: Final[dict[int, str]] = {
     mode.value: mode.name.lower() for mode in SeasonalMode
 }
 
-STATUS_OPTIONS: Final[dict[int, str]] = {status.value: status.name for status in ApplianceStatus}
+APPLIANCE_STATUS_OPTIONS: Final[dict[int, str]] = {
+    status.value: status.name for status in ApplianceStatus
+}
 
-SUBSTATUS_OPTIONS: Final[dict[int, str]] = {
+APPLIANCE_SUBSTATUS_OPTIONS: Final[dict[int, str]] = {
     status.value: status.name for status in ApplianceSubStatus
 }
 
 REMEHA_ENUM_SENSOR_OPTIONS: Final[dict[str, dict[int, str]]] = {
     "season_mode": SEASON_MODE_OPTIONS,
-    "status": STATUS_OPTIONS,
-    "substatus": SUBSTATUS_OPTIONS,
+    "appliance_status": APPLIANCE_STATUS_OPTIONS,
+    "appliance_substatus": APPLIANCE_SUBSTATUS_OPTIONS,
 }
 
 REMEHA_SENSORS: tuple[SensorEntityDescription, ...] = (
@@ -333,17 +320,17 @@ REMEHA_SENSORS: tuple[SensorEntityDescription, ...] = (
     ),
     SensorEntityDescription(  # 411
         key="varApStatus",
-        name="status",
-        translation_key="status",
+        name="appliance_status",
+        translation_key="appliance_status",
         device_class=SensorDeviceClass.ENUM,
-        options=list(STATUS_OPTIONS.values()),
+        options=list(APPLIANCE_STATUS_OPTIONS.values()),
     ),
     SensorEntityDescription(  # 412
         key="varApSubStatus",
-        name="substatus",
-        translation_key="substatus",
+        name="appliance_substatus",
+        translation_key="appliance_substatus",
         device_class=SensorDeviceClass.ENUM,
-        options=list(SUBSTATUS_OPTIONS.values()),
+        options=list(APPLIANCE_SUBSTATUS_OPTIONS.values()),
     ),
     SensorEntityDescription(  # 413
         key="varApPowerActual",

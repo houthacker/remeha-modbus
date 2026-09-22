@@ -194,7 +194,7 @@
           "summer": "Zomer"
         }
       },
-      "status": {
+      "appliance_status": {
         "name": "Status",
         "state": {
           "standby": "Stand-by",
@@ -225,7 +225,7 @@
           "unknown": "Onbekend"
         }
       },
-      "substatus": {
+      "appliance_substatus": {
         "name": "Substatus",
         "state": {
           "standby": "Stand-by",

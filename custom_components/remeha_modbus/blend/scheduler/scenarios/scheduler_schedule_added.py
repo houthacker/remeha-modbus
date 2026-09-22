@@ -12,7 +12,7 @@ from custom_components.remeha_modbus.blend.scheduler.helpers import decompose_sc
 from custom_components.remeha_modbus.const import ATTR_SCHEDULER_TAGS
 
 if TYPE_CHECKING:
-    from custom_components.remeha_modbus.coordinator import RemehaUpdateCoordinator  # noqa: TC004
+    from custom_components.remeha_modbus.coordinator import RemehaUpdateCoordinator
 
 _LOGGER = logging.getLogger(__name__)
 

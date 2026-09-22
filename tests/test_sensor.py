@@ -27,3 +27,6 @@ async def test_sensors(hass: HomeAssistant, remeha_api, mock_config_entry):
             state = hass.states.get(f"sensor.remeha_modbus_test_hub_{sd.name}")
             assert state is not None
             assert state.entity_id == f"sensor.remeha_modbus_test_hub_{sd.name}"
+
+            # Sensor state must not be empty. See issue #107
+            assert len(state.state) > 0

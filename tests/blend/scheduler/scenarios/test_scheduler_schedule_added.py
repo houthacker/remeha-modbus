@@ -4,13 +4,14 @@ from unittest.mock import patch
 from uuid import uuid4
 
 import pytest
+from aio_remeha_modbus.api.const import ClimateZoneScheduleId, Weekday
 from homeassistant.core import HomeAssistant, State
 from pytest_homeassistant_custom_component.common import MockEntity
 
 from custom_components.remeha_modbus.blend.scheduler.scenarios.scheduler_schedule_added import (
     SchedulerScheduleAdded,
 )
-from custom_components.remeha_modbus.const import ClimateZoneScheduleId, Weekday, ZoneScheduleUID
+from custom_components.remeha_modbus.const import ZoneScheduleUID
 from custom_components.remeha_modbus.coordinator import RemehaUpdateCoordinator
 from tests.conftest import setup_platform
 from tests.util.util import replace_tag_template

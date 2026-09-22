@@ -4,6 +4,7 @@ from unittest.mock import patch
 
 import pytest
 from aio_remeha_modbus.api.climate_zone import ClimateZone
+from aio_remeha_modbus.api.const import Weekday
 from aio_remeha_modbus.api.schedule import ZoneSchedule
 from homeassistant.core import HomeAssistant, ServiceCall
 from pydantic import TypeAdapter, ValidationError
@@ -13,7 +14,6 @@ from custom_components.remeha_modbus.blend.scheduler.const import SchedulerDomai
 from custom_components.remeha_modbus.blend.scheduler.scenarios.modbus_schedule_updated import (
     ModbusScheduleUpdated,
 )
-from custom_components.remeha_modbus.const import Weekday
 from custom_components.remeha_modbus.coordinator import RemehaUpdateCoordinator
 from custom_components.remeha_modbus.helpers.entities import integration_entities
 from tests.conftest import setup_platform

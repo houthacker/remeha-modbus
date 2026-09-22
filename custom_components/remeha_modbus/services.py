@@ -38,7 +38,7 @@ from custom_components.remeha_modbus.errors import (
 from custom_components.remeha_modbus.helpers.entities import is_schedule_sync_enabled
 
 if TYPE_CHECKING:
-    from custom_components.remeha_modbus.coordinator import RemehaUpdateCoordinator  # noqa: TC004
+    from custom_components.remeha_modbus.coordinator import RemehaUpdateCoordinator
 
 _LOGGER = logging.getLogger(__name__)
 

@@ -4,6 +4,7 @@ from unittest.mock import patch
 
 import pytest
 from aio_remeha_modbus.api import RemehaApi
+from aio_remeha_modbus.api.const import REMEHA_ZONE_RESERVED_REGISTERS
 from aio_remeha_modbus.api.errors import DiscoveryTableCorruptedError
 from homeassistant.components.climate.const import ATTR_PRESET_MODE, PRESET_ECO
 from homeassistant.components.switch.const import DOMAIN as SwitchDomain
@@ -18,7 +19,6 @@ from custom_components.remeha_modbus.const import (
     ISSUE_DISCOVERY_TABLE_CORRUPTED,
     ISSUE_HEATPUMP_MANAGED_SCHEDULES_OFF,
     ISSUE_INVALID_ZONE_SCHEDULE,
-    REMEHA_ZONE_RESERVED_REGISTERS,
 )
 from custom_components.remeha_modbus.helpers.entities import get_climate_entity_id
 from tests.conftest import setup_platform
