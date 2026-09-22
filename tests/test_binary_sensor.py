@@ -2,7 +2,7 @@
 
 from unittest.mock import patch
 
-from aio_remeha_modbus.api.main_control_monitoring import ApplianceDemandStatus, ApplianceStatus
+from aio_remeha_modbus.api.main_control_monitoring import ApplianceDemandStatus, MonitoringStatus
 from homeassistant.components.binary_sensor import DOMAIN as BinarySensorDomain
 from homeassistant.const import STATE_OFF, STATE_ON
 from homeassistant.core import HomeAssistant
@@ -22,7 +22,7 @@ async def test_sensors(hass: HomeAssistant, remeha_api, mock_config_entry):
 
         assert len(hass.states.async_all(domain_filter=BinarySensorDomain)) == 22
 
-        statuses = [*list(ApplianceDemandStatus), *list(ApplianceStatus)]
+        statuses = [*list(ApplianceDemandStatus), *list(MonitoringStatus)]
 
         for status in statuses:
             assert isinstance(status.name, str)
