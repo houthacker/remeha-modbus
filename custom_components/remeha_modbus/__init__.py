@@ -4,10 +4,10 @@ import logging
 from typing import TYPE_CHECKING
 
 from aio_remeha_modbus.api import RemehaApi
-from aio_remeha_modbus.api.const import ConnectionType
 from aio_remeha_modbus.helpers.modbus import ModbusUnit, RetryingModbusUnit
 from dateutil import tz
 from homeassistant.components.modbus import async_get_unit
+from homeassistant.components.modbus.const import RTUOVERTCP, SERIAL, TCP, UDP
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_NAME, CONF_TYPE, EVENT_HOMEASSISTANT_STARTED, Platform
 from homeassistant.core import Event, HomeAssistant
@@ -20,6 +20,7 @@ from custom_components.remeha_modbus.helpers.config import to_modbus_params
 
 if TYPE_CHECKING:
     from custom_components.remeha_modbus.blend.blender import Blender
+
 from custom_components.remeha_modbus.const import (
     AUTO_SCHEDULE_SELECTED_SCHEDULE,
     CONFIG_AUTO_SCHEDULE,
@@ -30,6 +31,9 @@ from custom_components.remeha_modbus.const import (
 )
 from custom_components.remeha_modbus.coordinator import RemehaUpdateCoordinator
 from custom_components.remeha_modbus.services import register_services
+
+CONNECTION_TYPES = [TCP, UDP, RTUOVERTCP, SERIAL]
+"""The support modbus connection types."""
 
 PLATFORMS: list[Platform] = [
     Platform.BINARY_SENSOR,
@@ -59,8 +63,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     modbus_hub_name = entry.data[CONF_NAME]
     modbus_type = entry.data[CONF_TYPE]
 
-    if modbus_type not in ConnectionType:
-        connection_types: str = ", ".join(e.value for e in ConnectionType)
+    if modbus_type not in CONNECTION_TYPES:
+        connection_types: str = ", ".join(CONNECTION_TYPES)
         raise ConfigEntryError(
             f"{modbus_type} is not a valid connection type. Use one of [{connection_types}]"
         )

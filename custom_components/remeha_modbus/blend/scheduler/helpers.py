@@ -5,6 +5,7 @@ from typing import cast
 from uuid import UUID
 
 from aio_remeha_modbus.api.climate_zone import ClimateZone
+from aio_remeha_modbus.api.const import Weekday
 from aio_remeha_modbus.api.schedule import (
     Timeslot,
     TimeslotActivity,
@@ -36,7 +37,6 @@ from custom_components.remeha_modbus.const import (
     HEATPUMP_MANAGED_SCHEDULES,
     SHORT_DESC_TO_WEEKDAY,
     WEEKDAY_TO_SHORT_DESC,
-    Weekday,
     ZoneScheduleUID,
 )
 from custom_components.remeha_modbus.errors import (

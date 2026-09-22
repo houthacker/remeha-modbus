@@ -10,7 +10,7 @@
           "summer": "Sommer"
         }
       },
-      "status": {
+      "appliance_status": {
         "name": "Status",
         "state": {
           "standby": "Standby",
@@ -41,7 +41,7 @@
           "unknown": "Unbekannt"
         }
       },
-      "substatus": {
+      "appliance_substatus": {
         "name": "Substatus",
         "state": {
           "standby": "Standby",

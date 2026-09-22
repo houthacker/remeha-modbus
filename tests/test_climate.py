@@ -3,6 +3,7 @@
 from unittest.mock import patch
 
 import pytest
+from aio_remeha_modbus.api.climate_zone import ClimateZoneMode
 from aio_remeha_modbus.api.const import REMEHA_ZONE_RESERVED_REGISTERS
 from homeassistant.components.climate.const import DOMAIN as ClimateDomain
 from homeassistant.components.climate.const import (
@@ -22,7 +23,6 @@ from custom_components.remeha_modbus.const import (
     REMEHA_PRESET_SCHEDULE_2,
     REMEHA_PRESET_SCHEDULE_3,
     REMEHA_PRESET_SCHEDULE_4,
-    ClimateZoneMode,
 )
 from custom_components.remeha_modbus.coordinator import RemehaUpdateCoordinator
 

@@ -6,6 +6,7 @@ from unittest.mock import patch
 from uuid import uuid4
 
 import pytest
+from aio_remeha_modbus.api.const import ClimateZoneScheduleId, Weekday
 from aio_remeha_modbus.api.schedule import (
     Timeslot,
     TimeslotActivity,
@@ -21,7 +22,7 @@ from custom_components.remeha_modbus.blend.scheduler.const import (
     SchedulerState,
     ServiceOperation,
 )
-from custom_components.remeha_modbus.const import ClimateZoneScheduleId, Weekday, ZoneScheduleUID
+from custom_components.remeha_modbus.const import ZoneScheduleUID
 from custom_components.remeha_modbus.errors import ParseError, RemehaModbusError
 from tests.conftest import setup_platform
 from tests.util.util import replace_tag_template

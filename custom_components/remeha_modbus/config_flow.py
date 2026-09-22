@@ -5,7 +5,12 @@ from types import MappingProxyType
 from typing import Any
 
 import voluptuous as vol
-from aio_remeha_modbus.api.const import BoilerEnergyLabel, PVSystemOrientation
+from aio_remeha_modbus.api.const import (
+    PV_MAX_TILT_DEGREES,
+    PV_MIN_TILT_DEGREES,
+    BoilerEnergyLabel,
+    PVSystemOrientation,
+)
 from aio_remeha_modbus.api.errors import RemehaModbusError
 from homeassistant.components.modbus.const import (
     CONF_BAUDRATE,
@@ -49,8 +54,6 @@ from custom_components.remeha_modbus.const import (
     PV_ANNUAL_EFFICIENCY_DECREASE,
     PV_CONFIG_SECTION,
     PV_INSTALLATION_DATE,
-    PV_MAX_TILT_DEGREES,
-    PV_MIN_TILT_DEGREES,
     PV_NOMINAL_POWER_WP,
     PV_ORIENTATION,
     PV_TILT,
