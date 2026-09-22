@@ -75,6 +75,9 @@ async def test_dhw_climate(hass: HomeAssistant, remeha_api, mock_config_entry):
         assert dhw.attributes["current_temperature"] == 53.2
         assert dhw.attributes["target_temp_step"] == 0.5
 
+        # Extra attributes
+        assert dhw.attributes["flow_temperature"] == 45.0
+
         # Attempt to set the temperature
         with pytest.raises(InvalidClimateContext):
             await hass.services.async_call(
@@ -172,6 +175,9 @@ async def test_ch_climate(hass: HomeAssistant, remeha_api, mock_config_entry):
         assert circa1.attributes["temperature"] == 20.0
         assert circa1.attributes["current_temperature"] == 23.2
         assert circa1.attributes["target_temp_step"] == 0.5
+
+        # Extra attributes
+        assert circa1.attributes["flow_temperature"] is None
 
         # Change setpoint
         await hass.services.async_call(

@@ -1,7 +1,7 @@
 """Platform for climate entities over modbus."""
 
 import logging
-from typing import Self, cast
+from typing import Self, cast, override
 
 from aio_remeha_modbus.api import RemehaApi
 from aio_remeha_modbus.api.climate_zone import (
@@ -27,7 +27,7 @@ from homeassistant.components.climate.const import (
 )
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import ATTR_TEMPERATURE, PRECISION_TENTHS, UnitOfTemperature
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
@@ -86,7 +86,10 @@ class RemehaClimateEntity(CoordinatorEntity, ClimateEntity):
         self.climate_zone_id: int = climate_zone_id
 
         self._attr_unique_id = generate_unique_id(climate_zone_id)
-        self._attr_extra_state_attributes = {"zone_id": climate_zone_id}
+        self._attr_extra_state_attributes = {
+            "zone_id": climate_zone_id,
+            "flow_temperature": None,
+        }
 
         _LOGGER.debug("Creating new RemehaModbusClimate entity [%s]", self._attr_unique_id)
 
@@ -118,6 +121,20 @@ class RemehaClimateEntity(CoordinatorEntity, ClimateEntity):
     def _zone(self) -> ClimateZone:
         """Return the modbus climate zone."""
         return self.coordinator.data["climates"][self.climate_zone_id]
+
+    @override
+    async def async_added_to_hass(self) -> None:
+        """Set extra attributes when being added to HA."""
+
+        self._attr_extra_state_attributes["flow_temperature"] = self._zone.flow_temperature
+        return await super().async_added_to_hass()
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        """Set flow_temperature as an extra attribute."""
+
+        self._attr_extra_state_attributes["flow_temperature"] = self._zone.flow_temperature
+        return super()._handle_coordinator_update()
 
     @property
     def available(self) -> bool:
