@@ -20,14 +20,14 @@ from custom_components.remeha_modbus.coordinator import RemehaUpdateCoordinator
 _LOGGER = logging.getLogger(__name__)
 
 
-def _state_fn(flags: IntFlag | None, state: int) -> Callable[[], bool | None]:
+def _state_fn(
+    current_state_fn: Callable[[], IntFlag | None], state: IntFlag
+) -> Callable[[], bool | None]:
 
     def _has_state() -> bool | None:
-        if flags is None:
-            return None
-
-        if flags & state:
-            return True
+        current_state = current_state_fn()
+        if isinstance(current_state, IntFlag):
+            return current_state & state == state
 
         return False
 
@@ -54,7 +54,7 @@ async def async_setup_entry(
                     name=cast(str, demand_status.name).lower(),
                     device_class=None,
                     state_func=_state_fn(
-                        coordinator.get_main_control_monitoring().demand_status,
+                        lambda: coordinator.get_main_control_monitoring().demand_status,
                         demand_status,
                     ),
                 )
@@ -67,7 +67,7 @@ async def async_setup_entry(
                     name=cast(str, status.name).lower(),
                     device_class=None,
                     state_func=_state_fn(
-                        coordinator.get_main_control_monitoring().monitoring_status, status
+                        lambda: coordinator.get_main_control_monitoring().monitoring_status, status
                     ),
                 )
                 for status in MonitoringStatus
