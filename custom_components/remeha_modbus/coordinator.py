@@ -607,7 +607,7 @@ class RemehaUpdateCoordinator(DataUpdateCoordinator):
             calorifier_hysteresis=dhw_zone.dhw_calorifier_hysteresis,
             appliance_seasonal_mode=self.get_appliance().season_mode,
         )
-        day = Weekday(datetime.now().weekday)
+        day = Weekday(datetime.now().weekday())
 
         _LOGGER.debug("Schedule generated:\n\n%s\n\n, now pushing it to the appliance.", time_slots)
 
