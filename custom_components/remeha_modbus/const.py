@@ -4,13 +4,10 @@ from collections.abc import Callable
 from enum import StrEnum
 from typing import Final, Literal, NamedTuple
 
-import voluptuous as vol
-from aio_remeha_modbus.api.appliance import ApplianceStatus, ApplianceSubStatus, SeasonalMode
-from aio_remeha_modbus.api.climate_zone import ClimateZoneMode
-from aio_remeha_modbus.api.const import (
-    ClimateZoneScheduleId,
-    Weekday,
-)
+import probatio
+from aio_remeha_modbus.gtw08.appliance import ApplianceStatus, ApplianceSubStatus
+from aio_remeha_modbus.gtw08.climate_zone import ClimateZoneMode
+from aio_remeha_modbus.gtw08.const import ClimateZoneScheduleId, SeasonalMode, Weekday
 from homeassistant.components.climate.const import (
     PRESET_COMFORT,
     PRESET_ECO,
@@ -152,11 +149,11 @@ READ_REGISTERS_REGISTER_COUNT: Final[str] = "register_count"
 READ_REGISTERS_STRUCT_FORMAT: Final[str] = "struct_format"
 
 ### Service schemes
-READ_REGISTERS_SERVICE_SCHEMA: vol.Schema = vol.Schema(
+READ_REGISTERS_SERVICE_SCHEMA: probatio.Schema = probatio.Schema(
     {
-        vol.Required(READ_REGISTERS_START_REGISTER): cv.positive_int,
-        vol.Required(READ_REGISTERS_REGISTER_COUNT, default=1): cv.positive_int,
-        vol.Required(READ_REGISTERS_STRUCT_FORMAT, default="=H"): remeha_cv.struct_format,
+        probatio.Required(READ_REGISTERS_START_REGISTER): cv.positive_int,
+        probatio.Required(READ_REGISTERS_REGISTER_COUNT, default=1): cv.positive_int,
+        probatio.Required(READ_REGISTERS_STRUCT_FORMAT, default="=H"): remeha_cv.struct_format,
     }
 )
 

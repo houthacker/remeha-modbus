@@ -3,14 +3,18 @@
 from unittest.mock import patch
 
 import pytest
-from aio_remeha_modbus.api.climate_zone import ClimateZone
-from aio_remeha_modbus.api.const import Weekday
-from aio_remeha_modbus.api.schedule import ZoneSchedule
+from aio_remeha_modbus.gtw08.climate_zone import ClimateZone
+from aio_remeha_modbus.gtw08.const import Weekday
+from aio_remeha_modbus.gtw08.time_program import Timeslot
 from homeassistant.core import HomeAssistant, ServiceCall
 from pydantic import TypeAdapter, ValidationError
 
 from custom_components.remeha_modbus.api.store import RemehaModbusStore
-from custom_components.remeha_modbus.blend.scheduler.const import SchedulerDomain, SchedulerSchedule
+from custom_components.remeha_modbus.blend.scheduler.const import (
+    SchedulerDomain,
+    SchedulerSchedule,
+    ScheduleUpdate,
+)
 from custom_components.remeha_modbus.blend.scheduler.scenarios.modbus_schedule_updated import (
     ModbusScheduleUpdated,
 )
@@ -21,19 +25,25 @@ from tests.util.util import set_storage_stub_return_value
 
 
 async def test_schedule_updated(
-    hass: HomeAssistant, remeha_api, mock_config_entry, modbus_test_store: RemehaModbusStore
+    hass: HomeAssistant,
+    remeha_api,
+    mock_config_entry,
+    modbus_test_store: RemehaModbusStore,
+    remeha_modbus_unit,
 ):
     """Test schedule updates through modbus."""
 
     with (
-        patch("custom_components.remeha_modbus.RemehaApi", new=lambda *args, **kwargs: remeha_api),
+        patch("aio_remeha_modbus.gtw08.GTW08", new=lambda *args, **kwargs: remeha_api),
         patch(
             "custom_components.remeha_modbus.api.store.RemehaModbusStore",
             new=lambda *args, **kwargs: modbus_test_store,
         ),
         patch("custom_components.scheduler.store.ScheduleStorage") as scheduler_storage,
     ):
-        await setup_platform(hass=hass, config_entry=mock_config_entry)
+        await setup_platform(
+            hass=hass, config_entry=mock_config_entry, remeha_modbus_unit=remeha_modbus_unit
+        )
         await hass.async_block_till_done()
 
         # HA is set up, patch the async_get_registry mock
@@ -44,13 +54,23 @@ async def test_schedule_updated(
         coordinator: RemehaUpdateCoordinator = mock_config_entry.runtime_data["coordinator"]
         climate: ClimateZone | None = coordinator.get_climate(id=2)
         assert climate is not None
+        assert climate.selected_schedule is not None
 
-        schedule: ZoneSchedule | None = (
+        schedule: list[Timeslot] | None = (
             climate.current_schedule[Weekday.MONDAY] if climate.current_schedule else None
         )
         assert schedule is not None
 
-        scenario = ModbusScheduleUpdated(hass=hass, coordinator=coordinator, schedule=schedule)
+        scenario = ModbusScheduleUpdated(
+            hass=hass,
+            coordinator=coordinator,
+            update=ScheduleUpdate(
+                zone_id=climate.id,
+                schedule_id=climate.selected_schedule,
+                day=Weekday.MONDAY,
+                time_slots=schedule,
+            ),
+        )
 
         # Expect no existing links and no scheduler entities.
         assert len(await coordinator.async_get_scheduler_links()) == 0

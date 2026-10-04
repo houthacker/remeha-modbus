@@ -3,13 +3,12 @@
 from unittest.mock import patch
 
 import pytest
-from aio_remeha_modbus.api.climate_zone import (
+from aio_remeha_modbus.gtw08.climate_zone import (
     ClimateZone,
     ClimateZoneMode,
-    ClimateZoneScheduleId,
-    Weekday,
-    ZoneSchedule,
 )
+from aio_remeha_modbus.gtw08.const import ClimateZoneScheduleId, Weekday
+from aio_remeha_modbus.gtw08.time_program import Timeslot
 from homeassistant.core import HomeAssistant
 from pymodbus import ModbusException
 
@@ -36,10 +35,12 @@ async def test_scheduling_service(
     """Test of the auto scheduling service."""
 
     with patch(
-        "custom_components.remeha_modbus.RemehaApi",
+        "aio_remeha_modbus.gtw08.GTW08",
         new=lambda *args, **kwargs: remeha_api,
     ):
-        await setup_platform(hass=hass, config_entry=mock_config_entry)
+        await setup_platform(
+            hass=hass, config_entry=mock_config_entry, remeha_modbus_unit=remeha_modbus_unit
+        )
         await hass.async_block_till_done()
 
         coordinator: RemehaUpdateCoordinator = mock_config_entry.runtime_data["coordinator"]
@@ -62,21 +63,25 @@ async def test_scheduling_service(
         assert zone.mode == ClimateZoneMode.SCHEDULING
 
         day: Weekday = Weekday.FRIDAY
-        schedule: ZoneSchedule | None = (
+        schedule: list[Timeslot] | None = (
             zone.current_schedule[day] if zone.current_schedule else None
         )
         assert schedule is not None
 
 
 @pytest.mark.parametrize("mock_config_entry", [{"auto_scheduling": True}], indirect=True)
-async def test_read_registers_service(hass: HomeAssistant, remeha_api, mock_config_entry):
+async def test_read_registers_service(
+    hass: HomeAssistant, remeha_api, mock_config_entry, remeha_modbus_unit
+):
     """Test of the auto scheduling service."""
 
     with patch(
-        "custom_components.remeha_modbus.RemehaApi",
+        "aio_remeha_modbus.gtw08.GTW08",
         new=lambda *args, **kwargs: remeha_api,
     ):
-        await setup_platform(hass=hass, config_entry=mock_config_entry)
+        await setup_platform(
+            hass=hass, config_entry=mock_config_entry, remeha_modbus_unit=remeha_modbus_unit
+        )
         await hass.async_block_till_done()
 
         # Call the service
@@ -95,12 +100,12 @@ async def test_read_registers_service(hass: HomeAssistant, remeha_api, mock_conf
 
 @pytest.mark.parametrize("mock_config_entry", [{"auto_scheduling": True}], indirect=True)
 async def test_read_registers_service_exceptions(
-    hass: HomeAssistant, remeha_api, mock_config_entry
+    hass: HomeAssistant, remeha_api, mock_config_entry, remeha_modbus_unit
 ):
     """Test modbus errors raised from the read_registers service."""
     with (
         patch(
-            "custom_components.remeha_modbus.RemehaApi",
+            "aio_remeha_modbus.gtw08.GTW08",
             new=lambda *args, **kwargs: remeha_api,
         ),
         patch(
@@ -108,7 +113,9 @@ async def test_read_registers_service_exceptions(
         ) as mock,
     ):
         mock.side_effect = ModbusException("Oops!")
-        await setup_platform(hass=hass, config_entry=mock_config_entry)
+        await setup_platform(
+            hass=hass, config_entry=mock_config_entry, remeha_modbus_unit=remeha_modbus_unit
+        )
         await hass.async_block_till_done()
 
         # Call the service

@@ -3,11 +3,13 @@
 import logging
 from collections.abc import Callable
 from enum import IntFlag
+from functools import cached_property
 from typing import cast
 
-from aio_remeha_modbus.api.main_control_monitoring import ApplianceDemandStatus, MonitoringStatus
-from aio_remeha_modbus.api.system_discovery_table import DeviceBoard
-from homeassistant.components.binary_sensor import BinarySensorDeviceClass, BinarySensorEntity
+from aio_remeha_modbus.gtw08.main_control_monitoring import ApplianceDemandStatus, MonitoringStatus
+from aio_remeha_modbus.gtw08.system_discovery_table import DeviceBoard
+from homeassistant.components.binary_sensor import BinarySensorEntity
+from homeassistant.components.binary_sensor.const import BinarySensorDeviceClass
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.device_registry import DeviceInfo
@@ -108,7 +110,7 @@ class RemehaBinarySensorEntity(CoordinatorEntity[RemehaUpdateCoordinator], Binar
     def _handle_coordinator_update(self) -> None:
         return super()._handle_coordinator_update()
 
-    @property
+    @cached_property
     def translation_key(self) -> str:
         """The translation key."""
 
@@ -125,7 +127,7 @@ class RemehaBinarySensorEntity(CoordinatorEntity[RemehaUpdateCoordinator], Binar
 
         return self._state_func()
 
-    @property
+    @cached_property
     def device_info(self) -> DeviceInfo | None:
         """Return information about the device this sensor belongs to.
 

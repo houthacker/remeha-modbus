@@ -4,7 +4,7 @@ import struct
 from enum import StrEnum
 from typing import TypeVar
 
-import voluptuous as vol
+import probatio
 
 T = TypeVar("T")
 
@@ -28,10 +28,10 @@ def require_not_none[T](value: T, message: str = "Require a value, but got None"
     raise ValueError(message, args)
 
 
-def str_enum(enum: type[StrEnum]) -> vol.In:
+def str_enum(enum: type[StrEnum]) -> probatio.In:
     """Create a validator for the given StrEnum."""
 
-    return vol.In([e.value for e in enum])
+    return probatio.In([e.value for e in enum])
 
 
 def struct_format(struct_format: str | bytes) -> str | bytes:
@@ -40,6 +40,6 @@ def struct_format(struct_format: str | bytes) -> str | bytes:
     try:
         struct.calcsize(struct_format)
     except struct.error as e:
-        raise vol.InInvalid(f"Invalid struct format {struct_format}") from e
+        raise probatio.InInvalid(f"Invalid struct format {struct_format}") from e
 
     return struct_format

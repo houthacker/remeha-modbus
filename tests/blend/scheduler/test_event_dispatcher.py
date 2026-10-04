@@ -10,14 +10,18 @@ from custom_components.remeha_modbus.coordinator import RemehaUpdateCoordinator
 from tests.conftest import setup_platform
 
 
-async def test_subscribe_to_entity_updates(hass: HomeAssistant, remeha_api, mock_config_entry):
+async def test_subscribe_to_entity_updates(
+    hass: HomeAssistant, remeha_api, mock_config_entry, remeha_modbus_unit
+):
     """Test that registering a new listener returns a unique unsubsribe function."""
 
     with patch(
-        "custom_components.remeha_modbus.RemehaApi",
+        "aio_remeha_modbus.gtw08.GTW08",
         new=lambda *args, **kwargs: remeha_api,
     ):
-        await setup_platform(hass=hass, config_entry=mock_config_entry)
+        await setup_platform(
+            hass=hass, config_entry=mock_config_entry, remeha_modbus_unit=remeha_modbus_unit
+        )
         await hass.async_block_till_done()
 
         entity_id: str = "climate.remeha_modbus_test_hub_dhw"
@@ -38,15 +42,17 @@ async def test_subscribe_to_entity_updates(hass: HomeAssistant, remeha_api, mock
 
 
 async def test_entity_update_listener_gets_called(
-    hass: HomeAssistant, remeha_api, mock_config_entry
+    hass: HomeAssistant, remeha_api, mock_config_entry, remeha_modbus_unit
 ):
     """Test that subscribers to entity updates are notified of updates."""
 
     with patch(
-        "custom_components.remeha_modbus.RemehaApi",
+        "aio_remeha_modbus.gtw08.GTW08",
         new=lambda *args, **kwargs: remeha_api,
     ):
-        await setup_platform(hass=hass, config_entry=mock_config_entry)
+        await setup_platform(
+            hass=hass, config_entry=mock_config_entry, remeha_modbus_unit=remeha_modbus_unit
+        )
         await hass.async_block_till_done()
 
         coordinator: RemehaUpdateCoordinator = mock_config_entry.runtime_data["coordinator"]

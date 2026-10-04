@@ -1,10 +1,11 @@
 """Platform for select entities in the Remeha Modbus integration."""
 
 import logging
+from functools import cached_property
 
-from aio_remeha_modbus.api import RemehaApi
-from aio_remeha_modbus.api.appliance import SilentMode
-from aio_remeha_modbus.api.system_discovery_table import DeviceBoard
+from aio_remeha_modbus.gtw08 import GTW08
+from aio_remeha_modbus.gtw08.appliance import SilentMode
+from aio_remeha_modbus.gtw08.system_discovery_table import DeviceBoard
 from homeassistant.components.select import SelectEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
@@ -24,7 +25,7 @@ async def async_setup_entry(
 ) -> None:
     """Create the select entities based on the given config entry."""
 
-    api: RemehaApi = entry.runtime_data["api"]
+    api: GTW08 = entry.runtime_data["api"]
     coordinator: RemehaUpdateCoordinator = entry.runtime_data["coordinator"]
     mainboards: list[DeviceBoard] = coordinator.get_devices(
         predicate=lambda device: device.is_mainboard()
@@ -47,7 +48,7 @@ class RemehaSelectEntity(CoordinatorEntity[RemehaUpdateCoordinator], SelectEntit
 
     def __init__(
         self,
-        api: RemehaApi,
+        api: GTW08,
         coordinator: RemehaUpdateCoordinator,
         parent_device_id: int | None,
         name: str,
@@ -68,7 +69,7 @@ class RemehaSelectEntity(CoordinatorEntity[RemehaUpdateCoordinator], SelectEntit
 
         self._api = api
 
-    @property
+    @cached_property
     def device_info(self) -> DeviceInfo | None:
         """Return information about the device this entity belongs to.
 
@@ -100,7 +101,7 @@ class RemehaSilentModeEntity(RemehaSelectEntity):
     """Entity to select appliance silent mode."""
 
     def __init__(
-        self, api: RemehaApi, coordinator: RemehaUpdateCoordinator, parent_device_id: int | None
+        self, api: GTW08, coordinator: RemehaUpdateCoordinator, parent_device_id: int | None
     ):
         """Entity to set the Appliance silent mode."""
 

@@ -80,7 +80,7 @@ class SchedulerScheduleUpdated(Scenario):
 
             # CH zones schedule editing is not supported yet, so our zone here must be a DHW zone.
             # For these zones, only schedule_1 is available through the Remeha Home app is seems.
-            zone_schedule = to_zone_schedule(to_scheduler_state(self._schedule_state), uid)
+            weekday, time_slots = to_zone_schedule(to_scheduler_state(self._schedule_state))
 
             # Push the ZoneSchedule to the modbus interface.
-            await self._coordinator.async_write_schedule(zone_schedule)
+            await zone.async_set_day_schedule(uid.schedule_id, weekday, time_slots)

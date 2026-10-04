@@ -3,7 +3,7 @@
 from collections.abc import Iterable
 from typing import overload
 
-from aio_remeha_modbus.api.climate_zone import ClimateZone, ZoneSchedule
+from aio_remeha_modbus.gtw08.climate_zone import ClimateZone
 from homeassistant.components.climate.const import DOMAIN as ClimatePlatform
 from homeassistant.components.switch.const import DOMAIN as SwitchPlatform
 from homeassistant.const import STATE_ON
@@ -55,11 +55,11 @@ def integration_entities(hass: HomeAssistant, entry_name: str) -> Iterable[str]:
     ]
 
 
-def generate_unique_id(source: ClimateZone | ZoneSchedule | int) -> str:
+def generate_unique_id(source: ClimateZone | int) -> str:
     """Generate the `unique_id` if the related climate entity.
 
     Args:
-        source (ClimateZone | ZoneSchedule | int): The source to base the unique id on.
+        source (ClimateZone | int): The source to base the unique id on.
 
     Returns: the unique_id of the related climate entity.
 
@@ -73,8 +73,6 @@ def generate_unique_id(source: ClimateZone | ZoneSchedule | int) -> str:
         zone_id = source
     elif isinstance(source, ClimateZone):
         zone_id = source.id
-    elif isinstance(source, ZoneSchedule):
-        zone_id = source.zone_id
     else:
         raise TypeError("source")
 

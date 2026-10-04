@@ -4,7 +4,7 @@ from unittest.mock import patch
 from uuid import uuid4
 
 import pytest
-from aio_remeha_modbus.api.const import ClimateZoneScheduleId, Weekday
+from aio_remeha_modbus.gtw08.const import ClimateZoneScheduleId, Weekday
 from homeassistant.core import HomeAssistant, State
 from pytest_homeassistant_custom_component.common import MockEntity
 
@@ -19,18 +19,26 @@ from tests.util.util import replace_tag_template
 
 @pytest.mark.parametrize("json_file", ["scheduler.state_no_tags.json"], indirect=True)
 async def test_schedule_added_no_tags(
-    hass: HomeAssistant, remeha_api, mock_config_entry, modbus_test_store, json_file
+    hass: HomeAssistant,
+    *,
+    remeha_api,
+    mock_config_entry,
+    modbus_test_store,
+    json_file,
+    remeha_modbus_unit,
 ):
     """Test an added scheduler.schedule having no tags."""
 
     with (
-        patch("custom_components.remeha_modbus.RemehaApi", new=lambda *args, **kwargs: remeha_api),
+        patch("aio_remeha_modbus.gtw08.GTW08", new=lambda *args, **kwargs: remeha_api),
         patch(
             "custom_components.remeha_modbus.api.store.RemehaModbusStore",
             new=lambda *args, **kwargs: modbus_test_store,
         ),
     ):
-        await setup_platform(hass=hass, config_entry=mock_config_entry)
+        await setup_platform(
+            hass=hass, config_entry=mock_config_entry, remeha_modbus_unit=remeha_modbus_unit
+        )
         await hass.async_block_till_done()
 
         coordinator: RemehaUpdateCoordinator = mock_config_entry.runtime_data["coordinator"]
@@ -53,18 +61,26 @@ async def test_schedule_added_no_tags(
 
 @pytest.mark.parametrize("json_file", ["scheduler.state.json"], indirect=True)
 async def test_schedule_added_not_on_waiting_list(
-    hass: HomeAssistant, remeha_api, mock_config_entry, modbus_test_store, json_file
+    hass: HomeAssistant,
+    *,
+    remeha_api,
+    mock_config_entry,
+    modbus_test_store,
+    json_file,
+    remeha_modbus_unit,
 ):
     """Test an added scheduler.schedule having no tags."""
 
     with (
-        patch("custom_components.remeha_modbus.RemehaApi", new=lambda *args, **kwargs: remeha_api),
+        patch("aio_remeha_modbus.gtw08.GTW08", new=lambda *args, **kwargs: remeha_api),
         patch(
             "custom_components.remeha_modbus.api.store.RemehaModbusStore",
             new=lambda *args, **kwargs: modbus_test_store,
         ),
     ):
-        await setup_platform(hass=hass, config_entry=mock_config_entry)
+        await setup_platform(
+            hass=hass, config_entry=mock_config_entry, remeha_modbus_unit=remeha_modbus_unit
+        )
         await hass.async_block_till_done()
 
         coordinator: RemehaUpdateCoordinator = mock_config_entry.runtime_data["coordinator"]
@@ -88,15 +104,17 @@ async def test_schedule_added_not_on_waiting_list(
 @pytest.mark.parametrize("json_file", ["scheduler.state.json"], indirect=True)
 async def test_schedule_added(
     hass: HomeAssistant,
+    *,
     remeha_api,
     mock_config_entry,
     modbus_test_store,
     json_file,
+    remeha_modbus_unit,
 ):
     """Test an added scheduler.schedule having no tags."""
 
     with (
-        patch("custom_components.remeha_modbus.RemehaApi", new=lambda *args, **kwargs: remeha_api),
+        patch("aio_remeha_modbus.gtw08.GTW08", new=lambda *args, **kwargs: remeha_api),
         patch(
             "custom_components.remeha_modbus.api.store.RemehaModbusStore",
             new=lambda *args, **kwargs: modbus_test_store,
@@ -108,6 +126,7 @@ async def test_schedule_added(
             hass=hass,
             config_entry=mock_config_entry,
             scheduler_entities=[MockEntity(entity_id=scheduler_state.entity_id)],
+            remeha_modbus_unit=remeha_modbus_unit,
         )
         await hass.async_block_till_done()
 

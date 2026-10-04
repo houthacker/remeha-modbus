@@ -1,19 +1,20 @@
 """Platform for climate entities over modbus."""
 
 import logging
+from functools import cached_property
 from typing import Self, cast, override
 
-from aio_remeha_modbus.api import RemehaApi
-from aio_remeha_modbus.api.climate_zone import (
+from aio_remeha_modbus.gtw08 import GTW08
+from aio_remeha_modbus.gtw08.climate_zone import (
     ClimateZone,
     ClimateZoneFunction,
     ClimateZoneHeatingMode,
     ClimateZoneMode,
 )
-from aio_remeha_modbus.api.const import (
+from aio_remeha_modbus.gtw08.const import (
     ClimateZoneScheduleId,
 )
-from aio_remeha_modbus.api.system_discovery_table import DeviceBoard
+from aio_remeha_modbus.gtw08.system_discovery_table import DeviceBoard
 from homeassistant.components.climate import (
     ClimateEntity,
 )
@@ -58,7 +59,7 @@ async def async_setup_entry(
 ) -> None:
     """Instantiate a new Remeha Modbus climate entity based on the given config entry."""
 
-    api: RemehaApi = entry.runtime_data["api"]
+    api: GTW08 = entry.runtime_data["api"]
     coordinator: RemehaUpdateCoordinator = entry.runtime_data["coordinator"]
 
     entities = [
@@ -74,14 +75,14 @@ class RemehaClimateEntity(CoordinatorEntity, ClimateEntity):
     _attr_has_entity_name = True
     _attr_precision = PRECISION_TENTHS
     _attr_should_poll: bool = False
-    _attr_target_temperature_step: float = TEMPERATURE_STEP
+    _attr_target_temperature_step: float | None = TEMPERATURE_STEP
     _attr_temperature_unit = UnitOfTemperature.CELSIUS
     _attr_translation_key = DOMAIN
 
-    def __init__(self, api: RemehaApi, coordinator: RemehaUpdateCoordinator, climate_zone_id: int):
+    def __init__(self, api: GTW08, coordinator: RemehaUpdateCoordinator, climate_zone_id: int):
         """Create a new climate entity."""
         super().__init__(coordinator)
-        self.api: RemehaApi = api
+        self.api: GTW08 = api
         self.coordinator: RemehaUpdateCoordinator = coordinator
         self.climate_zone_id: int = climate_zone_id
 
@@ -95,7 +96,7 @@ class RemehaClimateEntity(CoordinatorEntity, ClimateEntity):
 
     @classmethod
     def create_instance(
-        cls, api: RemehaApi, coordinator: RemehaUpdateCoordinator, climate_zone_id: int
+        cls, api: GTW08, coordinator: RemehaUpdateCoordinator, climate_zone_id: int
     ) -> Self:
         """Create the correct climate entity instance type."""
 
@@ -152,7 +153,7 @@ class RemehaClimateEntity(CoordinatorEntity, ClimateEntity):
 
         return self._zone.current_temparature
 
-    @property
+    @cached_property
     def device_info(self) -> DeviceInfo | None:
         """Return information about the device this climate belongs to.
 
@@ -215,7 +216,7 @@ class RemehaDhwEntity(RemehaClimateEntity):
         ClimateEntityFeature.TARGET_TEMPERATURE | ClimateEntityFeature.PRESET_MODE
     )
 
-    def __init__(self, api: RemehaApi, coordinator: RemehaUpdateCoordinator, climate_zone_id: int):
+    def __init__(self, api: GTW08, coordinator: RemehaUpdateCoordinator, climate_zone_id: int):
         """Create a new RemehaDhwEntity."""
         super().__init__(api=api, coordinator=coordinator, climate_zone_id=climate_zone_id)
 
@@ -257,7 +258,7 @@ class RemehaDhwEntity(RemehaClimateEntity):
                 )
         return HVACMode.OFF
 
-    @property
+    @cached_property
     def hvac_modes(self) -> list[HVACMode]:
         """Return the available HVAC modes for this zone."""
         return [HVACMode.OFF, HVACMode.HEAT, HVACMode.AUTO]
@@ -376,7 +377,7 @@ class RemehaChEntity(RemehaClimateEntity):
         | ClimateEntityFeature.PRESET_MODE
     )
 
-    def __init__(self, api: RemehaApi, coordinator: RemehaUpdateCoordinator, climate_zone_id: int):
+    def __init__(self, api: GTW08, coordinator: RemehaUpdateCoordinator, climate_zone_id: int):
         """Create a new RemehaChEntity."""
         super().__init__(api=api, coordinator=coordinator, climate_zone_id=climate_zone_id)
 
@@ -415,7 +416,7 @@ class RemehaChEntity(RemehaClimateEntity):
                     else HVACMode.HEAT_COOL
                 )
 
-    @property
+    @cached_property
     def hvac_modes(self) -> list[HVACMode]:
         """Return the available HVAC modes for this zone."""
         return [HVACMode.OFF, HVACMode.HEAT_COOL, HVACMode.COOL, HVACMode.AUTO]

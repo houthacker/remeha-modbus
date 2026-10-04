@@ -1,12 +1,13 @@
 """Platform for number entities in the Remeha Modbus integration."""
 
 import logging
+from functools import cached_property
 from typing import cast
 
-from aio_remeha_modbus.api import RemehaApi
-from aio_remeha_modbus.api.climate_zone import ClimateZone
-from aio_remeha_modbus.api.const import Limits
-from aio_remeha_modbus.api.system_discovery_table import DeviceBoard
+from aio_remeha_modbus.gtw08 import GTW08
+from aio_remeha_modbus.gtw08.climate_zone import ClimateZone
+from aio_remeha_modbus.gtw08.const import Limits
+from aio_remeha_modbus.gtw08.system_discovery_table import DeviceBoard
 from homeassistant.components.number import NumberDeviceClass, NumberEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
@@ -28,7 +29,7 @@ async def async_setup_entry(
 ) -> None:
     """Add all Remeha Modbus number entities based on the given config entry."""
 
-    api: RemehaApi = entry.runtime_data["api"]
+    api: GTW08 = entry.runtime_data["api"]
     coordinator: RemehaUpdateCoordinator = entry.runtime_data["coordinator"]
 
     entities: list[NumberEntity] = []
@@ -63,7 +64,7 @@ class DhwHysteresisEntity(CoordinatorEntity[RemehaUpdateCoordinator], NumberEnti
     """Hysteresis entity linked to a RemehaDhwClimate."""
 
     _attr_has_entity_name = True
-    _attr_device_class: NumberDeviceClass = NumberDeviceClass.TEMPERATURE
+    _attr_device_class = NumberDeviceClass.TEMPERATURE
     _attr_native_max_value = Limits.HYSTERESIS_MAX_TEMP
     _attr_native_min_value = Limits.HYSTERESIS_MIN_TEMP
     _attr_native_step = TEMPERATURE_STEP
@@ -71,12 +72,12 @@ class DhwHysteresisEntity(CoordinatorEntity[RemehaUpdateCoordinator], NumberEnti
     _attr_should_poll = False
     _attr_translation_key = DOMAIN
 
-    def __init__(self, api: RemehaApi, coordinator: RemehaUpdateCoordinator, zone_id: int):
+    def __init__(self, api: GTW08, coordinator: RemehaUpdateCoordinator, zone_id: int):
         """Create a new DHW hysteresis entity."""
 
         super().__init__(coordinator)
 
-        self._api: RemehaApi = api
+        self._api: GTW08 = api
         self._climate_zone_id = zone_id
         self._attr_unique_id = f"hysteresis_{zone_id}"
         self._attr_name = "dhw_hysteresis"
@@ -102,7 +103,7 @@ class DhwHysteresisEntity(CoordinatorEntity[RemehaUpdateCoordinator], NumberEnti
 
         self.async_write_ha_state()
 
-    @property
+    @cached_property
     def device_info(self) -> DeviceInfo | None:
         """Return information about the device this instance belongs to.
 
@@ -147,13 +148,13 @@ class RemehaSummerWinterNumber(CoordinatorEntity[RemehaUpdateCoordinator], Numbe
     _attr_translation_key = DOMAIN
 
     def __init__(
-        self, api: RemehaApi, coordinator: RemehaUpdateCoordinator, parent_device_id: int | None
+        self, api: GTW08, coordinator: RemehaUpdateCoordinator, parent_device_id: int | None
     ):
         """Create a new summer/winter threshold entity."""
 
         super().__init__(coordinator)
 
-        self._api: RemehaApi = api
+        self._api: GTW08 = api
         self._parent_device_id = parent_device_id
         self._attr_unique_id = "summer_winter"
         self._attr_name = "summer_winter"
@@ -172,7 +173,7 @@ class RemehaSummerWinterNumber(CoordinatorEntity[RemehaUpdateCoordinator], Numbe
         # TODO Update the value so users don't have to wait until the next sync.
         self.async_write_ha_state()
 
-    @property
+    @cached_property
     def device_info(self) -> DeviceInfo | None:
         """Return information about the device this instance belongs to.
 
@@ -216,22 +217,22 @@ class RemehaNeutralBandNumber(CoordinatorEntity[RemehaUpdateCoordinator], Number
     _attr_translation_key = DOMAIN
 
     def __init__(
-        self, api: RemehaApi, coordinator: RemehaUpdateCoordinator, parent_device_id: int | None
+        self, api: GTW08, coordinator: RemehaUpdateCoordinator, parent_device_id: int | None
     ):
         """Create a new neutral-band entity."""
 
         super().__init__(coordinator)
 
-        self._api: RemehaApi = api
+        self._api: GTW08 = api
         self._parent_device_id = parent_device_id
         self._attr_unique_id = "neutral_band_summer_winter"
         self._attr_name = "neutral_band_summer_winter"
 
     @property
-    def native_value(self) -> float:
+    def native_value(self) -> float | None:
         """Return the current neutral band."""
 
-        return cast(float, self.coordinator.get_appliance().neutral_band_summer_winter)
+        return self.coordinator.get_appliance().neutral_band_summer_winter
 
     async def async_set_native_value(self, value: float) -> None:
         """Update the neutral band."""
@@ -241,7 +242,7 @@ class RemehaNeutralBandNumber(CoordinatorEntity[RemehaUpdateCoordinator], Number
         # TODO Update the value so users don't have to wait until the next sync.
         self.async_write_ha_state()
 
-    @property
+    @cached_property
     def device_info(self) -> DeviceInfo | None:
         """Return information about the device this instance belongs to.
 

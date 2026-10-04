@@ -4,14 +4,14 @@ import logging
 from types import MappingProxyType
 from typing import Any
 
-import voluptuous as vol
-from aio_remeha_modbus.api.const import (
+import probatio
+from aio_remeha_modbus.gtw08.const import (
     PV_MAX_TILT_DEGREES,
     PV_MIN_TILT_DEGREES,
     BoilerEnergyLabel,
     PVSystemOrientation,
 )
-from aio_remeha_modbus.api.errors import RemehaModbusError
+from aio_remeha_modbus.gtw08.errors import RemehaModbusError
 from homeassistant.components.modbus.const import (
     CONF_BAUDRATE,
     CONF_BYTESIZE,
@@ -69,14 +69,14 @@ _LOGGER = logging.getLogger(__name__)
 
 
 # Schema for auto scheduling support
-def _auto_scheduling_schema(current: ConfigEntry | None = None) -> vol.Schema:
-    return vol.Schema(
+def _auto_scheduling_schema(current: ConfigEntry | None = None) -> probatio.Schema:
+    return probatio.Schema(
         {
-            vol.Required(
+            probatio.Required(
                 WEATHER_ENTITY_ID,
-                default=current.data[WEATHER_ENTITY_ID] if current else vol.UNDEFINED,
+                default=current.data[WEATHER_ENTITY_ID] if current else probatio.UNDEFINED,
             ): selector({"entity": {"filter": {"domain": WeatherDomain}}}),
-            vol.Required(
+            probatio.Required(
                 AUTO_SCHEDULE_SELECTED_SCHEDULE,
                 default=(
                     current.data[AUTO_SCHEDULE_SELECTED_SCHEDULE]
@@ -96,89 +96,91 @@ def _auto_scheduling_schema(current: ConfigEntry | None = None) -> vol.Schema:
                     }
                 }
             ),
-            vol.Required(PV_CONFIG_SECTION): section(
-                vol.Schema(
+            probatio.Required(PV_CONFIG_SECTION): section(
+                probatio.Schema(
                     {
-                        vol.Required(
+                        probatio.Required(
                             PV_NOMINAL_POWER_WP,
                             default=(
                                 current.data[PV_CONFIG_SECTION][PV_NOMINAL_POWER_WP]
                                 if current
-                                else vol.UNDEFINED
+                                else probatio.UNDEFINED
                             ),
                         ): cv.positive_int,
-                        vol.Optional(
+                        probatio.Optional(
                             PV_ORIENTATION,
                             default=(
-                                current.data[PV_CONFIG_SECTION].get(PV_ORIENTATION, vol.UNDEFINED)
+                                current.data[PV_CONFIG_SECTION].get(
+                                    PV_ORIENTATION, probatio.UNDEFINED
+                                )
                                 if current
                                 else PVSystemOrientation.SOUTH
                             ),
                         ): remeha_cv.str_enum(PVSystemOrientation),
-                        vol.Optional(
+                        probatio.Optional(
                             PV_TILT,
                             default=(
-                                current.data[PV_CONFIG_SECTION].get(PV_TILT, vol.UNDEFINED)
+                                current.data[PV_CONFIG_SECTION].get(PV_TILT, probatio.UNDEFINED)
                                 if current
                                 else 30.0
                             ),
-                        ): vol.All(
-                            vol.Coerce(float),
-                            vol.Range(min=PV_MIN_TILT_DEGREES, max=PV_MAX_TILT_DEGREES),
+                        ): probatio.All(
+                            probatio.Coerce(float),
+                            probatio.Range(min=PV_MIN_TILT_DEGREES, max=PV_MAX_TILT_DEGREES),
                         ),
-                        vol.Optional(
+                        probatio.Optional(
                             PV_ANNUAL_EFFICIENCY_DECREASE,
                             default=(
                                 current.data[PV_CONFIG_SECTION].get(
-                                    PV_ANNUAL_EFFICIENCY_DECREASE, vol.UNDEFINED
+                                    PV_ANNUAL_EFFICIENCY_DECREASE, probatio.UNDEFINED
                                 )
                                 if current
                                 else 0.0
                             ),
                         ): cv.positive_float,
-                        vol.Optional(
+                        probatio.Optional(
                             PV_INSTALLATION_DATE,
                             default=(
                                 current.data[PV_CONFIG_SECTION].get(
-                                    PV_INSTALLATION_DATE, vol.UNDEFINED
+                                    PV_INSTALLATION_DATE, probatio.UNDEFINED
                                 )
                                 if current
-                                else vol.UNDEFINED
+                                else probatio.UNDEFINED
                             ),
                         ): selector({"date": {}}),
                     }
                 ),
                 {"collapsed": False},
             ),
-            vol.Required(DHW_BOILER_CONFIG_SECTION): section(
-                vol.Schema(
+            probatio.Required(DHW_BOILER_CONFIG_SECTION): section(
+                probatio.Schema(
                     {
-                        vol.Required(
+                        probatio.Required(
                             DHW_BOILER_VOLUME,
                             default=(
                                 current.data[DHW_BOILER_CONFIG_SECTION][DHW_BOILER_VOLUME]
                                 if current
-                                else vol.UNDEFINED
+                                else probatio.UNDEFINED
                             ),
                         ): cv.positive_int,
-                        vol.Optional(
+                        probatio.Optional(
                             DHW_BOILER_HEAT_LOSS_RATE,
                             default=(
                                 current.data[DHW_BOILER_CONFIG_SECTION].get(
-                                    DHW_BOILER_HEAT_LOSS_RATE, vol.UNDEFINED
+                                    DHW_BOILER_HEAT_LOSS_RATE, probatio.UNDEFINED
                                 )
                                 if current
                                 else 0.0
                             ),
                         ): cv.positive_float,
-                        vol.Optional(
+                        probatio.Optional(
                             DHW_BOILER_ENERGY_LABEL,
                             default=(
                                 current.data[DHW_BOILER_CONFIG_SECTION].get(
-                                    DHW_BOILER_ENERGY_LABEL, vol.UNDEFINED
+                                    DHW_BOILER_ENERGY_LABEL, probatio.UNDEFINED
                                 )
                                 if current
-                                else vol.UNDEFINED
+                                else probatio.UNDEFINED
                             ),
                         ): remeha_cv.str_enum(BoilerEnergyLabel),
                     }
@@ -189,62 +191,62 @@ def _auto_scheduling_schema(current: ConfigEntry | None = None) -> vol.Schema:
     )
 
 
-def _modbus_serial_schema(current: ConfigEntry | None = None) -> vol.Schema:
-    return vol.Schema(
+def _modbus_serial_schema(current: ConfigEntry | None = None) -> probatio.Schema:
+    return probatio.Schema(
         {
-            vol.Required(
+            probatio.Required(
                 CONF_BAUDRATE,
                 default=current.data[CONF_BAUDRATE]
                 if current and CONF_BAUDRATE in current.data
                 else 115200,
             ): cv.positive_int,
-            vol.Required(
+            probatio.Required(
                 CONF_BYTESIZE,
                 default=current.data[CONF_BYTESIZE]
                 if current and CONF_BYTESIZE in current.data
                 else 8,
-            ): vol.All(int, vol.In([5, 6, 7, 8])),
-            vol.Required(
+            ): probatio.All(int, probatio.In([5, 6, 7, 8])),
+            probatio.Required(
                 MODBUS_SERIAL_METHOD,
                 default=current.data[MODBUS_SERIAL_METHOD]
                 if current and MODBUS_SERIAL_METHOD in current.data
                 else MODBUS_SERIAL_METHOD_RTU,
-            ): vol.In([MODBUS_SERIAL_METHOD_RTU, MODBUS_SERIAL_METHOD_ASCII]),
-            vol.Required(
+            ): probatio.In([MODBUS_SERIAL_METHOD_RTU, MODBUS_SERIAL_METHOD_ASCII]),
+            probatio.Required(
                 CONF_PARITY,
                 default=(
                     current.data[CONF_PARITY]
                     if current and CONF_PARITY in current.data
                     else MODBUS_SERIAL_PARITY_NONE
                 ),
-            ): vol.In(
+            ): probatio.In(
                 [
                     MODBUS_SERIAL_PARITY_EVEN,
                     MODBUS_SERIAL_PARITY_ODD,
                     MODBUS_SERIAL_PARITY_NONE,
                 ]
             ),
-            vol.Required(
-                CONF_PORT, default=current.data[CONF_PORT] if current else vol.UNDEFINED
+            probatio.Required(
+                CONF_PORT, default=current.data[CONF_PORT] if current else probatio.UNDEFINED
             ): SerialPortSelector(),
-            vol.Required(
+            probatio.Required(
                 CONF_STOPBITS,
                 default=current.data[CONF_STOPBITS]
                 if current and CONF_STOPBITS in current.data
                 else 2,
-            ): vol.All(int, vol.In([1, 2])),
+            ): probatio.All(int, probatio.In([1, 2])),
         }
     )
 
 
-def _modbus_socket_schema(current: ConfigEntry | None = None) -> vol.Schema:
-    return vol.Schema(
+def _modbus_socket_schema(current: ConfigEntry | None = None) -> probatio.Schema:
+    return probatio.Schema(
         {
-            vol.Required(
-                CONF_HOST, default=current.data[CONF_HOST] if current else vol.UNDEFINED
+            probatio.Required(
+                CONF_HOST, default=current.data[CONF_HOST] if current else probatio.UNDEFINED
             ): cv.string,
-            vol.Required(
-                CONF_PORT, default=current.data[CONF_PORT] if current else vol.UNDEFINED
+            probatio.Required(
+                CONF_PORT, default=current.data[CONF_PORT] if current else probatio.UNDEFINED
             ): cv.port,
         }
     )
@@ -332,10 +334,10 @@ class RemehaConfigFlow(ConfigFlow, domain=DOMAIN):
 
         return self.async_show_form(
             step_id="user",
-            data_schema=vol.Schema(
+            data_schema=probatio.Schema(
                 {
-                    vol.Required(CONF_NAME): cv.string,
-                    vol.Required(CONF_TYPE): selector(
+                    probatio.Required(CONF_NAME): cv.string,
+                    probatio.Required(CONF_TYPE): selector(
                         {
                             "select": {
                                 "translation_key": "modbus_type",
@@ -348,8 +350,8 @@ class RemehaConfigFlow(ConfigFlow, domain=DOMAIN):
                             }
                         }
                     ),
-                    vol.Required(MODBUS_DEVICE_ADDRESS, default=100): cv.positive_int,
-                    vol.Optional(CONFIG_AUTO_SCHEDULE, default=False): cv.boolean,
+                    probatio.Required(MODBUS_DEVICE_ADDRESS, default=100): cv.positive_int,
+                    probatio.Optional(CONFIG_AUTO_SCHEDULE, default=False): cv.boolean,
                 }
             ),
             errors=errors,
@@ -490,9 +492,9 @@ class RemehaConfigFlow(ConfigFlow, domain=DOMAIN):
 
         return self.async_show_form(
             step_id="reconfigure",
-            data_schema=vol.Schema(
+            data_schema=probatio.Schema(
                 {
-                    vol.Required(CONF_TYPE, default=reconf_entry.data[CONF_TYPE]): selector(
+                    probatio.Required(CONF_TYPE, default=reconf_entry.data[CONF_TYPE]): selector(
                         {
                             "select": {
                                 "translation_key": "modbus_type",
@@ -505,10 +507,10 @@ class RemehaConfigFlow(ConfigFlow, domain=DOMAIN):
                             }
                         }
                     ),
-                    vol.Required(
+                    probatio.Required(
                         MODBUS_DEVICE_ADDRESS, default=reconf_entry.data[MODBUS_DEVICE_ADDRESS]
                     ): cv.positive_int,
-                    vol.Required(
+                    probatio.Required(
                         CONFIG_AUTO_SCHEDULE, default=reconf_entry.data[CONFIG_AUTO_SCHEDULE]
                     ): cv.boolean,
                 }

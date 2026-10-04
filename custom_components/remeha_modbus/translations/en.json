@@ -409,7 +409,7 @@
       "message": "Modbus discovery table corrupted. Please visit your repairs dashboard to fix this."
     },
     "update_failed_invalid_zone_schedule": {
-      "message": "Failed to update: zone {zone} uses selected schedule {selected_schedule} which failed to decode. Please visit your repairs dashboard to fix this."
+      "message": "Failed to update: one of the selected zone schedules failed to decode. Please visit your repairs dashboard to fix this."
     },
     "update_failed_modbus_exception": {
       "message": "Failed to update due to modbus exception: {modbus_message}"
@@ -444,7 +444,7 @@
         "step": {
           "confirm_overwrite": {
             "title": "Overwrite faulty schedule",
-            "description": "> [!WARNING]\n> A zone schedule failed to parse. To fix this issue, overwrite the faulty zone schedule with a default schedule that only uses the anti-frost/eco preset, depending on the zone type.\n\n> If you suspect this is a bug rather than a faulty zone schema, please report an issue [here]({issue_tracker_url})."
+            "description": "> [!WARNING]\n> A zone schedule failed to parse. To fix this issue, overwrite all zone schedules with a default schedule that only uses the anti-frost/eco preset, depending on the zone type.\n\n> If you suspect this is a bug rather than a faulty zone schema, please report an issue [here]({issue_tracker_url})."
           }
         }
       }

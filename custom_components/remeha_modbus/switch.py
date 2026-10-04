@@ -3,16 +3,17 @@
 import logging
 from typing import Any, cast
 
-from aio_remeha_modbus.api import RemehaApi
-from aio_remeha_modbus.api.appliance import CoolingType
-from aio_remeha_modbus.api.system_discovery_table import DeviceBoard
+from aio_remeha_modbus.gtw08 import GTW08
+from aio_remeha_modbus.gtw08.appliance import CoolingType
+from aio_remeha_modbus.gtw08.system_discovery_table import DeviceBoard
 from homeassistant.components.climate.const import (
     ATTR_PRESET_MODE,
     PRESET_ECO,
     SERVICE_SET_PRESET_MODE,
 )
 from homeassistant.components.climate.const import DOMAIN as ClimateDomain
-from homeassistant.components.switch import SwitchDeviceClass, SwitchEntity
+from homeassistant.components.switch import SwitchEntity
+from homeassistant.components.switch.const import SwitchDeviceClass
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import STATE_ON
 from homeassistant.core import HomeAssistant
@@ -42,7 +43,7 @@ async def async_setup_entry(
 ) -> None:
     """Create the switch entities based on the given config entry."""
 
-    api: RemehaApi = entry.runtime_data["api"]
+    api: GTW08 = entry.runtime_data["api"]
     coordinator: RemehaUpdateCoordinator = entry.runtime_data["coordinator"]
     mainboards: list[DeviceBoard] = coordinator.get_devices(lambda device: device.is_mainboard())
     parent_device_id: int | None = mainboards[0].id if mainboards else None
@@ -89,7 +90,7 @@ class RemehaModbusSwitch(RestoreEntity, SwitchEntity):
 
         return cast(str, self.unique_id)
 
-    @cached_property
+    @property
     def available(self) -> bool:
         """Return whether this switch is available."""
 
@@ -222,7 +223,7 @@ class RemehaApplianceSwitch(CoordinatorEntity[RemehaUpdateCoordinator], SwitchEn
 
     def __init__(
         self,
-        api: RemehaApi,
+        api: GTW08,
         coordinator: RemehaUpdateCoordinator,
         parent_device_id: int | None,
         name: str,
@@ -236,13 +237,13 @@ class RemehaApplianceSwitch(CoordinatorEntity[RemehaUpdateCoordinator], SwitchEn
         self._attr_name = name
         self._attr_unique_id = name
 
-    @property
+    @cached_property
     def translation_key(self) -> str:
-        """The translation key."""
+        """Key to use when translating the name of this entity."""
 
         return cast(str, self.name)
 
-    @property
+    @cached_property
     def device_info(self) -> DeviceInfo | None:
         """Return information about the device this switch belongs to.
 
@@ -274,7 +275,7 @@ class RemehaChEnabledSwitch(RemehaApplianceSwitch):
     """Switch that enables/disables central heating demand processing (parameter AP016)."""
 
     def __init__(
-        self, api: RemehaApi, coordinator: RemehaUpdateCoordinator, parent_device_id: int | None
+        self, api: GTW08, coordinator: RemehaUpdateCoordinator, parent_device_id: int | None
     ):
         """Create the central heating switch."""
 
@@ -318,7 +319,7 @@ class RemehaCoolingEnabledSwitch(RemehaApplianceSwitch):
     """
 
     def __init__(
-        self, api: RemehaApi, coordinator: RemehaUpdateCoordinator, parent_device_id: int | None
+        self, api: GTW08, coordinator: RemehaUpdateCoordinator, parent_device_id: int | None
     ):
         """Create the cooling switch."""
 
@@ -360,7 +361,7 @@ class RemehaForceSummerSwitch(RemehaApplianceSwitch):
     """
 
     def __init__(
-        self, api: RemehaApi, coordinator: RemehaUpdateCoordinator, parent_device_id: int | None
+        self, api: GTW08, coordinator: RemehaUpdateCoordinator, parent_device_id: int | None
     ):
         """Create the force-summer switch."""
 

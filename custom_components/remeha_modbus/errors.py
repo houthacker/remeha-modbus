@@ -1,6 +1,6 @@
 """Errors for the remeha_modbus integration."""
 
-from aio_remeha_modbus.api.const import ClimateZoneScheduleId
+from aio_remeha_modbus.gtw08.const import ClimateZoneScheduleId
 from homeassistant.exceptions import IntegrationError, ServiceValidationError
 from pymodbus import ModbusException
 

@@ -3,9 +3,9 @@
 from unittest.mock import patch
 
 import pytest
-from aio_remeha_modbus.api import RemehaApi
-from aio_remeha_modbus.api.const import REMEHA_ZONE_RESERVED_REGISTERS
-from aio_remeha_modbus.api.errors import DiscoveryTableCorruptedError
+from aio_remeha_modbus.gtw08 import GTW08
+from aio_remeha_modbus.gtw08.const import REMEHA_ZONE_RESERVED_REGISTERS
+from aio_remeha_modbus.gtw08.errors import DiscoveryTableCorruptedError
 from homeassistant.components.climate.const import ATTR_PRESET_MODE, PRESET_ECO
 from homeassistant.components.switch.const import DOMAIN as SwitchDomain
 from homeassistant.const import ATTR_ENTITY_ID, SERVICE_TURN_OFF, STATE_OFF, STATE_ON
@@ -26,11 +26,11 @@ from tests.util.repairs import get_repairs, process_repair_fix_flow, start_repai
 
 
 @pytest.mark.parametrize(
-    "json_fixture", ["modbus_store_corrupted_discovery_table.json"], indirect=True
+    "remeha_modbus_unit", ["modbus_store_corrupted_discovery_table.json"], indirect=True
 )
 async def test_discovery_table_corrupted_repair(
     hass: HomeAssistant,
-    remeha_api: RemehaApi,
+    remeha_api: GTW08,
     mock_config_entry,
     hass_client,
     hass_ws_client,
@@ -43,7 +43,7 @@ async def test_discovery_table_corrupted_repair(
     )
 
     with patch(
-        "custom_components.remeha_modbus.RemehaApi",
+        "aio_remeha_modbus.gtw08.GTW08",
         new=lambda *args, **kwargs: remeha_api,
     ):
         # Modbus recovery register must be zero
@@ -53,7 +53,9 @@ async def test_discovery_table_corrupted_repair(
         assert discovery_register == 0x0000
 
         # Start remeha_modbus
-        await setup_platform(hass=hass, config_entry=mock_config_entry)
+        await setup_platform(
+            hass=hass, config_entry=mock_config_entry, remeha_modbus_unit=remeha_modbus_unit
+        )
         await hass.async_block_till_done()
 
         # Start repair fix flow
@@ -80,20 +82,29 @@ async def test_discovery_table_corrupted_repair(
         assert discovery_register == 0x5A00
 
 
-@pytest.mark.parametrize("json_fixture", ["modbus_store_invalid_timeslot.json"], indirect=True)
+@pytest.mark.parametrize(
+    "remeha_modbus_unit", ["modbus_store_invalid_timeslot.json"], indirect=True
+)
 @pytest.mark.parametrize("remeha_api", [{"require_update": False}], indirect=True)
 async def test_invalid_zone_schedule_repair(
-    hass: HomeAssistant, remeha_api: RemehaApi, mock_config_entry, hass_client, hass_ws_client
+    hass: HomeAssistant,
+    remeha_api: GTW08,
+    mock_config_entry,
+    hass_client,
+    hass_ws_client,
+    remeha_modbus_unit,
 ):
     """Test repairing an invalid zone schedule."""
 
     with patch(
-        "custom_components.remeha_modbus.RemehaApi",
+        "aio_remeha_modbus.gtw08.GTW08",
         new=lambda *args, **kwargs: remeha_api,
     ):
         # Start remeha_modbus
         # with pytest.raises(UpdateFailed):
-        await setup_platform(hass=hass, config_entry=mock_config_entry)
+        await setup_platform(
+            hass=hass, config_entry=mock_config_entry, remeha_modbus_unit=remeha_modbus_unit
+        )
         await hass.async_block_till_done()
 
         # And modbus register 1201 must contain 0x05a0
@@ -129,16 +140,23 @@ async def test_invalid_zone_schedule_repair(
 
 
 async def test_undo_manual_schedule_execution_repair(
-    hass: HomeAssistant, remeha_api, mock_config_entry, hass_client, hass_ws_client
+    hass: HomeAssistant,
+    remeha_api,
+    mock_config_entry,
+    hass_client,
+    hass_ws_client,
+    remeha_modbus_unit,
 ):
     """Test repairing/resetting `switch.heatpump_managed_schedules`."""
 
     with patch(
-        "custom_components.remeha_modbus.RemehaApi",
+        "aio_remeha_modbus.gtw08.GTW08",
         new=lambda *args, **kwargs: remeha_api,
     ):
         # Start remeha_modbus
-        await setup_platform(hass=hass, config_entry=mock_config_entry)
+        await setup_platform(
+            hass=hass, config_entry=mock_config_entry, remeha_modbus_unit=remeha_modbus_unit
+        )
         await hass.async_block_till_done()
 
         entity_id = f"{SwitchDomain}.{HEATPUMP_MANAGED_SCHEDULES}"

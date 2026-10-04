@@ -4,13 +4,12 @@ from datetime import datetime, time, timedelta
 from typing import cast
 from uuid import UUID
 
-from aio_remeha_modbus.api.climate_zone import ClimateZone
-from aio_remeha_modbus.api.const import Weekday
-from aio_remeha_modbus.api.schedule import (
+from aio_remeha_modbus.gtw08.climate_zone import ClimateZone
+from aio_remeha_modbus.gtw08.const import ClimateZoneScheduleId, Weekday
+from aio_remeha_modbus.gtw08.time_program import (
     Timeslot,
     TimeslotActivity,
     TimeslotSetpointType,
-    ZoneSchedule,
 )
 from homeassistant.components.climate.const import DOMAIN as ClimateDomain
 from homeassistant.components.climate.const import PRESET_COMFORT, PRESET_ECO, PRESET_NONE
@@ -28,6 +27,7 @@ from custom_components.remeha_modbus.blend.scheduler.const import (
     SchedulerState,
     SchedulerStateAction,
     SchedulerTimeslot,
+    ScheduleUpdate,
     ServiceOperation,
 )
 from custom_components.remeha_modbus.const import (
@@ -37,7 +37,6 @@ from custom_components.remeha_modbus.const import (
     HEATPUMP_MANAGED_SCHEDULES,
     SHORT_DESC_TO_WEEKDAY,
     WEEKDAY_TO_SHORT_DESC,
-    ZoneScheduleUID,
 )
 from custom_components.remeha_modbus.errors import (
     ParseError,
@@ -110,7 +109,7 @@ def to_scheduler_state(state: State) -> SchedulerState:
     return validator.validate_python(dict(state.as_dict()))
 
 
-def to_zone_schedule(state: SchedulerState, uid: ZoneScheduleUID) -> ZoneSchedule:
+def to_zone_schedule(state: SchedulerState) -> tuple[Weekday, list[Timeslot]]:
     """Convert the given state to a `ZoneSchedule` instance.
 
     Args:
@@ -118,7 +117,7 @@ def to_zone_schedule(state: SchedulerState, uid: ZoneScheduleUID) -> ZoneSchedul
         uid (ZoneScheduleUID): The unique identification of the zone schedule.
 
     Returns:
-        ZoneSchedule: The zone schedule
+        tuple[Weekday, list[Timeslot]]: The zone schedule
 
     Raises:
         ParseError: if `state` cannot be converted into a ZoneSchedule.
@@ -162,9 +161,7 @@ def to_zone_schedule(state: SchedulerState, uid: ZoneScheduleUID) -> ZoneSchedul
             for (idx, time_slot) in enumerate(state["attributes"]["timeslots"])
         ]
 
-        return ZoneSchedule(
-            id=uid.schedule_id, zone_id=uid.zone_id, day=weekday, time_slots=time_slots
-        )
+        return (weekday, time_slots)
 
     raise ParseError(
         translation_domain=DOMAIN,
@@ -173,12 +170,11 @@ def to_zone_schedule(state: SchedulerState, uid: ZoneScheduleUID) -> ZoneSchedul
     )
 
 
-def _to_schedule_name(schedule: ZoneSchedule) -> str:
-    return f"zone_{schedule.zone_id}_{schedule.id.name.lower()}_{schedule.day.name.lower()}"
+def _to_schedule_name(zone_id: int, schedule_id: ClimateZoneScheduleId, day: Weekday) -> str:
+    return f"zone_{zone_id}_{schedule_id.name.lower()}_{day.name.lower()}"
 
 
-def _get_durations(schedule: ZoneSchedule):
-    time_slots = schedule.time_slots
+def _get_durations(time_slots: list[Timeslot]):
     for idx, ts in enumerate(time_slots):
         if idx == len(time_slots) - 1:
             # Calculate the time delta until tomorrow.
@@ -198,9 +194,13 @@ def _to_dhw_preset_mode(setpoint_type: TimeslotSetpointType) -> str:
 
 
 def _to_new_scheduler_schedule(
-    schedule: ZoneSchedule, linking_tag: UUID, data: SchedulerSchedule
+    zone_id: int,
+    schedule_id: ClimateZoneScheduleId,
+    day: Weekday,
+    linking_tag: UUID,
+    data: SchedulerSchedule,
 ) -> SchedulerSchedule:
-    data[ATTR_SCHEDULER_NAME] = _to_schedule_name(schedule=schedule)
+    data[ATTR_SCHEDULER_NAME] = _to_schedule_name(zone_id, schedule_id, day)
 
     # When creating a new schedule, a unique tag is added so it can be identified
     # when the new-schedule-event is received. It can then be linked to the correct modbus schedule.
@@ -220,7 +220,10 @@ def _to_edited_scheduler_schedule(
 
 async def to_scheduler_schedule(
     hass: HomeAssistant,
-    schedule: ZoneSchedule,
+    *,
+    schedule_id: ClimateZoneScheduleId,
+    day: Weekday,
+    time_slots: list[Timeslot],
     operation: ServiceOperation,
     linked_scheduler_entity: str | None = None,
     linking_tag: UUID | None = None,
@@ -231,7 +234,9 @@ async def to_scheduler_schedule(
 
     Args:
         hass (HomeAssistant): The HA instance.
-        schedule (ZoneSchedule): The schedule to convert.
+        schedule_id (ClimateZoneScheduleId): The schedule id.
+        day (Weekday): The weekday of the schedule.
+        time_slots (list[Timeslot]): The time slots to convert.
         operation (ServiceOperation): The type of service to call on the scheduler component.
         linked_scheduler_entity (str | None): The linked scheduler entity. Only required if `operation` is `EDIT`.
         linking_tag (UUID | None): The tag to use to link the `scheduler.schedule` to our `climate` entity. Only required if `operation` is `ADD`.
@@ -244,15 +249,15 @@ async def to_scheduler_schedule(
 
     """
 
-    durations: dict[Timeslot, timedelta] = dict(_get_durations(schedule=schedule))
+    durations: dict[Timeslot, timedelta] = dict(_get_durations(time_slots))
     climate_entity_id = get_own_entity_by_unique_id(
-        hass, ClimateDomain, generate_unique_id(schedule)
+        hass, ClimateDomain, generate_unique_id(schedule_id)
     )
     if climate_entity_id is None:
         raise ParseError(translation_domain=DOMAIN, translation_key="parse_error_entity_not_found")
 
     data = SchedulerSchedule(
-        weekdays=[WEEKDAY_TO_SHORT_DESC[schedule.day]],
+        weekdays=[WEEKDAY_TO_SHORT_DESC[day]],
         repeat_type="repeat",
         timeslots=[
             SchedulerTimeslot(
@@ -279,9 +284,15 @@ async def to_scheduler_schedule(
                     )
                 ],
             )
-            for ts in schedule.time_slots
+            for ts in time_slots
         ],
     )
+
+    state = hass.states.get(climate_entity_id)
+    assert state is not None
+
+    zone_id_attr = state.attributes.get("zone_id")
+    assert zone_id_attr is not None
 
     match operation:
         case ServiceOperation.EDIT:
@@ -290,7 +301,11 @@ async def to_scheduler_schedule(
             )
         case ServiceOperation.ADD:
             return _to_new_scheduler_schedule(
-                schedule=schedule, linking_tag=cast(UUID, linking_tag), data=data
+                zone_id=int(zone_id_attr),
+                schedule_id=schedule_id,
+                day=day,
+                linking_tag=cast(UUID, linking_tag),
+                data=data,
             )
 
 
@@ -328,7 +343,7 @@ def scheduler_is_installed(hass: HomeAssistant) -> bool:
 
 def get_updated_dhw_schedules(
     old: dict[int, ClimateZone], new: dict[int, ClimateZone]
-) -> list[ZoneSchedule]:
+) -> list[ScheduleUpdate]:
     """Return all updated `ZoneSchedule`s of the DHW zones.
 
     Both `old` and `new` are allowed to contain `ClimateZone`s that are not DHW,
@@ -339,7 +354,7 @@ def get_updated_dhw_schedules(
         new: The possibly updated climate zones indexed by their id.
 
     Returns:
-        A list containing all new and updated `ZoneSchedule` instances, or an
+        A list containing all new and updated schedules, or an
         empty list if either `old` or `new` is `None`.
 
     Raises:
@@ -361,7 +376,7 @@ def get_updated_dhw_schedules(
             translation_key="schedule_update_non_equal_climates",
         )
 
-    updated_new_schedules: list[ZoneSchedule] = []
+    updated_new_schedules: list[ScheduleUpdate] = []
     for old_zone_id, old_zone in old.items():
         new_zone: ClimateZone = new[old_zone_id]
 
@@ -373,17 +388,28 @@ def get_updated_dhw_schedules(
                 assert new_zone.current_schedule is not None
 
                 updated_new_schedules += [
-                    schedule
-                    for weekday, schedule in new_zone.current_schedule.items()
-                    if old_zone.current_schedule.get(weekday) != schedule and schedule is not None
+                    ScheduleUpdate(
+                        zone_id=new_zone.id,
+                        schedule_id=new_zone.selected_schedule,
+                        day=day,
+                        time_slots=time_slots,
+                    )
+                    for day, time_slots in new_zone.current_schedule.items()
+                    if old_zone.current_schedule.get(day) != time_slots and time_slots is not None
                 ]
+
             # or, the old zone didn't have a schedule yet and a new one was created.
             elif new_zone.selected_schedule is not None:
                 assert new_zone.current_schedule is not None
                 updated_new_schedules += [
-                    schedule
-                    for schedule in new_zone.current_schedule.values()
-                    if schedule is not None
+                    ScheduleUpdate(
+                        zone_id=new_zone.id,
+                        schedule_id=new_zone.selected_schedule,
+                        day=day,
+                        time_slots=time_slots,
+                    )
+                    for day, time_slots in new_zone.current_schedule.items()
+                    if time_slots is not None
                 ]
 
     return updated_new_schedules
