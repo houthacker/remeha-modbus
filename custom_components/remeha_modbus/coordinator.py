@@ -370,6 +370,19 @@ class RemehaUpdateCoordinator(DataUpdateCoordinator):
 
         return self.data["climates"][id] if self.data["climates"] else None
 
+    async def async_repair_invalid_schedules(self) -> int:
+        """Overwrite all unparsable day schedules with a default schedule.
+
+        This works on the raw schedule registers, since a zone with an invalid schedule
+        is not available through the API (and neither are any entities during first setup).
+
+        Returns:
+            `int`: The amount of day schedules that were overwritten.
+
+        """
+
+        return await self._api.async_repair_invalid_schedules()
+
     def get_climates(self, predicate: Callable[[ClimateZone], bool]) -> list[ClimateZone]:
         """Return all climate that match the given predicate."""
 
