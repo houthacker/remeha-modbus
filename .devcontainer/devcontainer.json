@@ -61,17 +61,22 @@
         "json.schemaDownload.enable": true,
         "python.terminal.activateEnvInCurrentTerminal": true,
         "python.defaultInterpreterPath": "/usr/local/bin/python",
-        "python.analysis.autoSearchPaths": false,
+        "python.analysis.autoSearchPaths": true,
+        "python.analysis.typeCheckingMode": "standard",
+        "python.analysis.diagnosticSeverityOverrides": {
+          "reportIncompatibleVariableOverride": "none"
+        },
+        "python.languageServer": "Pylance",
         "terminal.integrated.defaultProfile.linux": "zsh"
       }
     }
   },
   "remoteUser": "vscode",
   "features": {
-    "ghcr.io/devcontainers/features/docker-in-docker:4.0.0": {
+    "ghcr.io/devcontainers/features/docker-in-docker:4.1.2": {
       "moby": false
     },
-    "ghcr.io/devcontainers/features/github-cli:1": {},
+    "ghcr.io/devcontainers/features/github-cli:1.1.3": {},
     "ghcr.io/warrenbuckley/codespace-features/sqlite:latest": {},
     "ghcr.io/rocker-org/devcontainer-features/apt-packages:1": {
       "packages": "autoconf,bluez,build-essential,cmake,curl,ffmpeg,git,libssl-dev,libpcap-dev,libxml2,libxml2-dev,libxslt1-dev,libjpeg-dev,libturbojpeg0,libffi-dev,libudev-dev,zlib1g-dev,pkg-config,libavformat-dev,libavcodec-dev,libavdevice-dev,libavutil-dev,libswscale-dev,libswresample-dev,libavfilter-dev,libgammu-dev,libyaml-dev"

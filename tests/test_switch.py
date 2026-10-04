@@ -10,14 +10,16 @@ from custom_components.remeha_modbus.const import HEATPUMP_MANAGED_SCHEDULES, SW
 from .conftest import setup_platform
 
 
-async def test_switch(hass: HomeAssistant, remeha_api, mock_config_entry):
+async def test_switch(hass: HomeAssistant, remeha_api, mock_config_entry, remeha_modbus_unit):
     """Test a single DhwHysteresisEntity."""
 
     with patch(
-        "custom_components.remeha_modbus.RemehaApi",
+        "aio_remeha_modbus.gtw08.GTW08",
         new=lambda *args, **kwargs: remeha_api,
     ):
-        await setup_platform(hass=hass, config_entry=mock_config_entry)
+        await setup_platform(
+            hass=hass, config_entry=mock_config_entry, remeha_modbus_unit=remeha_modbus_unit
+        )
         await hass.async_block_till_done()
 
         for unique_id in [SWITCH_SCHEDULE_SYNC, HEATPUMP_MANAGED_SCHEDULES]:
@@ -26,14 +28,18 @@ async def test_switch(hass: HomeAssistant, remeha_api, mock_config_entry):
             assert state.name == unique_id
 
 
-async def test_appliance_switches(hass: HomeAssistant, remeha_api, mock_config_entry):
+async def test_appliance_switches(
+    hass: HomeAssistant, remeha_api, mock_config_entry, remeha_modbus_unit
+):
     """Test the appliance-level modbus switches (AP016 / AP028)."""
 
     with patch(
-        "custom_components.remeha_modbus.RemehaApi",
+        "aio_remeha_modbus.gtw08.GTW08",
         new=lambda *args, **kwargs: remeha_api,
     ):
-        await setup_platform(hass=hass, config_entry=mock_config_entry)
+        await setup_platform(
+            hass=hass, config_entry=mock_config_entry, remeha_modbus_unit=remeha_modbus_unit
+        )
         await hass.async_block_till_done()
 
         # Both are enabled in the modbus_store fixture (registers 500 and 502 are 1).
@@ -58,14 +64,18 @@ async def test_appliance_switches(hass: HomeAssistant, remeha_api, mock_config_e
         assert ch_enabled.state == "off"
 
 
-async def test_force_summer_switch(hass: HomeAssistant, remeha_api, mock_config_entry):
+async def test_force_summer_switch(
+    hass: HomeAssistant, remeha_api, mock_config_entry, remeha_modbus_unit
+):
     """Test the appliance force-summer switch (AP074)."""
 
     with patch(
-        "custom_components.remeha_modbus.RemehaApi",
+        "aio_remeha_modbus.gtw08.GTW08",
         new=lambda *args, **kwargs: remeha_api,
     ):
-        await setup_platform(hass=hass, config_entry=mock_config_entry)
+        await setup_platform(
+            hass=hass, config_entry=mock_config_entry, remeha_modbus_unit=remeha_modbus_unit
+        )
         await hass.async_block_till_done()
 
         # register 389 is 0 in the fixture -> off

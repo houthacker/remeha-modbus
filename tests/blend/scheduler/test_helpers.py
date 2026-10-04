@@ -6,8 +6,8 @@ from unittest.mock import patch
 from uuid import uuid4
 
 import pytest
-from aio_remeha_modbus.api.const import ClimateZoneScheduleId, Weekday
-from aio_remeha_modbus.api.schedule import (
+from aio_remeha_modbus.gtw08.const import Weekday
+from aio_remeha_modbus.gtw08.time_program import (
     Timeslot,
     TimeslotActivity,
     TimeslotSetpointType,
@@ -22,7 +22,6 @@ from custom_components.remeha_modbus.blend.scheduler.const import (
     SchedulerState,
     ServiceOperation,
 )
-from custom_components.remeha_modbus.const import ZoneScheduleUID
 from custom_components.remeha_modbus.errors import ParseError, RemehaModbusError
 from tests.conftest import setup_platform
 from tests.util.util import replace_tag_template
@@ -90,14 +89,10 @@ def test_to_zone_schedule(json_fixture: dict[str, Any]):
     """Test conversion of a SchedulerState to a ZoneSchedule."""
 
     scheduler_state = SchedulerState(**json_fixture)
-    uid = ZoneScheduleUID(
-        zone_id=2, schedule_id=ClimateZoneScheduleId.SCHEDULE_1, weekday=Weekday.MONDAY
-    )
-    zone_schedule = helpers.to_zone_schedule(scheduler_state, uid)
-    assert zone_schedule.id == uid.schedule_id
-    assert zone_schedule.zone_id == uid.zone_id
-    assert zone_schedule.day == uid.weekday
-    assert zone_schedule.time_slots == [
+
+    weekday, time_slots = helpers.to_zone_schedule(scheduler_state)
+    assert weekday == Weekday.MONDAY
+    assert time_slots == [
         Timeslot(
             setpoint_type=TimeslotSetpointType.COMFORT,
             activity=TimeslotActivity.DHW,
@@ -111,28 +106,30 @@ def test_to_zone_schedule_invalid(json_fixture: dict[str, Any]):
     """Test conversion of a SchedulerState not calling climate.set_preset."""
 
     scheduler_state = SchedulerState(**json_fixture)
-    uid = ZoneScheduleUID(
-        zone_id=2, schedule_id=ClimateZoneScheduleId.SCHEDULE_1, weekday=Weekday.MONDAY
-    )
 
     with pytest.raises(ParseError):
-        helpers.to_zone_schedule(scheduler_state, uid)
+        helpers.to_zone_schedule(scheduler_state)
 
 
 @pytest.mark.parametrize("json_file", ["scheduler_schedule.json"], indirect=True)
-async def test_to_scheduler_schedule(hass: HomeAssistant, remeha_api, mock_config_entry, json_file):
+async def test_to_scheduler_schedule(
+    hass: HomeAssistant, remeha_api, mock_config_entry, json_file, remeha_modbus_unit
+):
     """Test that to_scheduler_schedule converts a ZoneSchedule correctly."""
 
     with patch(
-        "custom_components.remeha_modbus.RemehaApi",
+        "aio_remeha_modbus.gtw08.GTW08",
         new=lambda *args, **kwargs: remeha_api,
     ):
-        await setup_platform(hass=hass, config_entry=mock_config_entry)
+        await setup_platform(
+            hass=hass, config_entry=mock_config_entry, remeha_modbus_unit=remeha_modbus_unit
+        )
         await hass.async_block_till_done()
 
         coordinator: RemehaUpdateCoordinator = mock_config_entry.runtime_data["coordinator"]
         climate = coordinator.get_climate(id=2)
         assert climate is not None
+        assert climate.selected_schedule is not None
         zone_schedule = (
             climate.current_schedule[Weekday.MONDAY]
             if climate.current_schedule is not None
@@ -145,22 +142,33 @@ async def test_to_scheduler_schedule(hass: HomeAssistant, remeha_api, mock_confi
         # Replace placeholder in fixture with real value
         json_file = replace_tag_template(json_file, uuid)
         scheduler_schedule = await helpers.to_scheduler_schedule(
-            hass=hass, schedule=zone_schedule, operation=ServiceOperation.ADD, linking_tag=uuid
+            hass,
+            schedule_id=climate.selected_schedule,
+            day=Weekday.MONDAY,
+            time_slots=zone_schedule,
+            operation=ServiceOperation.ADD,
+            linking_tag=uuid,
         )
         assert scheduler_schedule == json_file
 
 
 @pytest.mark.parametrize("json_file", ["remeha.schedulerstate.json"], indirect=True)
 async def test_links_exclusively_to_remeha_climate(
-    hass: HomeAssistant, remeha_api, mock_config_entry, json_file: SchedulerState
+    hass: HomeAssistant,
+    remeha_api,
+    mock_config_entry,
+    json_file: SchedulerState,
+    remeha_modbus_unit,
 ):
     """Test whether a given scheduler.State links exclusively to a remeha climate entity."""
 
     with patch(
-        "custom_components.remeha_modbus.RemehaApi",
+        "aio_remeha_modbus.gtw08.GTW08",
         new=lambda *args, **kwargs: remeha_api,
     ):
-        await setup_platform(hass=hass, config_entry=mock_config_entry)
+        await setup_platform(
+            hass=hass, config_entry=mock_config_entry, remeha_modbus_unit=remeha_modbus_unit
+        )
         await hass.async_block_till_done()
 
         assert helpers.links_exclusively_to_remeha_climate(hass, json_file)
@@ -170,28 +178,38 @@ async def test_links_exclusively_to_remeha_climate(
     "json_file", ["remeha.schedulerstate.multiple-climates.json"], indirect=True
 )
 async def test_links_exclusively_to_remeha_climate_invalid(
-    hass: HomeAssistant, remeha_api, mock_config_entry, json_file: SchedulerState
+    hass: HomeAssistant,
+    remeha_api,
+    mock_config_entry,
+    json_file: SchedulerState,
+    remeha_modbus_unit,
 ):
     """Test that the helper returns False when a SchedulerState links to at least two entities."""
 
     with patch(
-        "custom_components.remeha_modbus.RemehaApi",
+        "aio_remeha_modbus.gtw08.GTW08",
         new=lambda *args, **kwargs: remeha_api,
     ):
-        await setup_platform(hass=hass, config_entry=mock_config_entry)
+        await setup_platform(
+            hass=hass, config_entry=mock_config_entry, remeha_modbus_unit=remeha_modbus_unit
+        )
         await hass.async_block_till_done()
 
         assert not helpers.links_exclusively_to_remeha_climate(hass, json_file)
 
 
-async def test_get_updated_dhw_schedules(hass: HomeAssistant, remeha_api, mock_config_entry):
+async def test_get_updated_dhw_schedules(
+    hass: HomeAssistant, remeha_api, mock_config_entry, remeha_modbus_unit
+):
     """Test calculating updated DHW schedules between two schedule sets."""
 
     with patch(
-        "custom_components.remeha_modbus.RemehaApi",
+        "aio_remeha_modbus.gtw08.GTW08",
         new=lambda *args, **kwargs: remeha_api,
     ):
-        await setup_platform(hass=hass, config_entry=mock_config_entry)
+        await setup_platform(
+            hass=hass, config_entry=mock_config_entry, remeha_modbus_unit=remeha_modbus_unit
+        )
         await hass.async_block_till_done()
 
         coordinator: RemehaUpdateCoordinator = mock_config_entry.runtime_data["coordinator"]

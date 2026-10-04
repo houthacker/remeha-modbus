@@ -2,28 +2,36 @@
 
 import logging
 from collections.abc import Callable
-from datetime import timedelta
+from datetime import datetime, timedelta
 from typing import Any, cast
 from uuid import UUID
 
-from aio_remeha_modbus.api import RemehaApi
-from aio_remeha_modbus.api.appliance import Appliance
-from aio_remeha_modbus.api.climate_zone import ClimateZone, ClimateZoneType
-from aio_remeha_modbus.api.const import (
+from aio_remeha_modbus.gtw08 import GTW08
+from aio_remeha_modbus.gtw08.appliance import Appliance
+from aio_remeha_modbus.gtw08.climate_zone import (
+    ClimateZone,
+    ClimateZoneType,
+)
+from aio_remeha_modbus.gtw08.const import (
     BoilerConfiguration,
     BoilerEnergyLabel,
     ClimateZoneScheduleId,
     PVSystem,
     PVSystemOrientation,
+    Weekday,
 )
-from aio_remeha_modbus.api.errors import (
+from aio_remeha_modbus.gtw08.const import UnitOfTemperature as RemehaUnitOfTemperature
+from aio_remeha_modbus.gtw08.errors import (
     DiscoveryTableCorruptedError,
     InvalidZoneSchedule,
 )
-from aio_remeha_modbus.api.main_control_monitoring import MainControlMonitoring
-from aio_remeha_modbus.api.schedule import HourlyForecast, WeatherForecast, ZoneSchedule
-from aio_remeha_modbus.api.schedule import UnitOfTemperature as RemehaUnitOfTemperature
-from aio_remeha_modbus.api.system_discovery_table import DeviceBoard
+from aio_remeha_modbus.gtw08.main_control_monitoring import MainControlMonitoring
+from aio_remeha_modbus.gtw08.schedule import (
+    HourlyForecast,
+    WeatherForecast,
+    generate_dhw_day_schedule,
+)
+from aio_remeha_modbus.gtw08.system_discovery_table import DeviceBoard
 from dateutil.parser import parse
 from homeassistant.components.switch.const import DOMAIN as SwitchPlatform
 from homeassistant.config_entries import ConfigEntry
@@ -34,16 +42,18 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, Upda
 from modbus_connection.exceptions import ModbusError
 
 from custom_components.remeha_modbus.api.store import RemehaModbusStorage, WaitingListEntry
-from custom_components.remeha_modbus.blend.scheduler.const import SchedulerLinkView, ZoneScheduleUID
+from custom_components.remeha_modbus.blend.scheduler.const import (
+    SchedulerLinkView,
+    ScheduleUpdate,
+    ZoneScheduleUID,
+)
 from custom_components.remeha_modbus.blend.scheduler.helpers import get_updated_dhw_schedules
 from custom_components.remeha_modbus.const import (
-    AUTO_SCHEDULE_SELECTED_SCHEDULE,
     DHW_BOILER_CONFIG_SECTION,
     DHW_BOILER_ENERGY_LABEL,
     DHW_BOILER_HEAT_LOSS_RATE,
     DHW_BOILER_VOLUME,
     DOMAIN,
-    HA_SCHEDULE_TO_REMEHA_SCHEDULE,
     ISSUE_DISCOVERY_TABLE_CORRUPTED,
     ISSUE_DISCOVERY_TABLE_CORRUPTED_LEARN_MORE_URL,
     ISSUE_INVALID_ZONE_SCHEDULE,
@@ -124,7 +134,7 @@ class RemehaUpdateCoordinator(DataUpdateCoordinator):
         self,
         hass: HomeAssistant,
         config_entry: ConfigEntry,
-        api: RemehaApi,
+        api: GTW08,
         store: RemehaModbusStorage,
     ):
         """Create a new instance the Remeha Modbus update coordinator."""
@@ -141,13 +151,13 @@ class RemehaUpdateCoordinator(DataUpdateCoordinator):
         )
 
         self._store: RemehaModbusStorage = store
-        self._api: RemehaApi = api
+        self._api: GTW08 = api
         self._device_boards: dict[int, DeviceBoard] = {}
 
         # This list is populated by the added_to_hass() callback of the climate entities.
         self._climate_entity_ids: list[str] = []
 
-        self._schedule_subscribers: set[Subscriber[ZoneSchedule]] = set()
+        self._schedule_subscribers: set[Subscriber[ScheduleUpdate]] = set()
 
     def _is_before_first_update(self) -> bool:
         return not self.data or "climates" not in self.data
@@ -205,11 +215,6 @@ class RemehaUpdateCoordinator(DataUpdateCoordinator):
             ir.async_create_issue(
                 hass=self.hass,
                 domain=DOMAIN,
-                data={
-                    "zone_id": ex.zone,
-                    "schedule_id": ex.schedule_id.name.lower(),
-                    "is_dhw": ex.is_dhw,
-                },
                 issue_domain=DOMAIN,
                 issue_id=ISSUE_INVALID_ZONE_SCHEDULE,
                 is_fixable=True,
@@ -221,10 +226,6 @@ class RemehaUpdateCoordinator(DataUpdateCoordinator):
             raise UpdateFailed(
                 translation_domain=DOMAIN,
                 translation_key="update_failed_invalid_zone_schedule",
-                translation_placeholders={
-                    "zone": str(ex.zone),
-                    "selected_schedule": ex.schedule_id,
-                },
             ) from ex
 
         # Log ignored zones
@@ -256,23 +257,30 @@ class RemehaUpdateCoordinator(DataUpdateCoordinator):
             # Subscribers that haven't been called before receive all zone schedules
             # while subscribers that do have been called before receive only updated
             # zone schedules.
-            schedules = (
+            updates = (
                 updated_schedules
                 if subscriber.has_been_called
                 else [
-                    schedule
+                    ScheduleUpdate(
+                        zone_id=zone.id,
+                        schedule_id=zone.selected_schedule,
+                        day=day,
+                        time_slots=time_slots,
+                    )
                     for zone in new_zones.values()
-                    if zone.is_domestic_hot_water() and zone.current_schedule is not None
-                    for schedule in zone.current_schedule.values()
-                    if schedule is not None
+                    if zone.is_domestic_hot_water()
+                    and zone.current_schedule is not None
+                    and zone.selected_schedule is not None
+                    for day, time_slots in zone.current_schedule.items()
+                    if time_slots is not None
                 ]
             )
 
-            for schedule in schedules:
-                await subscriber.async_notify(schedule)
+            for update in updates:
+                await subscriber.async_notify(update)
 
     def track_zone_schedule_updates(
-        self, callback: Callable[[ZoneSchedule], None]
+        self, callback: Callable[[ScheduleUpdate], None]
     ) -> UnsubscribeCallback:
         """Register `callback` to be called when updated `ZoneSchedule`s are received from modbus.
 
@@ -285,7 +293,7 @@ class RemehaUpdateCoordinator(DataUpdateCoordinator):
         send to individual subscribers.
 
         Args:
-            callback (Callable[[ZoneSchedule], None]): The callback to call. If the callback
+            callback (Callable[[tuple[Weekday, list[Timeslot]]], None]): The callback to call. If the callback
             raises an exception during its execution, any subsequent callbacks are not executed.
 
         Returns:
@@ -507,32 +515,6 @@ class RemehaUpdateCoordinator(DataUpdateCoordinator):
         entry = await self._store.async_get_attributes_by_zone(uid=uid)
         return entry.schedule_entity_id if entry else None
 
-    async def async_write_schedule(self, schedule: ZoneSchedule):
-        """Write the given schedule to the modbus interface.
-
-        If the schedule is written successfully, the current state is also
-        updated to prevent zone schedule update cycles.
-
-        Args:
-            schedule (ZoneSchedule): The schedule to write.
-
-        Raises:
-            ModbusError: if writing `schedule` to the modbus interface fails.
-
-        """
-
-        await self._api.async_overwrite_zone_schedule(schedule)
-
-        # Update the current schedule state if the updated schedule
-        # is the current schedule. Otherwise no update of current state
-        # necessary since we only store the schedules of the selected schedule.
-        # Before the first update, data["climates"] doesn't exist yet.
-        if not self._is_before_first_update() and schedule.zone_id in self.data["climates"]:
-            zone: ClimateZone = self.data["climates"][schedule.zone_id]
-
-            if zone.selected_schedule == schedule.id and zone.current_schedule is not None:
-                zone.current_schedule[schedule.day] = schedule
-
     async def async_read_registers(
         self, start_register: int, register_count: int, struct_format: str
     ) -> tuple[Any, ...]:
@@ -612,21 +594,26 @@ class RemehaUpdateCoordinator(DataUpdateCoordinator):
                 translation_domain=DOMAIN, translation_key="auto_schedule_no_solar_irradiance"
             )
 
-        schedule: ZoneSchedule = ZoneSchedule.generate(
+        if dhw_zone.dhw_calorifier_hysteresis is None:
+            _LOGGER.warning("Cannot generate schedule: no DHW calorifier hysteresis available.")
+            raise RemehaServiceError(
+                translation_domain=DOMAIN, translation_key="auto_schedule_value_error"
+            )
+
+        time_slots = generate_dhw_day_schedule(
             weather_forecast=weather_forecast,
             pv_system=_config_to_pv_config(cast(ConfigEntry[Any], self.config_entry)),
             boiler_config=_config_to_boiler_config(cast(ConfigEntry[Any], self.config_entry)),
-            boiler_zone=dhw_zone,
+            calorifier_hysteresis=dhw_zone.dhw_calorifier_hysteresis,
             appliance_seasonal_mode=self.get_appliance().season_mode,
-            schedule_id=HA_SCHEDULE_TO_REMEHA_SCHEDULE[
-                cast(ConfigEntry[Any], self.config_entry).data[AUTO_SCHEDULE_SELECTED_SCHEDULE]
-            ],
         )
+        day = Weekday(datetime.now().weekday)
 
-        _LOGGER.debug("Schedule generated:\n\n%s\n\n, now pushing it to the appliance.", schedule)
+        _LOGGER.debug("Schedule generated:\n\n%s\n\n, now pushing it to the appliance.", time_slots)
 
         try:
-            await self.async_write_schedule(schedule)
+            await dhw_zone.async_set_day_schedule(ClimateZoneScheduleId.SCHEDULE_1, day, time_slots)
+
         except ModbusError as e:
             raise RemehaServiceError(
                 translation_domain=DOMAIN, translation_key="auto_schedule_modbus_error"

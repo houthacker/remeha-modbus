@@ -7,21 +7,23 @@ from datetime import timedelta, tzinfo
 from typing import Any, Final, cast
 from unittest.mock import AsyncMock, patch
 
+import probatio
 import pytest
 import pytest_asyncio
-import voluptuous as vol
-from aio_remeha_modbus.api.api import RemehaApi
-from aio_remeha_modbus.api.const import BoilerEnergyLabel
+from aio_remeha_modbus.gtw08 import GTW08
+from aio_remeha_modbus.gtw08.const import BoilerEnergyLabel
 from dateutil import tz
 from homeassistant.components.modbus.const import RTUOVERTCP
 from homeassistant.components.weather import (
-    SERVICE_GET_FORECASTS,
     Forecast,
     WeatherEntity,
-    async_get_forecasts_service,
 )
 from homeassistant.components.weather.const import DOMAIN as WeatherDomain
-from homeassistant.components.weather.const import WeatherEntityFeature
+from homeassistant.components.weather.const import (
+    SERVICE_GET_FORECASTS,
+    WeatherEntityFeature,
+)
+from homeassistant.components.weather.services import _async_get_forecasts_service
 from homeassistant.const import CONF_HOST, CONF_NAME, CONF_PORT, CONF_TYPE
 from homeassistant.core import HomeAssistant, SupportsResponse
 from homeassistant.helpers import entity_registry as er
@@ -86,26 +88,26 @@ class MockWeatherEntity(MockEntity, WeatherEntity):
 async def remeha_api(
     request,
     remeha_modbus_unit,
-) -> RemehaApi:
-    """Create a new RemehaApi instance with a mocked modbus client."""
+) -> GTW08:
+    """Create a new GTW08 instance with a mocked modbus client."""
 
     # mock_modbus_client MUST be a mock, otherwise a real connection might be made and mess up the appliance.
     if not isinstance(remeha_modbus_unit, MockModbusUnit):
         pytest.fail(
-            f"Cannot create RemehaApi with non-mocked modbus unit type {type(remeha_modbus_unit).__qualname__}."
+            f"Cannot create GTW08 with non-mocked modbus unit type {type(remeha_modbus_unit).__qualname__}."
         )
 
     require_update = (
         request.param.get("require_update", True) if hasattr(request, "param") else True
     )
-    name = request.param.get("name", "test_api") if hasattr(request, "param") else "test_api"
+    name: str = request.param.get("name", "test_api") if hasattr(request, "param") else "test_api"
     time_zone: tzinfo | None = (
         tz.gettz(request.param.get("time_zone", TESTING_TIME_ZONE))
         if hasattr(request, "param")
         else tz.gettz(TESTING_TIME_ZONE)
     )
 
-    api = RemehaApi(
+    api = GTW08(
         name=name,
         unit=remeha_modbus_unit,
         time_zone=time_zone,
@@ -116,14 +118,18 @@ async def remeha_api(
     return api
 
 
+def load_modbus_store(unit: MockModbusUnit, file_name: str = "modbus_store.json") -> None:
+    """Load a recorded register store into the mock unit."""
+    store: dict[str, str] = json_fixture(file_name)["server"]["registers"]
+    unit.load_raw({"holding": {int(key): int(value, 16) for key, value in store.items()}})
+
+
 @pytest.fixture
-def remeha_modbus_unit(request, mock_modbus_unit: MockModbusUnit, json_fixture) -> MockModbusUnit:
+def remeha_modbus_unit(request, mock_modbus_unit: MockModbusUnit) -> MockModbusUnit:
     """Return a mocked modbus unit with registers loaded from the requested json file."""
 
-    store: dict[str, str] = json_fixture["server"]["registers"]
-    mock_modbus_unit.load_raw(
-        {"holding": {int(key): int(value, 16) for key, value in store.items()}}
-    )
+    json_file = request.param if hasattr(request, "param") else "modbus_store.json"
+    load_modbus_store(mock_modbus_unit, json_file)
 
     return mock_modbus_unit
 
@@ -138,10 +144,8 @@ def finalizer():
         fn()
 
 
-@pytest.fixture
-def json_fixture(request) -> JsonValueType:
+def json_fixture(filename: str = "modbus_store.json") -> Any:
     """Read a fixture and return it as a `JsonValueType`."""
-    filename = request.param if hasattr(request, "param") else "modbus_store.json"
     return load_json_value_fixture(filename=filename)
 
 
@@ -237,6 +241,7 @@ def modbus_test_store(request, hass) -> RemehaModbusStore:
 
 async def setup_platform(
     hass: HomeAssistant,
+    remeha_modbus_unit: MockModbusUnit,
     config_entry: MockConfigEntry,
     add_schedule_callback: Callable[[ScheduleEntry], None] | None = None,
     edit_schedule_callback: Callable[[ScheduleEntry], None] | None = None,
@@ -256,6 +261,7 @@ async def setup_platform(
 
     Args:
         hass (HomeAssistant): Home Assistant instance.
+        remeha_modbus_unit (MockModbusUnit): A mocked modbus unit.
         config_entry (MockConfigEntry): The config entry to use for setting up the platform.
         add_schedule_callback (Callable[[ScheduleEntry], None] | None): A callback function for the `scheduler.add` service.
         edit_schedule_callback (Callable[[ScheduleEntry], None] | None): A callback function for the `scheduler.edit` service.
@@ -280,8 +286,8 @@ async def setup_platform(
 
     weather_component.async_register_entity_service(
         name=SERVICE_GET_FORECASTS,
-        schema={vol.Required("type"): vol.In(("daily", "hourly", "twice_daily"))},
-        func=async_get_forecasts_service,
+        schema={probatio.Required("type"): probatio.In(("daily", "hourly", "twice_daily"))},
+        func=_async_get_forecasts_service,
         required_features=[
             WeatherEntityFeature.FORECAST_DAILY,
             WeatherEntityFeature.FORECAST_HOURLY,
@@ -304,9 +310,15 @@ async def setup_platform(
     config_entry.add_to_hass(hass=hass)
 
     # We don't want lingering timers after the tests are done, so disable the updates of the update coordinator.
-    with patch(
-        "custom_components.remeha_modbus.coordinator.RemehaUpdateCoordinator.update_interval",
-        0,
+    with (
+        patch(
+            "custom_components.remeha_modbus.coordinator.RemehaUpdateCoordinator.update_interval",
+            0,
+        ),
+        patch(
+            "custom_components.remeha_modbus.async_get_unit",
+            new=lambda *args, **kwargs: remeha_modbus_unit,
+        ),
     ):
         await hass.config_entries.async_setup(entry_id=config_entry.entry_id)
         await hass.async_block_till_done()
@@ -314,7 +326,7 @@ async def setup_platform(
         # Register our services
         register_services(hass, config_entry, config_entry.runtime_data["coordinator"])
 
-    # Ensure hass and RemehaApi are using the same time zone.
+    # Ensure hass and GTW08 are using the same time zone.
     await hass.config.async_update(time_zone=TESTING_TIME_ZONE)
 
 

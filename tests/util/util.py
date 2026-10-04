@@ -9,7 +9,7 @@ from secrets import token_hex
 from typing import Any
 
 import attr
-import voluptuous as vol
+import probatio
 from homeassistant.components.switch.const import DOMAIN as SchedulerEntityPlatform
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import ATTR_ENTITY_ID
@@ -48,7 +48,7 @@ def async_add_mock_service(
     hass: HomeAssistant,
     domain: str,
     service: str,
-    schema: vol.Schema | None = None,
+    schema: probatio.Schema | None = None,
     user_callback: (
         Callable[[ServiceCall], None] | Callable[[ServiceCall], Coroutine[Any, Any, None]] | None
     ) = None,
@@ -61,7 +61,7 @@ def async_add_mock_service(
         hass (HomeAssistant): Home Assistant instance.
         domain (str): The domain of the mock service.
         service (str): The name of the mock service.
-        schema (vol.Schema | None): The schema of the mock service.
+        schema (probatio.Schema | None): The schema of the mock service.
         user_callback (Callable[[ServiceCall], None] | None): An optional callback method.
         response (ServiceResponse): An optional response object.
         supports_response (SupportsResponse): The type of response supported by the service.
@@ -247,7 +247,7 @@ class SchedulerCoordinatorStub(DataUpdateCoordinator):
         )
 
         if schedule_id is None:
-            raise vol.Invalid(f"Entity not found: {call.data[ATTR_ENTITY_ID]}")
+            raise probatio.Invalid(f"Entity not found: {call.data[ATTR_ENTITY_ID]}")
 
         data = dict(call.data)
         del data[ATTR_ENTITY_ID]
@@ -397,7 +397,7 @@ class SchedulerPlatformStub:
             SERVICE_EDIT: async_add_mock_service(
                 hass=hass,
                 domain=SchedulerDomain,
-                schema=EDIT_SCHEDULE_SCHEMA.extend({vol.Required(ATTR_ENTITY_ID): cv.string}),
+                schema=EDIT_SCHEDULE_SCHEMA.extend({probatio.Required(ATTR_ENTITY_ID): cv.string}),
                 service=SERVICE_EDIT,
                 user_callback=lambda call: self._coordinator.edit_schedule(
                     call=call, user_callback=self._user_callbacks.get(SERVICE_EDIT)

@@ -6,7 +6,7 @@ The voluptuous helpers are those that don't exist in HA.
 from types import MappingProxyType
 from typing import Any
 
-from aio_remeha_modbus.api import RemehaApi
+from aio_remeha_modbus.gtw08 import GTW08
 from homeassistant.components.modbus.connection import ModbusParams, async_get_temporary_unit
 from homeassistant.components.modbus.const import (
     CONF_BAUDRATE,
@@ -74,4 +74,4 @@ async def async_probe_connection(hass: HomeAssistant, data: MappingProxyType[str
 
     params, unit_id = to_modbus_params(config=MappingProxyType(data))
     async with async_get_temporary_unit(hass=hass, params=params, unit_id=unit_id) as unit:
-        await RemehaApi.async_health_check(unit=unit)
+        await GTW08.async_health_check(unit=unit)

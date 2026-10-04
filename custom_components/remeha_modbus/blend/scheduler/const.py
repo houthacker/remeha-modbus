@@ -3,7 +3,8 @@
 from enum import StrEnum
 from typing import Any, Final, Literal, NotRequired, Required, TypedDict
 
-from homeassistant.const import STATE_OFF, STATE_ON, STATE_UNAVAILABLE, STATE_UNKNOWN
+from aio_remeha_modbus.gtw08.const import ClimateZoneScheduleId, Weekday
+from aio_remeha_modbus.gtw08.time_program import Timeslot
 from pydantic.dataclasses import dataclass
 
 from custom_components.remeha_modbus.const import (
@@ -176,8 +177,25 @@ class SchedulerState(TypedDict):
     entity_id: str
     """The entity id of the scheduler.schedule."""
 
-    state: Literal[f"{STATE_ON}", f"{STATE_OFF}", f"{STATE_UNKNOWN}", f"{STATE_UNAVAILABLE}"]
+    state: Literal["on", "off", "unknown", "unavailable"]
     """The state of the scheduler.schedule."""
 
     attributes: SchedulerStateAttributes
     """The attributes of the scheduler state."""
+
+
+@dataclass(frozen=True)
+class ScheduleUpdate:
+    """Represent a time schedule update."""
+
+    zone_id: int
+    """The one-based ClimateZone id."""
+
+    schedule_id: ClimateZoneScheduleId
+    """The schedule id that was updated."""
+
+    day: Weekday
+    """The weekday the updated schedule is active."""
+
+    time_slots: list[Timeslot]
+    """The full list of time slots for the new schedule."""

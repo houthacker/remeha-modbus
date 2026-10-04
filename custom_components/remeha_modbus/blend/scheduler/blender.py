@@ -4,7 +4,6 @@ import asyncio
 import logging
 from typing import Final, override
 
-from aio_remeha_modbus.api.schedule import ZoneSchedule
 from homeassistant.components.switch.const import DOMAIN as SwitchDomain
 from homeassistant.const import STATE_ON
 from homeassistant.core import Event, HomeAssistant, State, callback
@@ -15,6 +14,7 @@ from custom_components.remeha_modbus.blend.blender import BlenderState
 from custom_components.remeha_modbus.blend.scheduler.const import (
     SCHEDULER_INSTALLATION_URL,
     SchedulerDomain,
+    ScheduleUpdate,
 )
 from custom_components.remeha_modbus.blend.scheduler.helpers import scheduler_is_installed
 from custom_components.remeha_modbus.blend.scheduler.scenarios.modbus_schedule_updated import (
@@ -161,17 +161,17 @@ class SchedulerBlender(Blender):
             )
 
     @callback
-    def _zone_schedule_updated(self, schedule: ZoneSchedule) -> None:
-        """Handle a modbus `ZoneSchedule` update.
+    def _zone_schedule_updated(self, update: ScheduleUpdate) -> None:
+        """Handle a modbus schedule update.
 
         Args:
-            schedule (ZoneSchedule): The updated zone schedule.
+            update (tuple[Weekday, list[Timeslot]]): The updated zone schedule.
 
         """
 
         if self._ready_for_scenario_execution():
             scenario = ModbusScheduleUpdated(
-                hass=self._hass, coordinator=self._coordinator, schedule=schedule
+                hass=self._hass, coordinator=self._coordinator, update=update
             )
 
             # Execute the scenario in a separate task since it requires I/O.
@@ -180,9 +180,9 @@ class SchedulerBlender(Blender):
             _LOGGER.debug(
                 "Ignoring ZoneSchedule-update event (zone_id=%d, schedule_id=%d, day=%s) because current blender state %s\
                     prevents us from handling it.",
-                schedule.zone_id,
-                schedule.id.value,
-                schedule.day.name,
+                update.zone_id,
+                update.schedule_id.value,
+                update.day.name,
                 self._state.name,
             )
 

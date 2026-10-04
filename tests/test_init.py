@@ -17,14 +17,18 @@ async def test_async_setup(hass):
     assert await async_setup_component(hass, DOMAIN, {}) is True
 
 
-async def test_remove_config_entry_device(hass: HomeAssistant, remeha_api, mock_config_entry):
+async def test_remove_config_entry_device(
+    hass: HomeAssistant, remeha_api, mock_config_entry, remeha_modbus_unit
+):
     """Stale devices may be removed from the UI; devices still in use may not."""
 
     with patch(
-        "custom_components.remeha_modbus.RemehaApi",
+        "aio_remeha_modbus.gtw08.GTW08",
         new=lambda *args, **kwargs: remeha_api,
     ):
-        await setup_platform(hass=hass, config_entry=mock_config_entry)
+        await setup_platform(
+            hass=hass, config_entry=mock_config_entry, remeha_modbus_unit=remeha_modbus_unit
+        )
         await hass.async_block_till_done()
 
         device_registry = dr.async_get(hass)

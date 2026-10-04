@@ -13,15 +13,17 @@ from tests.conftest import setup_platform
 
 
 async def test_blender_creation(
-    hass: HomeAssistant, remeha_api, mock_config_entry: MockConfigEntry
+    hass: HomeAssistant, remeha_api, mock_config_entry: MockConfigEntry, remeha_modbus_unit
 ):
     """Test that creating a new SchedulerBlender puts it in the expected state."""
 
     with patch(
-        "custom_components.remeha_modbus.RemehaApi",
+        "aio_remeha_modbus.gtw08.GTW08",
         new=lambda *args, **kwargs: remeha_api,
     ):
-        await setup_platform(hass=hass, config_entry=mock_config_entry)
+        await setup_platform(
+            hass=hass, config_entry=mock_config_entry, remeha_modbus_unit=remeha_modbus_unit
+        )
         await hass.async_block_till_done()
 
         coordinator: RemehaUpdateCoordinator = mock_config_entry.runtime_data["coordinator"]
@@ -36,14 +38,17 @@ async def test_blender_async_blend(
     remeha_api,
     mock_config_entry: MockConfigEntry,
     finalizer: list,
+    remeha_modbus_unit,
 ):
     """Test that blending a SchedulerBlender transitions it to the STARTED state."""
 
     with patch(
-        "custom_components.remeha_modbus.RemehaApi",
+        "aio_remeha_modbus.gtw08.GTW08",
         new=lambda *args, **kwargs: remeha_api,
     ):
-        await setup_platform(hass=hass, config_entry=mock_config_entry)
+        await setup_platform(
+            hass=hass, config_entry=mock_config_entry, remeha_modbus_unit=remeha_modbus_unit
+        )
         await hass.async_block_till_done()
 
         coordinator: RemehaUpdateCoordinator = mock_config_entry.runtime_data["coordinator"]

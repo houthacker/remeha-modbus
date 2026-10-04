@@ -9,28 +9,34 @@ from homeassistant.core import HomeAssistant
 from .conftest import setup_platform
 
 
-async def test_climates(hass: HomeAssistant, remeha_api, mock_config_entry):
+async def test_climates(hass: HomeAssistant, remeha_api, mock_config_entry, remeha_modbus_unit):
     """Test climates."""
 
     with patch(
-        "custom_components.remeha_modbus.RemehaApi",
+        "aio_remeha_modbus.gtw08.GTW08",
         new=lambda *args, **kwargs: remeha_api,
     ):
-        await setup_platform(hass=hass, config_entry=mock_config_entry)
+        await setup_platform(
+            hass=hass, config_entry=mock_config_entry, remeha_modbus_unit=remeha_modbus_unit
+        )
         await hass.async_block_till_done()
 
         # DhwHysteresisEntity + RemehaSummerWinterNumber + RemehaNeutralBandNumber.
         assert len(hass.states.async_all(domain_filter="number")) == 3
 
 
-async def test_dhw_hysteresis(hass: HomeAssistant, remeha_api, mock_config_entry):
+async def test_dhw_hysteresis(
+    hass: HomeAssistant, remeha_api, mock_config_entry, remeha_modbus_unit
+):
     """Test a single DhwHysteresisEntity."""
 
     with patch(
-        "custom_components.remeha_modbus.RemehaApi",
+        "aio_remeha_modbus.gtw08.GTW08",
         new=lambda *args, **kwargs: remeha_api,
     ):
-        await setup_platform(hass=hass, config_entry=mock_config_entry)
+        await setup_platform(
+            hass=hass, config_entry=mock_config_entry, remeha_modbus_unit=remeha_modbus_unit
+        )
         await hass.async_block_till_done()
 
         hysteresis = hass.states.get("number.remeha_modbus_test_hub_dhw_hysteresis")
@@ -56,14 +62,18 @@ async def test_dhw_hysteresis(hass: HomeAssistant, remeha_api, mock_config_entry
         assert hysteresis.state == "20.0"
 
 
-async def test_summer_winter(hass: HomeAssistant, remeha_api, mock_config_entry):
+async def test_summer_winter(
+    hass: HomeAssistant, remeha_api, mock_config_entry, remeha_modbus_unit
+):
     """Test the appliance summer/winter threshold number entity (AP073)."""
 
     with patch(
-        "custom_components.remeha_modbus.RemehaApi",
+        "aio_remeha_modbus.gtw08.GTW08",
         new=lambda *args, **kwargs: remeha_api,
     ):
-        await setup_platform(hass=hass, config_entry=mock_config_entry)
+        await setup_platform(
+            hass=hass, config_entry=mock_config_entry, remeha_modbus_unit=remeha_modbus_unit
+        )
         await hass.async_block_till_done()
 
         summer_winter = hass.states.get("number.remeha_modbus_test_hub_summer_winter")
@@ -86,14 +96,16 @@ async def test_summer_winter(hass: HomeAssistant, remeha_api, mock_config_entry)
         assert summer_winter.state == "25.0"
 
 
-async def test_neutral_band(hass: HomeAssistant, remeha_api, mock_config_entry):
+async def test_neutral_band(hass: HomeAssistant, remeha_api, mock_config_entry, remeha_modbus_unit):
     """Test the appliance neutral-band number entity (AP075)."""
 
     with patch(
-        "custom_components.remeha_modbus.RemehaApi",
+        "aio_remeha_modbus.gtw08.GTW08",
         new=lambda *args, **kwargs: remeha_api,
     ):
-        await setup_platform(hass=hass, config_entry=mock_config_entry)
+        await setup_platform(
+            hass=hass, config_entry=mock_config_entry, remeha_modbus_unit=remeha_modbus_unit
+        )
         await hass.async_block_till_done()
 
         neutral_band = hass.states.get("number.remeha_modbus_test_hub_neutral_band_summer_winter")
@@ -112,15 +124,19 @@ async def test_neutral_band(hass: HomeAssistant, remeha_api, mock_config_entry):
         assert neutral_band.state == "5.0"
 
 
-@pytest.mark.parametrize("json_fixture", ["modbus_store_no_dhw_climate.json"], indirect=True)
-async def test_dhw_hysteresis_unavailable(hass: HomeAssistant, remeha_api, mock_config_entry):
+@pytest.mark.parametrize("remeha_modbus_unit", ["modbus_store_no_dhw_climate.json"], indirect=True)
+async def test_dhw_hysteresis_unavailable(
+    hass: HomeAssistant, remeha_api, mock_config_entry, remeha_modbus_unit
+):
     """Test a single DhwHysteresisEntity."""
 
     with patch(
-        "custom_components.remeha_modbus.RemehaApi",
+        "custom_components.remeha_modbus.GTW08",
         new=lambda *args, **kwargs: remeha_api,
     ):
-        await setup_platform(hass=hass, config_entry=mock_config_entry)
+        await setup_platform(
+            hass=hass, config_entry=mock_config_entry, remeha_modbus_unit=remeha_modbus_unit
+        )
         await hass.async_block_till_done()
 
         hysteresis = hass.states.get("number.remeha_modbus_test_hub_dhw_hysteresis")

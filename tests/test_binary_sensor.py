@@ -2,22 +2,24 @@
 
 from unittest.mock import patch
 
-from aio_remeha_modbus.api.main_control_monitoring import ApplianceDemandStatus, MonitoringStatus
-from homeassistant.components.binary_sensor import DOMAIN as BinarySensorDomain
+from aio_remeha_modbus.gtw08.main_control_monitoring import ApplianceDemandStatus, MonitoringStatus
+from homeassistant.components.binary_sensor.const import DOMAIN as BinarySensorDomain
 from homeassistant.const import STATE_OFF, STATE_ON
 from homeassistant.core import HomeAssistant
 
 from .conftest import setup_platform
 
 
-async def test_sensors(hass: HomeAssistant, remeha_api, mock_config_entry):
+async def test_sensors(hass: HomeAssistant, remeha_api, mock_config_entry, remeha_modbus_unit):
     """Test available sensors."""
 
     with patch(
-        "custom_components.remeha_modbus.RemehaApi",
+        "aio_remeha_modbus.gtw08.GTW08",
         new=lambda *args, **kwargs: remeha_api,
     ):
-        await setup_platform(hass=hass, config_entry=mock_config_entry)
+        await setup_platform(
+            hass=hass, config_entry=mock_config_entry, remeha_modbus_unit=remeha_modbus_unit
+        )
         await hass.async_block_till_done()
 
         assert len(hass.states.async_all(domain_filter=BinarySensorDomain)) == 22

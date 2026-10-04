@@ -5,7 +5,7 @@ from collections.abc import MutableMapping
 from typing import TypedDict
 from uuid import UUID
 
-from aio_remeha_modbus.api.const import ClimateZoneScheduleId, Weekday
+from aio_remeha_modbus.gtw08.const import ClimateZoneScheduleId, Weekday
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.storage import Store
 from pydantic.dataclasses import dataclass

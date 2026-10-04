@@ -1,9 +1,10 @@
 """Platform for sensor entities in the Remeha Modbus integration."""
 
 import logging
+from functools import cached_property
 from typing import cast
 
-from aio_remeha_modbus.api.system_discovery_table import DeviceBoard
+from aio_remeha_modbus.gtw08.system_discovery_table import DeviceBoard
 from homeassistant.components.sensor import (
     SensorEntity,
     SensorEntityDescription,
@@ -100,7 +101,7 @@ class RemehaSensorEntity(CoordinatorEntity[RemehaUpdateCoordinator], SensorEntit
 
         return value
 
-    @property
+    @cached_property
     def device_info(self) -> DeviceInfo | None:
         """Return information about the device this sensor belongs to.
 

@@ -2,9 +2,10 @@
 
 import logging
 from datetime import time
+from functools import cached_property
 
-from aio_remeha_modbus.api import RemehaApi
-from aio_remeha_modbus.api.system_discovery_table import DeviceBoard
+from aio_remeha_modbus.gtw08 import GTW08
+from aio_remeha_modbus.gtw08.system_discovery_table import DeviceBoard
 from homeassistant.components.time import TimeEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
@@ -27,7 +28,7 @@ async def async_setup_entry(
 ) -> None:
     """Create the time entities based on the given config entry."""
 
-    api: RemehaApi = entry.runtime_data["api"]
+    api: GTW08 = entry.runtime_data["api"]
     coordinator: RemehaUpdateCoordinator = entry.runtime_data["coordinator"]
     mainboards: list[DeviceBoard] = coordinator.get_devices(
         predicate=lambda device: device.is_mainboard()
@@ -57,7 +58,7 @@ class RemehaTimeEntity(CoordinatorEntity[RemehaUpdateCoordinator], TimeEntity):
 
     def __init__(
         self,
-        api: RemehaApi,
+        api: GTW08,
         coordinator: RemehaUpdateCoordinator,
         parent_device_id: int | None,
         name: str,
@@ -76,7 +77,7 @@ class RemehaTimeEntity(CoordinatorEntity[RemehaUpdateCoordinator], TimeEntity):
         self._attr_translation_key = name
         self._api = api
 
-    @property
+    @cached_property
     def device_info(self) -> DeviceInfo | None:
         """Return information about the device this entity belongs to.
 

@@ -1,7 +1,7 @@
 """Tests for the config_validation helpers."""
 
+import probatio
 import pytest
-import voluptuous as vol
 
 from custom_components.remeha_modbus.helpers.validation import struct_format
 
@@ -11,5 +11,5 @@ def test_struct_format():
 
     assert struct_format("=HH") == "=HH"
 
-    with pytest.raises(expected_exception=vol.Invalid):
+    with pytest.raises(expected_exception=probatio.Invalid):
         struct_format("abc")

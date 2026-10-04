@@ -5,7 +5,7 @@ from datetime import timedelta
 from unittest.mock import AsyncMock, patch
 
 import pytest
-from aio_remeha_modbus.api.const import PVSystemOrientation
+from aio_remeha_modbus.gtw08.const import PVSystemOrientation
 from homeassistant import config_entries
 from homeassistant.components.modbus.const import (
     CONF_BAUDRATE,
@@ -22,6 +22,7 @@ from homeassistant.const import CONF_HOST, CONF_NAME, CONF_PORT, CONF_TYPE
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResultType, InvalidData
 from homeassistant.helpers.entity_component import EntityComponent
+from modbus_connection.mock import MockModbusUnit
 
 from custom_components.remeha_modbus.const import (
     AUTO_SCHEDULE_SELECTED_SCHEDULE,
@@ -46,7 +47,7 @@ from custom_components.remeha_modbus.const import (
     REMEHA_PRESET_SCHEDULE_1,
     WEATHER_ENTITY_ID,
 )
-from tests.conftest import MockWeatherEntity, remeha_api, setup_platform
+from tests.conftest import MockWeatherEntity, setup_platform
 
 
 async def test_generic_config_invalid_data(
@@ -75,7 +76,7 @@ async def test_generic_config_invalid_data(
 
 
 async def test_config_modbus_serial(
-    hass: HomeAssistant, mock_setup_entry: AsyncMock, mock_modbus_unit
+    hass: HomeAssistant, mock_setup_entry: AsyncMock, mock_modbus_unit: MockModbusUnit
 ) -> None:
     """Test for modbus serial configuration setup."""
     result = await hass.config_entries.flow.async_init(
@@ -131,7 +132,7 @@ async def test_config_modbus_serial(
 
 
 async def test_config_modbus_socket(
-    hass: HomeAssistant, mock_setup_entry: AsyncMock, mock_modbus_unit
+    hass: HomeAssistant, mock_setup_entry: AsyncMock, mock_modbus_unit: MockModbusUnit
 ) -> None:
     """Test for modbus socket configuration setup."""
     result = await hass.config_entries.flow.async_init(
@@ -363,21 +364,23 @@ async def test_config_auto_scheduling_no_installation_date(
 
 
 async def test_reconfigure_non_unique_id(
-    hass: HomeAssistant, remeha_api, mock_config_entry, mock_modbus_unit
+    hass: HomeAssistant, remeha_api, mock_config_entry, remeha_modbus_unit
 ) -> None:
     """Test that reconfiguring the modbus connection fails if the hub name is changed as well."""
 
     with (
         patch(
-            "custom_components.remeha_modbus.RemehaApi",
+            "aio_remeha_modbus.gtw08.GTW08",
             new=lambda *args, **kwargs: remeha_api,
         ),
         patch(
-            "modbus_connection.tmodbus.TmodbusUnit", new=lambda *args, **kwargs: mock_modbus_unit
+            "modbus_connection.tmodbus.TmodbusUnit", new=lambda *args, **kwargs: remeha_modbus_unit
         ),
     ):
         # First setup the platform with the mocked ConfigEntry
-        await setup_platform(hass=hass, config_entry=mock_config_entry)
+        await setup_platform(
+            hass=hass, config_entry=mock_config_entry, remeha_modbus_unit=remeha_modbus_unit
+        )
         await hass.async_block_till_done()
 
         entries = hass.config_entries.async_entries(domain=DOMAIN)
@@ -430,7 +433,7 @@ async def test_reconfigure_non_unique_id(
 
 @pytest.mark.parametrize("mock_config_entry", [{"version": 1, "minor_version": 0}], indirect=True)
 async def test_migrate_from_config_v1_0(
-    hass: HomeAssistant, mock_config_entry, mock_modbus_unit
+    hass: HomeAssistant, remeha_api, mock_config_entry, remeha_modbus_unit
 ) -> None:
     """Test the migration of config v1.0 to whatever the current version is."""
 
@@ -438,11 +441,13 @@ async def test_migrate_from_config_v1_0(
     assert mock_config_entry.minor_version == 0
 
     with patch(
-        "custom_components.remeha_modbus.RemehaApi",
+        "aio_remeha_modbus.gtw08.GTW08",
         new=lambda *args, **kwargs: remeha_api,
     ):
         # First setup the platform with the mocked ConfigEntry
-        await setup_platform(hass=hass, config_entry=mock_config_entry)
+        await setup_platform(
+            hass=hass, config_entry=mock_config_entry, remeha_modbus_unit=remeha_modbus_unit
+        )
         await hass.async_block_till_done()
 
         entries = hass.config_entries.async_entries(domain=DOMAIN)
