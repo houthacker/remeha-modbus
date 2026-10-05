@@ -56,11 +56,11 @@ def test_decompose_scheduler_tag():
         helpers.decompose_scheduler_tag(tag)
 
 
-@pytest.mark.parametrize("json_fixture", ["scheduler.state.json"], indirect=True)
-def test_to_scheduler_state(json_fixture: dict[str, Any]):
+@pytest.mark.parametrize("json_file", ["scheduler.state.json"], indirect=True)
+def test_to_scheduler_state(json_file: dict[str, Any]):
     """Test conversion of a State to a SchedulerState."""
 
-    state = State(**json_fixture)
+    state = State(**json_file)
     converted: SchedulerState = helpers.to_scheduler_state(state)
 
     assert converted["entity_id"] == state.entity_id
@@ -74,21 +74,21 @@ def test_to_scheduler_state(json_fixture: dict[str, Any]):
     }
 
 
-@pytest.mark.parametrize("json_fixture", ["scheduler.invalid_scheduler.state.json"], indirect=True)
-def test_to_scheduler_state_invalid(json_fixture: dict[str, Any]):
+@pytest.mark.parametrize("json_file", ["scheduler.invalid_scheduler.state.json"], indirect=True)
+def test_to_scheduler_state_invalid(json_file: dict[str, Any]):
     """Test conversion of a State object that is not a SchedulerState."""
 
-    state = State(**json_fixture)
+    state = State(**json_file)
 
     with pytest.raises(ValidationError):
         helpers.to_scheduler_state(state)
 
 
-@pytest.mark.parametrize("json_fixture", ["remeha.schedulerstate.json"], indirect=True)
-def test_to_zone_schedule(json_fixture: dict[str, Any]):
+@pytest.mark.parametrize("json_file", ["remeha.schedulerstate.json"], indirect=True)
+def test_to_zone_schedule(json_file: dict[str, Any]):
     """Test conversion of a SchedulerState to a ZoneSchedule."""
 
-    scheduler_state = SchedulerState(**json_fixture)
+    scheduler_state = SchedulerState(**json_file)
 
     weekday, time_slots = helpers.to_zone_schedule(scheduler_state)
     assert weekday == Weekday.MONDAY
@@ -101,11 +101,11 @@ def test_to_zone_schedule(json_fixture: dict[str, Any]):
     ]
 
 
-@pytest.mark.parametrize("json_fixture", ["remeha.invalid-schedulerstate.json"], indirect=True)
-def test_to_zone_schedule_invalid(json_fixture: dict[str, Any]):
+@pytest.mark.parametrize("json_file", ["remeha.invalid-schedulerstate.json"], indirect=True)
+def test_to_zone_schedule_invalid(json_file: dict[str, Any]):
     """Test conversion of a SchedulerState not calling climate.set_preset."""
 
-    scheduler_state = SchedulerState(**json_fixture)
+    scheduler_state = SchedulerState(**json_file)
 
     with pytest.raises(ParseError):
         helpers.to_zone_schedule(scheduler_state)
@@ -143,6 +143,7 @@ async def test_to_scheduler_schedule(
         json_file = replace_tag_template(json_file, uuid)
         scheduler_schedule = await helpers.to_scheduler_schedule(
             hass,
+            zone_id=climate.id,
             schedule_id=climate.selected_schedule,
             day=Weekday.MONDAY,
             time_slots=zone_schedule,
