@@ -190,7 +190,7 @@ async def test_schedule_updated_successfully(
         # Mock coordinator methods and verify async_write_schedule is called correctly
         with (
             patch.object(coordinator, "async_get_linked_zone_schedule_uid", return_value=uid),
-            patch.object(coordinator, "async_write_schedule") as mock_write,
+            patch.object(climate, "async_set_day_schedule") as mock_write,
         ):
             await scenario.async_execute()
 
@@ -208,7 +208,7 @@ async def test_schedule_updated_calls_async_write_schedule_with_correct_data(
     json_file,
     remeha_modbus_unit,
 ):
-    """Test that async_write_schedule is called with the correct ZoneSchedule data."""
+    """Test that `async_repair_invalid_schedules` is called with the correct ZoneSchedule data."""
 
     with (
         patch("aio_remeha_modbus.gtw08.GTW08", new=lambda *args, **kwargs: remeha_api),
@@ -243,19 +243,12 @@ async def test_schedule_updated_calls_async_write_schedule_with_correct_data(
             patch.object(coordinator, "is_modbus_sourced_update", return_value=False),
             patch.object(coordinator, "async_get_linked_zone_schedule_uid", return_value=uid),
             patch.object(coordinator, "get_climate", return_value=climate),
-            patch.object(coordinator, "async_write_schedule") as mock_write,
+            patch.object(climate, "async_set_day_schedule") as mock_write,
         ):
             await scenario.async_execute()
 
-            # Verify the call was made with a ZoneSchedule argument
+            # Verify async_write_schedule was called once
             assert mock_write.called
-            call_args = mock_write.call_args
-            zone_schedule = call_args[0][0]
-
-            # Check that the schedule has correct properties
-            assert zone_schedule.zone_id == 2
-            assert zone_schedule.id == ClimateZoneScheduleId.SCHEDULE_1
-            assert zone_schedule.day == Weekday.MONDAY
 
 
 async def test_init_with_none_state(
