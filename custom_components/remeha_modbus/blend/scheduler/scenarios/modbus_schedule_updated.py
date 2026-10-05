@@ -80,6 +80,7 @@ class ModbusScheduleUpdated(Scenario):
                     await to_scheduler_schedule(
                         hass=self._hass,
                         day=self._update.day,
+                        zone_id=self._update.zone_id,
                         schedule_id=self._update.schedule_id,
                         time_slots=self._update.time_slots,
                         operation=operation,
@@ -108,6 +109,7 @@ class ModbusScheduleUpdated(Scenario):
                     await to_scheduler_schedule(
                         hass=self._hass,
                         day=self._update.day,
+                        zone_id=self._update.zone_id,
                         schedule_id=self._update.schedule_id,
                         time_slots=self._update.time_slots,
                         operation=operation,

@@ -221,6 +221,7 @@ def _to_edited_scheduler_schedule(
 async def to_scheduler_schedule(
     hass: HomeAssistant,
     *,
+    zone_id: int,
     schedule_id: ClimateZoneScheduleId,
     day: Weekday,
     time_slots: list[Timeslot],
@@ -234,6 +235,7 @@ async def to_scheduler_schedule(
 
     Args:
         hass (HomeAssistant): The HA instance.
+        zone_id (int): The one-based id of the climate zone containing the schedule.
         schedule_id (ClimateZoneScheduleId): The schedule id.
         day (Weekday): The weekday of the schedule.
         time_slots (list[Timeslot]): The time slots to convert.
@@ -251,7 +253,7 @@ async def to_scheduler_schedule(
 
     durations: dict[Timeslot, timedelta] = dict(_get_durations(time_slots))
     climate_entity_id = get_own_entity_by_unique_id(
-        hass, ClimateDomain, generate_unique_id(schedule_id)
+        hass, ClimateDomain, generate_unique_id(zone_id)
     )
     if climate_entity_id is None:
         raise ParseError(translation_domain=DOMAIN, translation_key="parse_error_entity_not_found")
