@@ -46,6 +46,7 @@ _LOGGER = logging.getLogger(__name__)
 
 def async_add_mock_service(
     hass: HomeAssistant,
+    *,
     domain: str,
     service: str,
     schema: probatio.Schema | None = None,
@@ -312,10 +313,10 @@ class SchedulerStorageStub:
         return self._coordinator.get_schedules()
 
 
-def set_storage_stub_return_value(mock_config_entry: MockConfigEntry, scheduler_storage):
+def set_storage_stub_return_value(hass: HomeAssistant, scheduler_storage):
     """Mock implementation of scheduler.store.async_get_registry."""
 
-    coordinator: SchedulerCoordinatorStub = mock_config_entry.runtime_data["coordinator"]
+    coordinator: SchedulerCoordinatorStub = hass.data[SchedulerDomain]["coordinator"]
     scheduler_storage.return_value = SchedulerStorageStub(coordinator=coordinator)
 
     return scheduler_storage
