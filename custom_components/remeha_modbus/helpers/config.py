@@ -53,7 +53,7 @@ def to_modbus_params(config: MappingProxyType[str, Any]) -> tuple[ModbusParams, 
             ),
         )
     elif config[CONF_TYPE] == TCP:
-        params = ModbusTcpParams(host=config[CONF_HOST], port=config[CONF_PORT], framer="socket")
+        params = ModbusTcpParams(host=config[CONF_HOST], port=config[CONF_PORT])
     elif config[CONF_TYPE] == UDP:
         params = ModbusUdpParams(host=config[CONF_HOST], port=config[CONF_PORT], framer="socket")
     elif config[CONF_TYPE] == RTUOVERTCP:
