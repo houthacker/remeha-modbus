@@ -47,9 +47,7 @@ async def test_schedule_updated(
         await hass.async_block_till_done()
 
         # HA is set up, patch the async_get_registry mock
-        set_storage_stub_return_value(
-            mock_config_entry=mock_config_entry, scheduler_storage=scheduler_storage
-        )
+        set_storage_stub_return_value(hass=hass, scheduler_storage=scheduler_storage)
 
         coordinator: RemehaUpdateCoordinator = mock_config_entry.runtime_data["coordinator"]
         climate: ClimateZone | None = coordinator.get_climate(id=2)
