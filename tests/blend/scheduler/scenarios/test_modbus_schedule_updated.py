@@ -24,6 +24,7 @@ from tests.conftest import setup_platform
 from tests.util.util import set_storage_stub_return_value
 
 
+@pytest.mark.parametrize("expected_lingering_timers", [True])
 async def test_schedule_updated(
     hass: HomeAssistant,
     remeha_api,
