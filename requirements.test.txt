@@ -14,7 +14,7 @@ ha-ffmpeg
 hassil
 home-assistant-frontend
 home-assistant-intents
-homeassistant~=2026.10.0b0
+homeassistant>=2026.10.0b0
 modbus-connection[tmodbus]==4.12.1
 mutagen
 pre-commit

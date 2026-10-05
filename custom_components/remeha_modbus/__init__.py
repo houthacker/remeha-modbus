@@ -70,13 +70,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         ) from e
 
     unit = async_get_unit(hass=hass, entry=entry, params=params, unit_id=unit_id)
-    unit.require_timeout(10)
-    unit.set_message_spacing(0.00175)
 
     api: GTW08 = GTW08(
         name=modbus_hub_name,
         unit=RetryingModbusUnit(unit),
         time_zone=await hass.async_add_executor_job(tz.gettz, hass.config.time_zone),
+        request_timeout=0.5,
     )
 
     # Setup the coordinator
