@@ -466,6 +466,20 @@ REMEHA_SENSORS: tuple[SensorEntityDescription, ...] = (
         device_class=SensorDeviceClass.POWER,
         state_class=SensorStateClass.MEASUREMENT,
     ),
+    SensorEntityDescription(  # 7600
+        key="varBufferTempBottom",
+        device_class=SensorDeviceClass.TEMPERATURE,
+        name="buffer_temperature_bottom",
+        native_unit_of_measurement="°C",
+        state_class=SensorStateClass.MEASUREMENT,
+    ),
+    SensorEntityDescription(  # 7601
+        key="varBufferTempTop",
+        device_class=SensorDeviceClass.TEMPERATURE,
+        name="buffer_temperature_top",
+        native_unit_of_measurement="°C",
+        state_class=SensorStateClass.MEASUREMENT,
+    ),
     SensorEntityDescription(  # 9230
         key="varHpCopCalculated",
         name="cop_calculated",
