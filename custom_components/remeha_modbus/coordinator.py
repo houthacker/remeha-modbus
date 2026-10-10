@@ -246,6 +246,11 @@ class RemehaUpdateCoordinator(DataUpdateCoordinator):
             | {
                 field_name: getattr(self._api.main_control_monitoring, field_name)
                 for field_name in self._api.main_control_monitoring.resolved_fields
+            }
+            # The buffer tank fields have generic names, so prefix them to prevent collisions.
+            | {
+                f"buffer_{field_name}": getattr(self._api.buffer_tank, field_name)
+                for field_name in self._api.buffer_tank.resolved_fields
             },
         }
 
