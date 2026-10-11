@@ -107,11 +107,11 @@ async def test_invalid_zone_schedule_repair(
         )
         await hass.async_block_till_done()
 
-        # And modbus register 1201 must contain 0x05a0
+        # And modbus register 1201 must contain 0x05a1
         (timeslot_activity_register,) = await remeha_api.async_read_registers(
             689 + REMEHA_ZONE_RESERVED_REGISTERS,
         )
-        assert timeslot_activity_register == 0xA005
+        assert timeslot_activity_register == 0xA105
 
         # Start repair fix flow
         issue_registry = ir.async_get(hass)
@@ -132,11 +132,11 @@ async def test_invalid_zone_schedule_repair(
         await hass.async_block_till_done()
         assert issue_registry.async_get_issue(DOMAIN, ISSUE_INVALID_ZONE_SCHEDULE) is None
 
-        # And modbus register 1201 must contain 0x0100 (was 0x05a0)
+        # And modbus register 1201 must contain 0xa001 (was 0x05a1)
         (timeslot_activity_register,) = await remeha_api.async_read_registers(
             689 + REMEHA_ZONE_RESERVED_REGISTERS,
         )
-        assert timeslot_activity_register == 0x0A01
+        assert timeslot_activity_register == 0xA001
 
 
 async def test_undo_manual_schedule_execution_repair(
