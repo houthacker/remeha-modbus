@@ -136,7 +136,7 @@ async def test_invalid_zone_schedule_repair(
         (timeslot_activity_register,) = await remeha_api.async_read_registers(
             689 + REMEHA_ZONE_RESERVED_REGISTERS,
         )
-        assert timeslot_activity_register == 0x0001
+        assert timeslot_activity_register == 0x0A01
 
 
 async def test_undo_manual_schedule_execution_repair(
