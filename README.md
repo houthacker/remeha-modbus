@@ -71,6 +71,7 @@ According to Remeha, the following appliances can be extended with a GTW-08 (mod
 
 | Appliance type       | Supported by GTW-08 | Tested  |                                           Notes |
 | -------------------- | :-----------------: | :-----: | ----------------------------------------------: |
+| Azorra Ace           |       &check;       | &check; | Heat pump boiler; support is experimental       |
 | Confida 50E          |       &check;       | &check; |
 | Elga Ace             |       &check;       | &cross; |
 | Elga Ace MB          |       &check;       | &cross; |
