@@ -14,7 +14,7 @@ from aio_remeha_modbus.gtw08.climate_zone import (
 from aio_remeha_modbus.gtw08.const import (
     ClimateZoneScheduleId,
 )
-from aio_remeha_modbus.gtw08.system_discovery_table import DeviceBoard
+from aio_remeha_modbus.gtw08.system_discovery_table import DeviceBoard, DeviceBoardType
 from homeassistant.components.climate import (
     ClimateEntity,
 )
@@ -100,15 +100,33 @@ class RemehaClimateEntity(CoordinatorEntity, ClimateEntity):
     ) -> Self:
         """Create the correct climate entity instance type."""
 
+        mainboards: list[DeviceBoard] = coordinator.get_devices(lambda board: board.is_mainboard())
         zone: ClimateZone | None = coordinator.get_climate(climate_zone_id)
+
+        if not mainboards:
+            raise ValueError(
+                "No mainboard detected: cannot determine correct climate entity type to create."
+            )
+
+        mainboard = mainboards[0]
+        if mainboard.board_category is None:
+            raise ValueError(
+                "Detected main board does not designate a category: cannot determine correct climate entity type to create."
+            )
 
         if zone is None:
             raise ValueError(f"No existing ClimateZone with id {climate_zone_id}")
 
         if zone.is_domestic_hot_water():
-            return RemehaDhwEntity(
-                api=api, coordinator=coordinator, climate_zone_id=climate_zone_id
-            )  # pyright: ignore[reportReturnType]
+            match mainboard.board_category.type:
+                case DeviceBoardType.CU_HW:
+                    return RemehaHeatPumpBoilerEntity(
+                        api=api, coordinator=coordinator, climate_zone_id=climate_zone_id
+                    )  # pyright: ignore[reportReturnType]
+                case _:
+                    return RemehaDhwEntity(
+                        api=api, coordinator=coordinator, climate_zone_id=climate_zone_id
+                    )  # pyright: ignore[reportReturnType]
 
         if zone.is_central_heating():
             return RemehaChEntity(api=api, coordinator=coordinator, climate_zone_id=climate_zone_id)  # pyright: ignore[reportReturnType]
@@ -364,6 +382,33 @@ class RemehaDhwEntity(RemehaClimateEntity):
             )
 
         # TODO Update HA setpoint until next poll
+        self.async_write_ha_state()
+
+
+class RemehaHeatPumpBoilerEntity(RemehaDhwEntity):
+    """Remeha climate entity for Heat Pump Boilers."""
+
+    _attr_supported_features = (
+        ClimateEntityFeature.TURN_ON
+        | ClimateEntityFeature.TURN_OFF
+        | ClimateEntityFeature.TARGET_TEMPERATURE
+        | ClimateEntityFeature.PRESET_MODE
+    )
+
+    def __init__(self, api: GTW08, coordinator: RemehaUpdateCoordinator, climate_zone_id: int):
+        """Create a new RemehaHeatPumpBoilerEntity."""
+        super().__init__(api=api, coordinator=coordinator, climate_zone_id=climate_zone_id)
+
+    async def async_turn_off(self):
+        """Turn the climate zone off."""
+
+        zone: ClimateZone = self._zone
+        if self.hvac_mode is not HVACMode.OFF:
+            await zone.async_set_mode(ClimateZoneMode.ANTI_FROST)
+        else:
+            _LOGGER.debug("Turning off climate %s that is already off; ignoring.", self.name)
+
+        # TODO Update HA state until next poll
         self.async_write_ha_state()
 
 
