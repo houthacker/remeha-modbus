@@ -5,7 +5,7 @@ from typing import Any, cast
 
 from aio_remeha_modbus.gtw08 import GTW08
 from aio_remeha_modbus.gtw08.appliance import CoolingType
-from aio_remeha_modbus.gtw08.system_discovery_table import DeviceBoard
+from aio_remeha_modbus.gtw08.system_discovery_table import DeviceBoard, DeviceBoardType
 from homeassistant.components.climate.const import (
     ATTR_PRESET_MODE,
     PRESET_ECO,
@@ -48,21 +48,35 @@ async def async_setup_entry(
     mainboards: list[DeviceBoard] = coordinator.get_devices(lambda device: device.is_mainboard())
     parent_device_id: int | None = mainboards[0].id if mainboards else None
 
-    async_add_entities(
-        [
-            RemehaScheduleSynchronizationSwitch(SWITCH_SCHEDULE_SYNC, entry),
-            RemehaHeatpumpManagedSchedulesSwitch(HEATPUMP_MANAGED_SCHEDULES, entry),
-            RemehaChEnabledSwitch(
-                api=api, coordinator=coordinator, parent_device_id=parent_device_id
-            ),
-            RemehaCoolingEnabledSwitch(
-                api=api, coordinator=coordinator, parent_device_id=parent_device_id
-            ),
-            RemehaForceSummerSwitch(
-                api=api, coordinator=coordinator, parent_device_id=parent_device_id
-            ),
-        ]
-    )
+    entities = [
+        RemehaScheduleSynchronizationSwitch(SWITCH_SCHEDULE_SYNC, entry),
+        RemehaHeatpumpManagedSchedulesSwitch(HEATPUMP_MANAGED_SCHEDULES, entry),
+    ]
+
+    if mainboards:
+        mainboard = mainboards[0]
+        if mainboard.board_category and mainboard.board_category.type is not DeviceBoardType.CU_HW:
+            entities += [
+                RemehaChEnabledSwitch(
+                    api=api, coordinator=coordinator, parent_device_id=parent_device_id
+                ),
+                RemehaCoolingEnabledSwitch(
+                    api=api, coordinator=coordinator, parent_device_id=parent_device_id
+                ),
+                RemehaForceSummerSwitch(
+                    api=api, coordinator=coordinator, parent_device_id=parent_device_id
+                ),
+            ]
+        else:
+            _LOGGER.debug(
+                "Not adding CH, cooling and force-summer switches since mainboard does not support them."
+            )
+    else:
+        _LOGGER.warning(
+            "Not adding mainboard-dependent switches because no mainboard has been detected."
+        )
+
+    async_add_entities(entities)
 
 
 class RemehaModbusSwitch(RestoreEntity, SwitchEntity):
