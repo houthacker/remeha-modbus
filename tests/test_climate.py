@@ -1,15 +1,17 @@
 """Tests for the RemehaClimateEntity."""
 
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 from aio_remeha_modbus.gtw08.climate_zone import ClimateZoneMode
 from aio_remeha_modbus.gtw08.const import REMEHA_ZONE_RESERVED_REGISTERS
+from aio_remeha_modbus.gtw08.system_discovery_table import DeviceBoard, DeviceBoardType
 from homeassistant.components.climate.const import DOMAIN as ClimateDomain
 from homeassistant.components.climate.const import (
     PRESET_COMFORT,
     PRESET_ECO,
     PRESET_NONE,
+    ClimateEntityFeature,
     HVACAction,
     HVACMode,
 )
@@ -17,7 +19,13 @@ from homeassistant.const import STATE_OFF
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ServiceNotSupported, ServiceValidationError
 
-from custom_components.remeha_modbus.climate import InvalidClimateContext
+from custom_components.remeha_modbus.climate import (
+    InvalidClimateContext,
+    RemehaChEntity,
+    RemehaClimateEntity,
+    RemehaDhwEntity,
+    RemehaHeatPumpBoilerEntity,
+)
 from custom_components.remeha_modbus.const import (
     REMEHA_PRESET_SCHEDULE_1,
     REMEHA_PRESET_SCHEDULE_2,
@@ -698,3 +706,262 @@ async def test_dhw_climate_preset_mode_invalid(
                 },
                 blocking=True,
             )
+
+
+def _get_mainboard(coordinator: RemehaUpdateCoordinator) -> DeviceBoard:
+    """Return the first main board known to the coordinator."""
+
+    mainboards: list[DeviceBoard] = coordinator.get_devices(lambda board: board.is_mainboard())
+    assert len(mainboards) > 0
+
+    return mainboards[0]
+
+
+async def test_create_instance_default_appliance(
+    hass: HomeAssistant, remeha_api, mock_config_entry, remeha_modbus_unit
+):
+    """Test that a non-heat pump boiler appliance yields regular DHW and CH entities."""
+
+    with patch(
+        "aio_remeha_modbus.gtw08.GTW08",
+        new=lambda *args, **kwargs: remeha_api,
+    ):
+        await setup_platform(
+            hass=hass, config_entry=mock_config_entry, remeha_modbus_unit=remeha_modbus_unit
+        )
+        await hass.async_block_till_done()
+
+        coordinator: RemehaUpdateCoordinator = mock_config_entry.runtime_data["coordinator"]
+        mainboard = _get_mainboard(coordinator)
+        assert mainboard.board_category is not None
+        assert mainboard.board_category.type != DeviceBoardType.CU_HW
+
+        dhw_zone = coordinator.get_climates(lambda zone: zone.is_domestic_hot_water())[0]
+        ch_zone = coordinator.get_climates(lambda zone: zone.is_central_heating())[0]
+
+        dhw = RemehaClimateEntity.create_instance(remeha_api, coordinator, dhw_zone.id)
+        assert type(dhw) is RemehaDhwEntity
+
+        ch = RemehaClimateEntity.create_instance(remeha_api, coordinator, ch_zone.id)
+        assert type(ch) is RemehaChEntity
+
+
+@pytest.mark.parametrize("remeha_modbus_unit", ["azorra_ace_store.json"], indirect=True)
+async def test_create_instance_heat_pump_boiler(
+    hass: HomeAssistant, remeha_api, mock_config_entry, remeha_modbus_unit
+):
+    """Test that a DHW zone on a CU_HW main board yields a RemehaHeatPumpBoilerEntity."""
+
+    with patch(
+        "aio_remeha_modbus.gtw08.GTW08",
+        new=lambda *args, **kwargs: remeha_api,
+    ):
+        await setup_platform(
+            hass=hass, config_entry=mock_config_entry, remeha_modbus_unit=remeha_modbus_unit
+        )
+        await hass.async_block_till_done()
+
+        coordinator: RemehaUpdateCoordinator = mock_config_entry.runtime_data["coordinator"]
+        mainboard = _get_mainboard(coordinator)
+        assert mainboard.board_category is not None
+        assert mainboard.board_category.type == DeviceBoardType.CU_HW
+
+        dhw_zone = coordinator.get_climates(lambda zone: zone.is_domestic_hot_water())[0]
+        dhw = RemehaClimateEntity.create_instance(remeha_api, coordinator, dhw_zone.id)
+        assert isinstance(dhw, RemehaHeatPumpBoilerEntity)
+
+
+@pytest.mark.parametrize("remeha_modbus_unit", ["azorra_ace_store.json"], indirect=True)
+async def test_create_instance_no_mainboard(
+    hass: HomeAssistant, remeha_api, mock_config_entry, remeha_modbus_unit
+):
+    """Test that creating a climate entity fails if no main board is detected."""
+
+    with patch(
+        "aio_remeha_modbus.gtw08.GTW08",
+        new=lambda *args, **kwargs: remeha_api,
+    ):
+        await setup_platform(
+            hass=hass, config_entry=mock_config_entry, remeha_modbus_unit=remeha_modbus_unit
+        )
+        await hass.async_block_till_done()
+
+        coordinator: RemehaUpdateCoordinator = mock_config_entry.runtime_data["coordinator"]
+        dhw_zone = coordinator.get_climates(lambda zone: zone.is_domestic_hot_water())[0]
+
+        with (
+            patch.object(coordinator, "get_devices", return_value=[]),
+            pytest.raises(ValueError, match="No mainboard detected"),
+        ):
+            RemehaClimateEntity.create_instance(remeha_api, coordinator, dhw_zone.id)
+
+
+@pytest.mark.parametrize("remeha_modbus_unit", ["azorra_ace_store.json"], indirect=True)
+async def test_create_instance_mainboard_without_category(
+    hass: HomeAssistant, remeha_api, mock_config_entry, remeha_modbus_unit
+):
+    """Test that creating a climate entity fails if the main board has no category."""
+
+    with patch(
+        "aio_remeha_modbus.gtw08.GTW08",
+        new=lambda *args, **kwargs: remeha_api,
+    ):
+        await setup_platform(
+            hass=hass, config_entry=mock_config_entry, remeha_modbus_unit=remeha_modbus_unit
+        )
+        await hass.async_block_till_done()
+
+        coordinator: RemehaUpdateCoordinator = mock_config_entry.runtime_data["coordinator"]
+        dhw_zone = coordinator.get_climates(lambda zone: zone.is_domestic_hot_water())[0]
+
+        with (
+            patch.object(
+                coordinator,
+                "get_devices",
+                return_value=[MagicMock(spec=DeviceBoard, board_category=None)],
+            ),
+            pytest.raises(ValueError, match="does not designate a category"),
+        ):
+            RemehaClimateEntity.create_instance(remeha_api, coordinator, dhw_zone.id)
+
+
+@pytest.mark.parametrize("remeha_modbus_unit", ["azorra_ace_store.json"], indirect=True)
+async def test_heat_pump_boiler_climate(
+    hass: HomeAssistant, remeha_api, mock_config_entry, remeha_modbus_unit
+):
+    """Test the heat pump boiler climate entity."""
+
+    with patch(
+        "aio_remeha_modbus.gtw08.GTW08",
+        new=lambda *args, **kwargs: remeha_api,
+    ):
+        await setup_platform(
+            hass=hass, config_entry=mock_config_entry, remeha_modbus_unit=remeha_modbus_unit
+        )
+        await hass.async_block_till_done()
+
+        assert len(hass.states.async_all(domain_filter="climate")) == 1
+
+        hpb = hass.states.get(entity_id="climate.remeha_modbus_test_hub_dhw")
+        assert hpb is not None
+
+        assert hpb.state == "auto"
+        assert hpb.attributes["supported_features"] == (
+            ClimateEntityFeature.TURN_ON
+            | ClimateEntityFeature.TURN_OFF
+            | ClimateEntityFeature.TARGET_TEMPERATURE
+            | ClimateEntityFeature.PRESET_MODE
+        )
+        assert hpb.attributes["hvac_action"] == HVACAction.IDLE
+        assert hpb.attributes["hvac_modes"] == [
+            HVACMode.OFF,
+            HVACMode.HEAT,
+            HVACMode.AUTO,
+        ]
+        assert hpb.attributes["max_temp"] == 65
+        assert hpb.attributes["min_temp"] == 10
+        assert hpb.attributes["preset_mode"] == REMEHA_PRESET_SCHEDULE_1
+        assert hpb.attributes["preset_modes"] == [
+            REMEHA_PRESET_SCHEDULE_1,
+            PRESET_COMFORT,
+            PRESET_ECO,
+            PRESET_NONE,
+        ]
+        assert hpb.attributes["temperature"] == 25.0
+        assert hpb.attributes["current_temperature"] == 53.2
+        assert hpb.attributes["target_temp_step"] == 0.5
+        assert hpb.attributes["flow_temperature"] == 45.0
+
+
+@pytest.mark.parametrize("remeha_modbus_unit", ["azorra_ace_store.json"], indirect=True)
+async def test_heat_pump_boiler_climate_turn_off_on(
+    hass: HomeAssistant, remeha_api, mock_config_entry, remeha_modbus_unit
+):
+    """Test turning a heat pump boiler off and on again.
+
+    Turning off must put it in preset 'ECO', turning on must put it in preset 'COMFORT'.
+    """
+
+    with patch(
+        "aio_remeha_modbus.gtw08.GTW08",
+        new=lambda *args, **kwargs: remeha_api,
+    ):
+        await setup_platform(
+            hass=hass, config_entry=mock_config_entry, remeha_modbus_unit=remeha_modbus_unit
+        )
+        await hass.async_block_till_done()
+
+        hpb = hass.states.get(entity_id="climate.remeha_modbus_test_hub_dhw")
+        assert hpb is not None
+        assert hpb.state == "auto"
+
+        await hass.services.async_call(
+            domain=ClimateDomain,
+            service="turn_off",
+            service_data={"entity_id": hpb.entity_id},
+            blocking=True,
+        )
+
+        hpb = hass.states.get(entity_id=hpb.entity_id)
+        assert hpb is not None
+        assert hpb.state == STATE_OFF
+        assert hpb.attributes["preset_mode"] == PRESET_ECO
+
+        await hass.services.async_call(
+            domain=ClimateDomain,
+            service="turn_on",
+            service_data={"entity_id": hpb.entity_id},
+            blocking=True,
+        )
+
+        hpb = hass.states.get(entity_id=hpb.entity_id)
+        assert hpb is not None
+        assert hpb.state == "heat"
+        assert hpb.attributes["preset_mode"] == PRESET_COMFORT
+
+
+@pytest.mark.parametrize("remeha_modbus_unit", ["azorra_ace_store.json"], indirect=True)
+async def test_heat_pump_boiler_climate_turn_off_when_off(
+    hass: HomeAssistant, remeha_api, mock_config_entry, remeha_modbus_unit
+):
+    """Test turning off a heat pump boiler that is already off does not write its mode again."""
+
+    with patch(
+        "aio_remeha_modbus.gtw08.GTW08",
+        new=lambda *args, **kwargs: remeha_api,
+    ):
+        await setup_platform(
+            hass=hass, config_entry=mock_config_entry, remeha_modbus_unit=remeha_modbus_unit
+        )
+        await hass.async_block_till_done()
+
+        hpb = hass.states.get(entity_id="climate.remeha_modbus_test_hub_dhw")
+        assert hpb is not None
+
+        await hass.services.async_call(
+            domain=ClimateDomain,
+            service="turn_off",
+            service_data={"entity_id": hpb.entity_id},
+            blocking=True,
+        )
+
+        hpb = hass.states.get(entity_id=hpb.entity_id)
+        assert hpb is not None
+        assert hpb.state == STATE_OFF
+
+        with patch(
+            "aio_remeha_modbus.gtw08.climate_zone.ClimateZone.async_set_mode"
+        ) as async_set_mode:
+            await hass.services.async_call(
+                domain=ClimateDomain,
+                service="turn_off",
+                service_data={"entity_id": hpb.entity_id},
+                blocking=True,
+            )
+
+            async_set_mode.assert_not_called()
+
+        hpb = hass.states.get(entity_id=hpb.entity_id)
+        assert hpb is not None
+        assert hpb.state == STATE_OFF
+        assert hpb.attributes["preset_mode"] == PRESET_ECO
