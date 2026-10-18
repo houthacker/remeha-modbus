@@ -248,6 +248,17 @@ class RemehaDhwEntity(RemehaClimateEntity):
         return self._zone.dhw_calorifier_hysteresis
 
     @property
+    def tank_temperature_top(self) -> float | None:
+        """Return the temperature measured at the top of the tank.
+
+        Returns:
+            The temperature measured by the tank top sensor (`DM001`)
+
+        """
+
+        return self._zone.dhw_tank_temperature_top
+
+    @property
     def hvac_action(self) -> HVACAction | None:
         """Return the current HVAC action.
 

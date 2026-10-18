@@ -279,6 +279,12 @@
           "unknown": "Unknown",
           "safety_shutdown": "Safety shutdown / reset wait time"
         }
+      },
+      "dhw_tank_temperature_top": {
+        "name": "DHW tank temperature (top sensor)"
+      },
+      "dhw_tank_temperature_bottom": {
+        "name": "DHW tank temperature (bottom sensor)"
       }
     }
   },

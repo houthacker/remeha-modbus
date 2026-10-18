@@ -278,6 +278,12 @@
           "unknown": "Onbekend",
           "safety_shutdown": "Veiligheidsuitschakeling / reset-wachttijd"
         }
+      },
+      "dhw_tank_temperature_top": {
+        "name": "Tanktemperatuur SWW (topsensor)"
+      },
+      "dhw_tank_temperature_bottom": {
+        "name": "Tanktemperatuur SWW (bodemsensor)"
       }
     }
   },

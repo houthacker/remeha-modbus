@@ -1,15 +1,20 @@
 """Platform for sensor entities in the Remeha Modbus integration."""
 
 import logging
+from collections.abc import Callable
 from functools import cached_property
-from typing import cast
+from typing import cast, override
 
-from aio_remeha_modbus.gtw08.system_discovery_table import DeviceBoard
+from aio_remeha_modbus.gtw08.climate_zone import ClimateZone
+from aio_remeha_modbus.gtw08.system_discovery_table import DeviceBoard, DeviceBoardType
 from homeassistant.components.sensor import (
+    SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
+    SensorStateClass,
 )
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import UnitOfTemperature
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -32,17 +37,45 @@ async def async_setup_entry(
 
     coordinator: RemehaUpdateCoordinator = entry.runtime_data["coordinator"]
     mainboards: list[DeviceBoard] = coordinator.get_devices(lambda device: device.is_mainboard())
+    mainboard = mainboards[0] if mainboards else None
 
-    async_add_entities(
-        [
-            RemehaSensorEntity(
+    entities = [
+        RemehaSensorEntity(
+            coordinator=coordinator,
+            parent_device_id=mainboard.id if mainboard else None,
+            description=sensor_description,
+        )
+        for sensor_description in REMEHA_SENSORS
+    ]
+
+    if (
+        mainboard
+        and mainboard.board_category
+        and mainboard.board_category.type is DeviceBoardType.CU_HW
+    ):
+
+        def _get_dhw_zone(coordinator: RemehaUpdateCoordinator) -> ClimateZone:
+            zones = coordinator.get_climates(lambda z: z.is_domestic_hot_water())
+
+            assert len(zones) > 0
+            return zones[0]
+
+        entities += [
+            RemehaTemperatureSensorEntity(
+                "dhw_tank_temperature_top",
                 coordinator=coordinator,
-                parent_device_id=mainboards[0].id if mainboards else None,
-                description=sensor_description,
-            )
-            for sensor_description in REMEHA_SENSORS
+                parent_device_id=mainboard.id,
+                native_value_func=lambda c: _get_dhw_zone(c).dhw_tank_temperature_top,
+            ),
+            RemehaTemperatureSensorEntity(
+                "dhw_tank_temperature_bottom",
+                coordinator=coordinator,
+                parent_device_id=mainboard.id,
+                native_value_func=lambda c: _get_dhw_zone(c).current_temparature,
+            ),
         ]
-    )
+
+    async_add_entities(entities)
 
 
 class RemehaSensorEntity(CoordinatorEntity[RemehaUpdateCoordinator], SensorEntity):
@@ -127,3 +160,36 @@ class RemehaSensorEntity(CoordinatorEntity[RemehaUpdateCoordinator], SensorEntit
             and device_instance.software_version is not None
             else None
         )
+
+
+class RemehaTemperatureSensorEntity(RemehaSensorEntity):
+    """Entity class to represent a temperature sensor."""
+
+    def __init__(
+        self,
+        name: str,
+        coordinator: RemehaUpdateCoordinator,
+        parent_device_id: int | None,
+        native_value_func: Callable[[RemehaUpdateCoordinator], float | None],
+    ):
+        """Create a new temperature sensor entity."""
+
+        description = SensorEntityDescription(
+            key=name,
+            name=name,
+            native_unit_of_measurement=UnitOfTemperature.CELSIUS,
+            device_class=SensorDeviceClass.TEMPERATURE,
+            state_class=SensorStateClass.MEASUREMENT,
+            translation_key=name,
+        )
+
+        super().__init__(
+            coordinator=coordinator, parent_device_id=parent_device_id, description=description
+        )
+
+        self._native_value_func = native_value_func
+
+    @property
+    @override
+    def native_value(self):
+        return self._native_value_func(self.coordinator)
