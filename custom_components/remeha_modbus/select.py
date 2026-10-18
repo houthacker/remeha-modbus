@@ -8,8 +8,12 @@ from types import CoroutineType
 from typing import Any, override
 
 from aio_remeha_modbus.gtw08 import GTW08
-from aio_remeha_modbus.gtw08.appliance import SilentMode
-from aio_remeha_modbus.gtw08.system_discovery_table import DeviceBoard
+from aio_remeha_modbus.gtw08.appliance import (
+    DIContactLogicConfiguration,
+    DigitalInputConfiguration,
+    SilentMode,
+)
+from aio_remeha_modbus.gtw08.system_discovery_table import DeviceBoard, DeviceBoardType
 from homeassistant.components.select import SelectEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
@@ -34,25 +38,73 @@ async def async_setup_entry(
     mainboards: list[DeviceBoard] = coordinator.get_devices(
         predicate=lambda device: device.is_mainboard()
     )
-    parent_device_id: int | None = mainboards[0].id if mainboards else None
+    mainboard = mainboards[0] if mainboards else None
+    parent_device_id: int | None = mainboard.id if mainboard else None
 
-    async_add_entities(
-        [
+    entities = [
+        RemehaSelectEntity(
+            api=api,
+            coordinator=coordinator,
+            parent_device_id=parent_device_id,
+            name="appliance_silent_mode",
+            options=SilentMode,
+            get_current_option_func=lambda a: a.appliance.silent_mode,
+            set_current_option_func=api.appliance.async_set_silent_mode,
+        )
+    ]
+
+    # Add select entities that are only available on CU_HW boards
+    if (
+        mainboard
+        and mainboard.board_category
+        and mainboard.board_category.type is DeviceBoardType.CU_HW
+    ):
+        entities += [
             RemehaSelectEntity(
                 api=api,
                 coordinator=coordinator,
                 parent_device_id=parent_device_id,
-                name="appliance_silent_mode",
-                options=SilentMode,
-                get_current_option_func=lambda a: a.appliance.silent_mode,
-                set_current_option_func=api.appliance.async_set_silent_mode,
-            )
+                name="digital_input_1_configuration",
+                options=DigitalInputConfiguration,
+                get_current_option_func=lambda a: a.appliance.digital_input_1_configuration,
+                set_current_option_func=api.appliance.async_set_digital_input_1_configuration,
+            ),
+            RemehaSelectEntity(
+                api=api,
+                coordinator=coordinator,
+                parent_device_id=parent_device_id,
+                name="digital_input_2_configuration",
+                options=DigitalInputConfiguration,
+                get_current_option_func=lambda a: a.appliance.digital_input_2_configuration,
+                set_current_option_func=api.appliance.async_set_digital_input_2_configuration,
+            ),
+            RemehaSelectEntity(
+                api=api,
+                coordinator=coordinator,
+                parent_device_id=parent_device_id,
+                name="digital_input_1_contact_logic",
+                options=DIContactLogicConfiguration,
+                get_current_option_func=lambda a: a.appliance.digital_input_1_contact_logic,
+                set_current_option_func=api.appliance.async_set_digital_input_1_contact_logic,
+            ),
+            RemehaSelectEntity(
+                api=api,
+                coordinator=coordinator,
+                parent_device_id=parent_device_id,
+                name="digital_input_2_contact_logic",
+                options=DIContactLogicConfiguration,
+                get_current_option_func=lambda a: a.appliance.digital_input_2_contact_logic,
+                set_current_option_func=api.appliance.async_set_digital_input_2_contact_logic,
+            ),
         ]
-    )
+
+    async_add_entities(entities)
 
 
 class RemehaSelectEntity[E: Enum](CoordinatorEntity[RemehaUpdateCoordinator], SelectEntity):
     """Super class for select entities."""
+
+    _attr_has_entity_name = True
 
     def __init__(
         self,
@@ -77,7 +129,6 @@ class RemehaSelectEntity[E: Enum](CoordinatorEntity[RemehaUpdateCoordinator], Se
         self._getter = get_current_option_func
         self._setter = set_current_option_func
 
-        self._attr_name = name
         self._attr_unique_id = name
         self._attr_options = [e.name.lower() for e in options]
         self._attr_translation_key = name
@@ -101,7 +152,7 @@ class RemehaSelectEntity[E: Enum](CoordinatorEntity[RemehaUpdateCoordinator], Se
                 translation_placeholders={"option": option},
             )
 
-        value = self._enum_type[option]
+        value = self._enum_type[option.upper()]
         await self._setter(value)
 
         # TODO Update current data to reflect changes immediately

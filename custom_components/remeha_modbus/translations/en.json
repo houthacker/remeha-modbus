@@ -167,6 +167,38 @@
           "level_1": "Level 1",
           "level_2": "Level 2"
         }
+      },
+      "digital_input_1_configuration": {
+        "name": "Digital input 1",
+        "state": {
+          "off": "Off",
+          "smart_grid": "Smart Grid",
+          "release_compressor": "Release compressor",
+          "release_backup": "Release backup"
+        }
+      },
+      "digital_input_2_configuration": {
+        "name": "Digital input 2",
+        "state": {
+          "off": "Off",
+          "smart_grid": "Smart Grid",
+          "release_compressor": "Release compressor",
+          "release_backup": "Release backup"
+        }
+      },
+      "digital_input_1_contact_logic": {
+        "name": "Logic contact digital input 1",
+        "state": {
+          "normally_open": "Input active when contact is open",
+          "normally_closed": "Input active when contact is closed"
+        }
+      },
+      "digital_input_2_contact_logic": {
+        "name": "Logic contact digital input 2",
+        "state": {
+          "normally_open": "Input active when contact is open",
+          "normally_closed": "Input active when contact closed"
+        }
       }
     },
     "switch": {

@@ -166,6 +166,38 @@
           "level_1": "Level 1",
           "level_2": "Level 2"
         }
+      },
+      "digital_input_1_configuration": {
+        "name": "Digitale ingang 1",
+        "state": {
+          "off": "Uit",
+          "smart_grid": "Smart Grid",
+          "release_compressor": "Vrijgave compressor",
+          "release_backup": "Vrijgave backup"
+        }
+      },
+      "digital_input_2_configuration": {
+        "name": "Digitale ingang 2",
+        "state": {
+          "off": "Uit",
+          "smart_grid": "Smart Grid",
+          "release_compressor": "Vrijgave compressor",
+          "release_backup": "Vrijgave backup"
+        }
+      },
+      "digital_input_1_contact_logic": {
+        "name": "Logisch contact digitale ingang 1",
+        "state": {
+          "normally_open": "Ingang actief op Normaal Open contact",
+          "normally_closed": "Ingang actief op Normaal Gesloten contact"
+        }
+      },
+      "digital_input_2_contact_logic": {
+        "name": "Logisch contact digitale ingang 2",
+        "state": {
+          "normally_open": "Ingang actief op Normaal Open contact",
+          "normally_closed": "Ingang actief op Normaal Gesloten contact"
+        }
       }
     },
     "switch": {
