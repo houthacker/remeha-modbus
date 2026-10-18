@@ -1,7 +1,11 @@
 """Platform for select entities in the Remeha Modbus integration."""
 
 import logging
+from collections.abc import Callable
+from enum import Enum
 from functools import cached_property
+from types import CoroutineType
+from typing import Any, override
 
 from aio_remeha_modbus.gtw08 import GTW08
 from aio_remeha_modbus.gtw08.appliance import SilentMode
@@ -34,25 +38,32 @@ async def async_setup_entry(
 
     async_add_entities(
         [
-            RemehaSilentModeEntity(
+            RemehaSelectEntity(
                 api=api,
                 coordinator=coordinator,
                 parent_device_id=parent_device_id,
+                name="appliance_silent_mode",
+                options=SilentMode,
+                get_current_option_func=lambda a: a.appliance.silent_mode,
+                set_current_option_func=api.appliance.async_set_silent_mode,
             )
         ]
     )
 
 
-class RemehaSelectEntity(CoordinatorEntity[RemehaUpdateCoordinator], SelectEntity):
+class RemehaSelectEntity[E: Enum](CoordinatorEntity[RemehaUpdateCoordinator], SelectEntity):
     """Super class for select entities."""
 
     def __init__(
         self,
+        *,
         api: GTW08,
         coordinator: RemehaUpdateCoordinator,
         parent_device_id: int | None,
         name: str,
-        options: list[str],
+        options: type[E],
+        get_current_option_func: Callable[[GTW08], E | None],
+        set_current_option_func: Callable[[E], CoroutineType[Any, Any, None]],
     ):
         """Create a new select entity."""
 
@@ -62,12 +73,39 @@ class RemehaSelectEntity(CoordinatorEntity[RemehaUpdateCoordinator], SelectEntit
             _LOGGER.warning("Select entity [%s] not linked to a parent device.", name)
 
         self._parent_device_id = parent_device_id
+        self._enum_type = options
+        self._getter = get_current_option_func
+        self._setter = set_current_option_func
 
         self._attr_name = name
         self._attr_unique_id = name
-        self._attr_options = options
+        self._attr_options = [e.name.lower() for e in options]
+        self._attr_translation_key = name
 
         self._api = api
+
+    @property
+    @override
+    def current_option(self) -> str | None:
+        value = self._getter(self._api)
+        return None if value is None else value.name.lower()
+
+    @override
+    async def async_select_option(self, option: str) -> None:
+        if option not in self._attr_options or option not in [
+            e.name.lower() for e in self._enum_type
+        ]:
+            raise RemehaModbusError(
+                translation_domain=DOMAIN,
+                translation_key="invalid_select_option",
+                translation_placeholders={"option": option},
+            )
+
+        value = self._enum_type[option]
+        await self._setter(value)
+
+        # TODO Update current data to reflect changes immediately
+        self.async_write_ha_state()
 
     @cached_property
     def device_info(self) -> DeviceInfo | None:
@@ -95,49 +133,3 @@ class RemehaSelectEntity(CoordinatorEntity[RemehaUpdateCoordinator], SelectEntit
             and device_instance.software_version is not None
             else None
         )
-
-
-class RemehaSilentModeEntity(RemehaSelectEntity):
-    """Entity to select appliance silent mode."""
-
-    def __init__(
-        self, api: GTW08, coordinator: RemehaUpdateCoordinator, parent_device_id: int | None
-    ):
-        """Entity to set the Appliance silent mode."""
-
-        super().__init__(
-            api=api,
-            coordinator=coordinator,
-            parent_device_id=parent_device_id,
-            name="appliance_silent_mode",
-            options=[e.name.lower() for e in SilentMode],
-        )
-
-        self._attr_translation_key = "appliance_silent_mode"
-
-    @property
-    def current_option(self) -> str | None:
-        """Return the currently selected option."""
-
-        appliance = self.coordinator.get_appliance()
-        return None if appliance.silent_mode is None else appliance.silent_mode.name.lower()
-
-    async def async_select_option(self, option: str) -> None:
-        """Set the current option.
-
-        Raises:
-          RemehaModbusError if the option is invalid.
-
-        """
-        if option not in self._attr_options or option not in [e.name.lower() for e in SilentMode]:
-            raise RemehaModbusError(
-                translation_domain=DOMAIN,
-                translation_key="invalid_select_option",
-                translation_placeholders={"option": option},
-            )
-
-        selected_mode = SilentMode[option.upper()]
-        await self.coordinator.get_appliance().async_set_silent_mode(selected_mode)
-
-        # TODO Update current data to reflect changes immediately
-        self.async_write_ha_state()
