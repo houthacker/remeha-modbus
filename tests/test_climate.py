@@ -965,3 +965,27 @@ async def test_heat_pump_boiler_climate_turn_off_when_off(
         assert hpb is not None
         assert hpb.state == STATE_OFF
         assert hpb.attributes["preset_mode"] == PRESET_ECO
+
+
+@pytest.mark.parametrize("remeha_modbus_unit", ["azorra_ace_store.json"], indirect=True)
+async def test_dhw_climate_tank_temperature_top(
+    hass: HomeAssistant, remeha_api, mock_config_entry, remeha_modbus_unit
+):
+    """Test that a DHW climate entity returns the temperature measured at the top of the tank."""
+
+    with patch(
+        "aio_remeha_modbus.gtw08.GTW08",
+        new=lambda *args, **kwargs: remeha_api,
+    ):
+        await setup_platform(
+            hass=hass, config_entry=mock_config_entry, remeha_modbus_unit=remeha_modbus_unit
+        )
+        await hass.async_block_till_done()
+
+        coordinator: RemehaUpdateCoordinator = mock_config_entry.runtime_data["coordinator"]
+        dhw_zone = coordinator.get_climates(lambda zone: zone.is_domestic_hot_water())[0]
+        dhw = RemehaClimateEntity.create_instance(remeha_api, coordinator, dhw_zone.id)
+        assert isinstance(dhw, RemehaDhwEntity)
+
+        # Register 1120 (0x14dc) in the fixture.
+        assert dhw.tank_temperature_top == 53.4
