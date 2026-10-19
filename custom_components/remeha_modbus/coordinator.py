@@ -212,6 +212,9 @@ class RemehaUpdateCoordinator(DataUpdateCoordinator):
                 translation_placeholders={"modbus_message": str(ex)},
             ) from ex
         except InvalidZoneSchedule as ex:
+            _LOGGER.warning(
+                "Failed to parse zone schedule", exc_info=ex, stack_info=True, stacklevel=10
+            )
             ir.async_create_issue(
                 hass=self.hass,
                 domain=DOMAIN,
