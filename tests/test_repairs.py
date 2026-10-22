@@ -12,6 +12,8 @@ from homeassistant.const import ATTR_ENTITY_ID, SERVICE_TURN_OFF, STATE_OFF, STA
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResultType
 from homeassistant.helpers import issue_registry as ir
+from modbus_connection.mock import MockModbusUnit
+from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.remeha_modbus.const import (
     DOMAIN,
@@ -20,6 +22,7 @@ from custom_components.remeha_modbus.const import (
     ISSUE_HEATPUMP_MANAGED_SCHEDULES_OFF,
     ISSUE_INVALID_ZONE_SCHEDULE,
 )
+from custom_components.remeha_modbus.coordinator import RemehaUpdateCoordinator
 from custom_components.remeha_modbus.helpers.entities import get_climate_entity_id
 from tests.conftest import setup_platform
 from tests.util.repairs import get_repairs, process_repair_fix_flow, start_repair_fix_flow
@@ -101,7 +104,6 @@ async def test_invalid_zone_schedule_repair(
         new=lambda *args, **kwargs: remeha_api,
     ):
         # Start remeha_modbus
-        # with pytest.raises(UpdateFailed):
         await setup_platform(
             hass=hass, config_entry=mock_config_entry, remeha_modbus_unit=remeha_modbus_unit
         )
@@ -137,6 +139,42 @@ async def test_invalid_zone_schedule_repair(
             689 + REMEHA_ZONE_RESERVED_REGISTERS,
         )
         assert timeslot_activity_register == 0xA001
+
+
+async def test_auto_resolve_schedule_repair(
+    hass: HomeAssistant,
+    mock_config_entry: MockConfigEntry,
+    hass_ws_client,
+    remeha_modbus_unit: MockModbusUnit,
+):
+    """Test that a repair resolves itself after a successful coordinator update."""
+
+    # Start remeha_modbus
+    await setup_platform(
+        hass=hass, config_entry=mock_config_entry, remeha_modbus_unit=remeha_modbus_unit
+    )
+    await hass.async_block_till_done()
+
+    coordinator: RemehaUpdateCoordinator = mock_config_entry.runtime_data["coordinator"]
+
+    # Update a schedule register with an incorrect value.
+    remeha_modbus_unit.holding[689 + REMEHA_ZONE_RESERVED_REGISTERS] = 0xA105
+
+    # And force a coordinator refresh
+    await coordinator.async_refresh()
+
+    # Assert that an issue has been created
+    issue_registry = ir.async_get(hass)
+    issues = await get_repairs(hass, hass_ws_client)
+    assert issues
+    assert issue_registry.async_get_issue(DOMAIN, ISSUE_INVALID_ZONE_SCHEDULE) is not None
+
+    # Set correct value in registers and force coordinator refresh
+    remeha_modbus_unit.holding[689 + REMEHA_ZONE_RESERVED_REGISTERS] = 0x01A0
+    await coordinator.async_refresh()
+
+    # The issue must be gone.
+    assert issue_registry.async_get_issue(DOMAIN, ISSUE_INVALID_ZONE_SCHEDULE) is None
 
 
 async def test_undo_manual_schedule_execution_repair(
