@@ -1,4 +1,4 @@
-aio-remeha-modbus==4.7.0
+aio-remeha-modbus==4.7.1
 aiodhcpwatcher
 aiodiscover
 aiofiles
@@ -15,7 +15,7 @@ hassil
 home-assistant-frontend
 home-assistant-intents
 homeassistant>=2026.10.0b0
-modbus-connection[tmodbus]==4.12.1
+modbus-connection[tmodbus]==4.12.4
 mutagen
 pre-commit
 propcache
