@@ -5,6 +5,7 @@
   "postCreateCommand": "scripts/setup",
   "postStartCommand": "scripts/devenv",
   "containerEnv": {
+    "CLAUDE_CONFIG_DIR": "/home/vscode/.claude",
     "PYTHONASYNCIODEBUG": "1",
     "PYTHONPATH": "${containerWorkspaceFolder}/custom_components:${containerWorkspaceFolder}/config/custom_components",
     "UV_LINK_MODE": "copy",
@@ -20,6 +21,7 @@
   "customizations": {
     "vscode": {
       "extensions": [
+        "anthropic.claude-code",
         "charliermarsh.ruff",
         "ms-python.python",
         "ms-python.pylint",
@@ -81,5 +83,8 @@
     "ghcr.io/rocker-org/devcontainer-features/apt-packages:1": {
       "packages": "autoconf,bluez,build-essential,cmake,curl,ffmpeg,git,libssl-dev,libpcap-dev,libxml2,libxml2-dev,libxslt1-dev,libjpeg-dev,libturbojpeg0,libffi-dev,libudev-dev,zlib1g-dev,pkg-config,libavformat-dev,libavcodec-dev,libavdevice-dev,libavutil-dev,libswscale-dev,libswresample-dev,libavfilter-dev,libgammu-dev,libyaml-dev"
     }
-  }
+  },
+  "mounts": [
+    "source=claude-code-config,target=/home/vscode/.claude,type=volume"
+  ]
 }
