@@ -155,6 +155,10 @@ async def test_auto_resolve_schedule_repair(
     )
     await hass.async_block_till_done()
 
+    # Initially, no issue must exist.
+    issue_registry = ir.async_get(hass)
+    assert issue_registry.async_get_issue(DOMAIN, ISSUE_INVALID_ZONE_SCHEDULE) is None
+
     coordinator: RemehaUpdateCoordinator = mock_config_entry.runtime_data["coordinator"]
 
     # Update a schedule register with an incorrect value.
@@ -164,7 +168,6 @@ async def test_auto_resolve_schedule_repair(
     await coordinator.async_refresh()
 
     # Assert that an issue has been created
-    issue_registry = ir.async_get(hass)
     issues = await get_repairs(hass, hass_ws_client)
     assert issues
     assert issue_registry.async_get_issue(DOMAIN, ISSUE_INVALID_ZONE_SCHEDULE) is not None

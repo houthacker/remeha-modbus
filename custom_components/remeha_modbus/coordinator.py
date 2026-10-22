@@ -196,16 +196,8 @@ class RemehaUpdateCoordinator(DataUpdateCoordinator):
             # this is caused by the appliance executing some maintenance occupying
             # the L-bus. When the GTW-08 attempts to read the schedule, some registers
             # read incorrectly causing an exception here.
-            # If we end up here, all schedules have been parsed and the issue is resolved.
-            if (
-                ir.async_get(self.hass).async_get_issue(
-                    domain=DOMAIN, issue_id=ISSUE_INVALID_ZONE_SCHEDULE
-                )
-                is not None
-            ):
-                ir.async_delete_issue(
-                    self.hass, domain=DOMAIN, issue_id=ISSUE_INVALID_ZONE_SCHEDULE
-                )
+            # Reaching this line means that async_update() succeeded.
+            ir.async_delete_issue(self.hass, domain=DOMAIN, issue_id=ISSUE_INVALID_ZONE_SCHEDULE)
 
         except DiscoveryTableCorruptedError as ex:
             ir.async_create_issue(
