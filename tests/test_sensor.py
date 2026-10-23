@@ -6,7 +6,7 @@ import pytest
 from aio_remeha_modbus.gtw08.system_discovery_table import DeviceBoard, DeviceBoardType
 from homeassistant.components.sensor.const import DOMAIN as SensorDomain
 from homeassistant.components.sensor.const import SensorDeviceClass, SensorStateClass
-from homeassistant.const import UnitOfTemperature
+from homeassistant.const import STATE_UNKNOWN, UnitOfTemperature
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
@@ -32,7 +32,7 @@ async def test_sensors(hass: HomeAssistant, remeha_api, mock_config_entry, remeh
         )
         await hass.async_block_till_done()
 
-        assert len(hass.states.async_all(domain_filter=SensorDomain)) == 33
+        assert len(hass.states.async_all(domain_filter=SensorDomain)) == 35
 
         for sd in REMEHA_SENSORS:
             assert isinstance(sd.name, str)
@@ -187,3 +187,27 @@ async def test_tank_temperature_sensors_update(
         bottom = hass.states.get(TANK_TEMPERATURE_BOTTOM)
         assert bottom is not None
         assert float(bottom.state) == 48.5
+
+
+async def test_buffer_tank_sensors(
+    hass: HomeAssistant, remeha_api, mock_config_entry, remeha_modbus_unit
+):
+    """Test that the buffer tank temperatures are exposed as sensors."""
+
+    with patch(
+        "aio_remeha_modbus.gtw08.GTW08",
+        new=lambda *args, **kwargs: remeha_api,
+    ):
+        await setup_platform(
+            hass=hass, config_entry=mock_config_entry, remeha_modbus_unit=remeha_modbus_unit
+        )
+        await hass.async_block_till_done()
+
+        bottom = hass.states.get("sensor.remeha_modbus_test_hub_buffer_temperature_bottom")
+        assert bottom is not None
+        assert float(bottom.state) == 24.5
+
+        # The fixture holds 0xFFFF for the top sensor, which is how a missing sensor is reported.
+        top = hass.states.get("sensor.remeha_modbus_test_hub_buffer_temperature_top")
+        assert top is not None
+        assert top.state == STATE_UNKNOWN
