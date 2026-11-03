@@ -20,7 +20,6 @@ from homeassistant.components.water_heater.const import (
     STATE_ECO,
     STATE_GAS,
     STATE_HEAT_PUMP,
-    STATE_PERFORMANCE,
     WaterHeaterEntityFeature,
 )
 from homeassistant.const import ATTR_TEMPERATURE, PRECISION_TENTHS, UnitOfTemperature
@@ -279,8 +278,6 @@ class RemehaWaterHeaterEntity(CoordinatorEntity[RemehaUpdateCoordinator], WaterH
         elif operation_mode == REMEHA_PRESET_SCHEDULE_3:
             await zone.async_set_selected_schedule(ClimateZoneScheduleId.SCHEDULE_3)
             await zone.async_set_mode(ClimateZoneMode.SCHEDULING)
-        elif operation_mode == STATE_PERFORMANCE:
-            await zone.async_set_current_setpoint(zone.dhw_comfort_setpoint or 60.0)
 
         self.async_write_ha_state()
 
