@@ -317,6 +317,50 @@
       "dhw_tank_temperature_bottom": {
         "name": "Tanktemperatuur SWW (bodemsensor)"
       }
+    },
+    "water_heater": {
+      "heat_pump_boiler": {
+        "state_attributes": {
+          "operation_mode": {
+            "state": {
+              "schedule_1": "Programma 1",
+              "schedule_2": "Programma 2",
+              "schedule_3": "Programma 3"
+            }
+          }
+        }
+      },
+      "water_heater_electric": {
+        "state_attributes": {
+          "operation_mode": {
+            "state": {
+              "schedule_1": "Programma 1"
+            }
+          }
+        }
+      },
+      "water_heater_gas": {
+        "state_attributes": {
+          "operation_mode": {
+            "state": {
+              "schedule_1": "Programma 1",
+              "schedule_2": "Programma 2",
+              "schedule_3": "Programma 3"
+            }
+          }
+        }
+      },
+      "water_heater_oil": {
+        "state_attributes": {
+          "operation_mode": {
+            "state": {
+              "schedule_1": "Programma 1",
+              "schedule_2": "Programma 2",
+              "schedule_3": "Programma 3"
+            }
+          }
+        }
+      }
     }
   },
   "services": {

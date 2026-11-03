@@ -318,6 +318,50 @@
       "dhw_tank_temperature_bottom": {
         "name": "DHW tank temperature (bottom sensor)"
       }
+    },
+    "water_heater": {
+      "heat_pump_boiler": {
+        "state_attributes": {
+          "operation_mode": {
+            "state": {
+              "schedule_1": "Schedule 1",
+              "schedule_2": "Schedule 2",
+              "schedule_3": "Schedule 3"
+            }
+          }
+        }
+      },
+      "water_heater_electric": {
+        "state_attributes": {
+          "operation_mode": {
+            "state": {
+              "schedule_1": "Schedule 1"
+            }
+          }
+        }
+      },
+      "water_heater_gas": {
+        "state_attributes": {
+          "operation_mode": {
+            "state": {
+              "schedule_1": "Schedule 1",
+              "schedule_2": "Schedule 2",
+              "schedule_3": "Schedule 3"
+            }
+          }
+        }
+      },
+      "water_heater_oil": {
+        "state_attributes": {
+          "operation_mode": {
+            "state": {
+              "schedule_1": "Schedule 1",
+              "schedule_2": "Schedule 2",
+              "schedule_3": "Schedule 3"
+            }
+          }
+        }
+      }
     }
   },
   "services": {
