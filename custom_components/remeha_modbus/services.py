@@ -3,8 +3,10 @@
 import logging
 from typing import TYPE_CHECKING, cast
 
-from homeassistant.components.weather import SERVICE_GET_FORECASTS
-from homeassistant.components.weather.const import ATTR_WEATHER_TEMPERATURE_UNIT
+from homeassistant.components.weather.const import (
+    ATTR_WEATHER_TEMPERATURE_UNIT,
+    SERVICE_GET_FORECASTS,
+)
 from homeassistant.components.weather.const import DOMAIN as WeatherDomain
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import UnitOfTemperature
