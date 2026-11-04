@@ -15,9 +15,8 @@ from aio_remeha_modbus.gtw08.const import (
     ClimateZoneScheduleId,
 )
 from aio_remeha_modbus.gtw08.system_discovery_table import DeviceBoard, DeviceBoardType
-from homeassistant.components.climate import (
-    ClimateEntity,
-)
+from homeassistant.components.automation import automations_with_entity
+from homeassistant.components.climate import ClimateEntity
 from homeassistant.components.climate.const import (
     PRESET_COMFORT,
     PRESET_ECO,
@@ -26,9 +25,12 @@ from homeassistant.components.climate.const import (
     HVACAction,
     HVACMode,
 )
+from homeassistant.components.script import scripts_with_entity
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import ATTR_TEMPERATURE, PRECISION_TENTHS, UnitOfTemperature
+from homeassistant.const import ATTR_TEMPERATURE, PRECISION_TENTHS, Platform, UnitOfTemperature
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers import entity_registry as er
+from homeassistant.helpers import issue_registry as ir
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
@@ -54,6 +56,54 @@ from custom_components.remeha_modbus.helpers.entities import generate_unique_id
 _LOGGER = logging.getLogger(__name__)
 
 
+def _is_deprecated(zone: ClimateZone) -> bool:
+    return zone.is_domestic_hot_water()
+
+
+def _deprecate_entity(
+    hass: HomeAssistant, entity_registry: er.EntityRegistry, unique_id: str
+) -> bool:
+    """Return whether the deprecated entity should still be created."""
+
+    entity_id = entity_registry.async_get_entity_id(
+        domain=Platform.CLIMATE, platform=DOMAIN, unique_id=unique_id
+    )
+    if entity_id is None:
+        return False
+
+    references = automations_with_entity(hass, entity_id) + scripts_with_entity(hass, entity_id)
+    entry = entity_registry.async_get(entity_id)
+    assert entry is not None  # integrity failure if entity_id is not None
+
+    # Remove the entity if it is disabled and has no references.
+    if entry.disabled and not references:
+        entity_registry.async_remove(entity_id)
+        return False
+
+    placeholders = {
+        "entity_id": entity_id,
+        "replacement_entity_id": entity_id.replace(
+            f"{Platform.CLIMATE}.", f"{Platform.WATER_HEATER}.", count=1
+        ),
+    }
+    if references:
+        placeholders["references"] = "\n".join(references)
+
+    ir.async_create_issue(
+        hass,
+        DOMAIN,
+        f"deprecated_entity_{entity_id}",
+        breaks_in_ha_version="2027.3.0",
+        is_fixable=False,
+        severity=ir.IssueSeverity.WARNING,
+        translation_key="deprecated_climate_entity_used"
+        if references
+        else "deprecated_climate_entity",
+        translation_placeholders=placeholders,
+    )
+    return True
+
+
 async def async_setup_entry(
     hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
 ) -> None:
@@ -63,8 +113,15 @@ async def async_setup_entry(
     coordinator: RemehaUpdateCoordinator = entry.runtime_data["coordinator"]
 
     entities = [
-        RemehaClimateEntity.create_instance(api, coordinator, zone_id)
-        for zone_id in coordinator.data["climates"]
+        RemehaClimateEntity.create_instance(api, coordinator, zone.id)
+        for zone in coordinator.get_climates(lambda zone: not _is_deprecated(zone))
+    ]
+
+    # Add still in-use deprecated entities
+    entities += [
+        RemehaClimateEntity.create_instance(api, coordinator, zone.id)
+        for zone in coordinator.get_climates(_is_deprecated)
+        if _deprecate_entity(hass, er.async_get(hass), generate_unique_id(zone.id))
     ]
     async_add_entities(entities)
 

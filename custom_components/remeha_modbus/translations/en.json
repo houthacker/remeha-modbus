@@ -498,6 +498,14 @@
     }
   },
   "issues": {
+    "deprecated_climate_entity": {
+      "title": "Deprecated DHW entity detected",
+      "description": "The DHW climate entity `{entity_id}` is being replaced by `{replacement_entity_id}`.\nUpdate your dashboard, templates, automations and scripts with the replacement, disable the deprecated DHW climate and restart Home Assistant."
+    },
+    "deprecated_climate_entity_used": {
+      "title": "Deprecated DHW entity detected",
+      "description": "De SWW entity `{entity_id}` is being replaced by `{replacement_entity_id}`.\nIt is in use here: {references}\n\nUpdate je dashboard, templates, automations with the replacement, disable the deprecated DHW climate and restart Home Assistant."
+    },
     "discovery_table_corrupted": {
       "title": "Modbus discovery table corrupted",
       "fix_flow": {
