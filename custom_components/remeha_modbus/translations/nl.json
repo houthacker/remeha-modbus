@@ -497,6 +497,14 @@
     }
   },
   "issues": {
+    "deprecated_climate_entity": {
+      "title": "Verouderde SWW entity gedetecteerd",
+      "description": "De SWW entity `{entity_id}` wordt vervangen door `{replacement_entity_id}`.\nUpdate je dashboard, templates, automations en scripts hiermee, disable de verouderde SWW climate en herstart Home Assistant."
+    },
+    "deprecated_climate_entity_used": {
+      "title": "Verouderde SWW entity gedetecteerd",
+      "description": "De SWW entity `{entity_id}` wordt vervangen door `{replacement_entity_id}`.\nDe SWW entity wordt hier gebruikt: {references}\n\nUpdate je dashboard, templates, automations en scripts hiermee, disable de verouderde SWW climate en herstart Home Assistant."
+    },
     "discovery_table_corrupted": {
       "title": "Modbus discovery tabel ongeldig",
       "fix_flow": {

@@ -104,5 +104,15 @@
     "config_entry_key_error": {
       "message": "Konfigurationsfehler: das Feld {key} ist ungültig order erforderlich und nicht vorhanden."
     }
+  },
+  "issues": {
+    "deprecated_climate_entity": {
+      "title": "Veraltetes TWW entity erkannt",
+      "description": "Die TWW climate Entität `{entity_id}` wird durch `{replacement_entity_id}` ersetzt.\nAktualisiere deine Dashboards, Vorlagen, Automationen und Skripte mit der neuen Entität, deaktiviere die veraltete TWW Entität und starte Home Assistant neu."
+    },
+    "deprecated_climate_entity_used": {
+      "title": "Veraltetes TWW entity erkannt",
+      "description": "Die TWW climate Entität `{entity_id}` wird durch `{replacement_entity_id}` ersetzt.\nSie wird hier verwendet: {references}\n\nAktualisiere deine Dashboards, Vorlagen und Automationen mit der neuen Entität, deaktiviere die veraltete TWW Entität und starte Home Assistant neu."
+    }
   }
 }
