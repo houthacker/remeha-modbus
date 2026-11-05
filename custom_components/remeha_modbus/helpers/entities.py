@@ -8,7 +8,6 @@ from homeassistant.components.climate.const import DOMAIN as ClimatePlatform
 from homeassistant.components.switch.const import DOMAIN as SwitchPlatform
 from homeassistant.const import STATE_ON
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_platform
 from homeassistant.helpers import entity_registry as er
 
 from custom_components.remeha_modbus.blend.scheduler.const import SchedulerDomain
@@ -92,39 +91,6 @@ def is_scheduler_switch(hass: HomeAssistant, entity_id: str) -> bool:
     return entity_id in integration_entities(hass, SchedulerDomain)
 
 
-def get_own_entity_by_unique_id(
-    hass: HomeAssistant, platform_name: str, unique_id: str
-) -> str | None:
-    """Return a `remeha_modbus` entity_id by its `unique_id`.
-
-    Args:
-        hass: The HA instance
-        platform_name: The platform the entity belongs to, for example `light` or `switch`.
-        unique_id: The unique id of the entity.
-
-    Returns:
-        The `entity_id`, or `None` if no such entity can be found.
-
-    """
-
-    platform = next(
-        (p for p in entity_platform.async_get_platforms(hass, DOMAIN) if p.domain == platform_name),
-        None,
-    )
-
-    if platform is not None:
-        return next(
-            (
-                entity.entity_id
-                for entity in platform.entities.values()
-                if entity.unique_id == unique_id
-            ),
-            None,
-        )
-
-    return None
-
-
 @overload
 def get_climate_entity_id(hass: HomeAssistant, zone: ClimateZone) -> str:
     pass
@@ -150,9 +116,10 @@ def get_climate_entity_id(hass: HomeAssistant, zone: ClimateZone | int) -> str:
 
     """
 
+    entity_registry = er.async_get(hass)
     zone_id = zone.id if isinstance(zone, ClimateZone) else zone
     unique_id = generate_unique_id(zone_id)
-    entity_id = get_own_entity_by_unique_id(hass, ClimatePlatform, unique_id)
+    entity_id = entity_registry.async_get_entity_id(ClimatePlatform, DOMAIN, unique_id)
     if entity_id is not None:
         return entity_id
 
@@ -171,7 +138,10 @@ def is_schedule_sync_enabled(hass: HomeAssistant) -> bool:
     enable and disable schedule synchronization using for example a script or automation.
     """
 
-    schedule_sync_switch = get_own_entity_by_unique_id(hass, SwitchPlatform, SWITCH_SCHEDULE_SYNC)
+    entity_registry = er.async_get(hass)
+    schedule_sync_switch = entity_registry.async_get_entity_id(
+        SwitchPlatform, DOMAIN, SWITCH_SCHEDULE_SYNC
+    )
     if schedule_sync_switch is None:
         return False
 
