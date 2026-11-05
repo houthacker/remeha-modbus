@@ -11,11 +11,11 @@ from aio_remeha_modbus.gtw08.time_program import (
     TimeslotActivity,
     TimeslotSetpointType,
 )
-from homeassistant.components.climate.const import DOMAIN as ClimateDomain
 from homeassistant.components.climate.const import PRESET_COMFORT, PRESET_ECO, PRESET_NONE
 from homeassistant.components.switch.const import DOMAIN as SwitchDomain
-from homeassistant.const import STATE_OFF
+from homeassistant.const import STATE_OFF, Platform
 from homeassistant.core import HomeAssistant, State
+from homeassistant.helpers import entity_registry as er
 from pydantic import TypeAdapter
 
 from custom_components.remeha_modbus.blend.scheduler.const import (
@@ -44,7 +44,6 @@ from custom_components.remeha_modbus.errors import (
 )
 from custom_components.remeha_modbus.helpers.entities import (
     generate_unique_id,
-    get_own_entity_by_unique_id,
     integration_entities,
 )
 
@@ -52,6 +51,55 @@ from custom_components.remeha_modbus.helpers.entities import (
 def _set_key_diff[T](left: set[T], right: set[T]) -> set[T]:
     """Return the two-way difference between `left` and `right`."""
     return set((left - right) ^ (right - left))
+
+
+def _to_timeslot_setpoint_type(action: SchedulerStateAction) -> TimeslotSetpointType | None:
+    if (
+        action["service"] == "water_heater.set_operation_mode"
+        and "operation_mode" in action["data"]
+    ):
+        return TimeslotSetpointType[action["data"]["operation_mode"].upper()]
+
+    # TODO Remove backwards compatibility in HA 2027.3.0
+    if action["service"] == "climate.set_preset_mode" and "preset_mode" in action["data"]:
+        return TimeslotSetpointType[action["data"]["preset_mode"].upper()]
+
+    return None
+
+
+def _get_entity_id(hass: HomeAssistant, unique_id: str) -> tuple[str, Platform] | None:
+    entity_registry = er.async_get(hass)
+    entity_id = entity_registry.async_get_entity_id(Platform.WATER_HEATER, DOMAIN, unique_id)
+    if entity_id is None:
+        entity_id = entity_registry.async_get_entity_id(Platform.CLIMATE, DOMAIN, unique_id)
+        return (entity_id, Platform.CLIMATE) if entity_id else None
+
+    return (entity_id, Platform.WATER_HEATER)
+
+
+def _to_scheduler_action(
+    entity_id: str, platform: Platform, time_slot: Timeslot
+) -> SchedulerAction:
+    match platform:
+        case Platform.WATER_HEATER:
+            return SchedulerAction(
+                entity_id=entity_id,
+                service=f"{platform}.set_operation_mode",
+                service_data={
+                    "operation_mode": _to_dhw_mode(setpoint_type=time_slot.setpoint_type)
+                },
+            )
+        # TODO Remove backwards compatibility in HA 2027.3.0
+        case Platform.CLIMATE:
+            return SchedulerAction(
+                entity_id=entity_id,
+                service=f"{platform}.set_preset_mode",
+                service_data={"preset_mode": _to_dhw_mode(setpoint_type=time_slot.setpoint_type)},
+            )
+
+    raise ValueError(
+        f"Cannot create SchedulerAction: invalid platform type {platform}: require one of [{Platform.WATER_HEATER}, {Platform.CLIMATE}]"
+    )
 
 
 def compose_scheduler_tag(uuid: UUID) -> str:
@@ -138,12 +186,10 @@ def to_zone_schedule(state: SchedulerState) -> tuple[Weekday, list[Timeslot]]:
             )
 
         scheduler_action: SchedulerStateAction = state["attributes"]["actions"][idx]
-        if (
-            scheduler_action["service"] == "climate.set_preset_mode"
-            and "preset_mode" in scheduler_action["data"]
-        ):
+        timeslot_setpoint_type = _to_timeslot_setpoint_type(scheduler_action)
+        if timeslot_setpoint_type is not None:
             return Timeslot(
-                setpoint_type=TimeslotSetpointType[scheduler_action["data"]["preset_mode"].upper()],
+                setpoint_type=timeslot_setpoint_type,
                 activity=TimeslotActivity.DHW,
                 switch_time=datetime.strptime(parts[0], "%H:%M:%S").time(),
             )
@@ -184,7 +230,7 @@ def _get_durations(time_slots: list[Timeslot]):
             yield ts, timedelta(hours=next_ts.switch_time.hour - ts.switch_time.hour)
 
 
-def _to_dhw_preset_mode(setpoint_type: TimeslotSetpointType) -> str:
+def _to_dhw_mode(setpoint_type: TimeslotSetpointType) -> str:
     if setpoint_type is TimeslotSetpointType.ECO:
         return PRESET_ECO
     if setpoint_type is TimeslotSetpointType.COMFORT:
@@ -252,11 +298,11 @@ async def to_scheduler_schedule(
     """
 
     durations: dict[Timeslot, timedelta] = dict(_get_durations(time_slots))
-    climate_entity_id = get_own_entity_by_unique_id(
-        hass, ClimateDomain, generate_unique_id(zone_id)
-    )
-    if climate_entity_id is None:
+
+    entity_id = _get_entity_id(hass, generate_unique_id(zone_id))
+    if entity_id is None:
         raise ParseError(translation_domain=DOMAIN, translation_key="parse_error_entity_not_found")
+    entity_id, platform = entity_id
 
     data = SchedulerSchedule(
         weekdays=[WEEKDAY_TO_SHORT_DESC[day]],
@@ -276,21 +322,13 @@ async def to_scheduler_schedule(
                     )
                 ],
                 condition_type="and",
-                actions=[
-                    SchedulerAction(
-                        entity_id=climate_entity_id,
-                        service=f"{ClimateDomain}.set_preset_mode",
-                        service_data={
-                            "preset_mode": _to_dhw_preset_mode(setpoint_type=ts.setpoint_type)
-                        },
-                    )
-                ],
+                actions=[_to_scheduler_action(entity_id, platform, ts)],
             )
             for ts in time_slots
         ],
     )
 
-    state = hass.states.get(climate_entity_id)
+    state = hass.states.get(entity_id[0])
     assert state is not None
 
     zone_id_attr = state.attributes.get("zone_id")
