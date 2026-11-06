@@ -4,11 +4,14 @@ import logging
 from typing import TYPE_CHECKING, Any, cast
 
 import probatio
-from homeassistant.components.climate.const import DOMAIN as ClimateDomain
-from homeassistant.components.climate.const import SERVICE_SET_PRESET_MODE
+from homeassistant.components.climate.const import ATTR_PRESET_MODE, SERVICE_SET_PRESET_MODE
 from homeassistant.components.homeassistant.const import SERVICE_HOMEASSISTANT_RESTART
 from homeassistant.components.repairs import RepairsFlow, RepairsFlowResult
-from homeassistant.components.switch.const import DOMAIN as SwitchDomain
+from homeassistant.components.water_heater.const import (
+    ATTR_OPERATION_MODE,
+    SERVICE_SET_OPERATION_MODE,
+)
+from homeassistant.const import Platform
 from homeassistant.core import DOMAIN as HA_DOMAIN
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import issue_registry as ir
@@ -147,18 +150,30 @@ class UndoManualScheduleExecutionFixFlow(RepairsFlow):
 
                 # Let the heat pump manage schhedule execution
                 await self.hass.services.async_call(
-                    domain=SwitchDomain, service="turn_on", target={"entity_id": switch_entity}
+                    domain=Platform.SWITCH, service="turn_on", target={"entity_id": switch_entity}
                 )
 
                 # Set the preset mode of the related climates.
                 for k, v in issue.data.items():
                     if k != "switch":
-                        await self.hass.services.async_call(
-                            domain=ClimateDomain,
-                            service=SERVICE_SET_PRESET_MODE,
-                            service_data={"preset_mode": v},
-                            target={"entity_id": k},
-                        )
+                        state = self.hass.states.get(k)
+                        assert state is not None
+
+                        if state.domain == Platform.WATER_HEATER:
+                            await self.hass.services.async_call(
+                                domain=Platform.WATER_HEATER,
+                                service=SERVICE_SET_OPERATION_MODE,
+                                service_data={ATTR_OPERATION_MODE: v},
+                                target={"entity_id": k},
+                            )
+                        else:
+                            # TODO Remove in HA 2027.3.0
+                            await self.hass.services.async_call(
+                                domain=Platform.CLIMATE,
+                                service=SERVICE_SET_PRESET_MODE,
+                                service_data={ATTR_PRESET_MODE: v},
+                                target={"entity_id": k},
+                            )
             return self.async_create_entry(title="", data={})
 
         return self.async_show_form(step_id="confirm_undo", data_schema=probatio.Schema({}))
