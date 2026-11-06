@@ -4,8 +4,7 @@ import logging
 from types import MappingProxyType
 from typing import Final, Literal
 
-from homeassistant.components.climate.const import DOMAIN as ClimateEntityPlatform
-from homeassistant.components.switch.const import DOMAIN as SchedulerEntityPlatform
+from homeassistant.const import Platform
 from homeassistant.core import CALLBACK_TYPE as HomeAssistantCallback
 from homeassistant.core import Event, EventStateChangedData, HomeAssistant, State, callback
 from homeassistant.helpers.event import (
@@ -22,11 +21,19 @@ _LOGGER = logging.getLogger(__name__)
 
 ATTR_SCHEDULER_ENTITY_ADDED: Final[str] = "scheduler_entity_added"
 ATTR_SCHEDULER_ENTITY_REMOVED: Final[str] = "scheduler_entity_removed"
+ATTR_WATER_HEATER_ENTITY_ADDED: Final[str] = "water_heater_entity_added"
+ATTR_WATER_HEATER_ENTITY_REMOVED: Final[str] = "water_heater_entity_removed"
+
+# TODO Remove backwards compatibility in HA 2027.3.0
 ATTR_CLIMATE_ENTITY_ADDED: Final[str] = "climate_entity_added"
 ATTR_CLIMATE_ENTITY_REMOVED: Final[str] = "climate_entity_removed"
 
 
-ACCEPTED_DOMAINS: Final[tuple[str, str]] = (ClimateEntityPlatform, SchedulerEntityPlatform)
+ACCEPTED_DOMAINS: Final[tuple[str, str, str]] = (
+    Platform.WATER_HEATER,
+    Platform.CLIMATE,
+    Platform.SWITCH,
+)
 
 
 class EventDispatcher:
@@ -45,30 +52,45 @@ class EventDispatcher:
             {
                 ATTR_SCHEDULER_ENTITY_ADDED: async_track_state_added_domain(
                     hass=hass,
-                    domains=SchedulerEntityPlatform,
+                    domains=Platform.SWITCH,
                     action=lambda event: self._dispatch_entity_added_event(
-                        domain=SchedulerEntityPlatform, event=event
+                        domain=Platform.SWITCH, event=event
                     ),
                 ),
                 ATTR_SCHEDULER_ENTITY_REMOVED: async_track_state_removed_domain(
                     hass=hass,
-                    domains=SchedulerEntityPlatform,
+                    domains=Platform.SWITCH,
                     action=lambda event: self._dispatch_entity_removed_event(
-                        domain=SchedulerEntityPlatform, event=event
+                        domain=Platform.SWITCH, event=event
                     ),
                 ),
+                ATTR_WATER_HEATER_ENTITY_ADDED: async_track_state_added_domain(
+                    hass=hass,
+                    domains=Platform.WATER_HEATER,
+                    action=lambda event: self._dispatch_entity_added_event(
+                        domain=Platform.WATER_HEATER, event=event
+                    ),
+                ),
+                ATTR_WATER_HEATER_ENTITY_REMOVED: async_track_state_removed_domain(
+                    hass=hass,
+                    domains=Platform.WATER_HEATER,
+                    action=lambda event: self._dispatch_entity_removed_event(
+                        domain=Platform.WATER_HEATER, event=event
+                    ),
+                ),
+                # TODO Remove CLIMATE_* in HA 2027.3.0
                 ATTR_CLIMATE_ENTITY_ADDED: async_track_state_added_domain(
                     hass=hass,
-                    domains=ClimateEntityPlatform,
+                    domains=Platform.CLIMATE,
                     action=lambda event: self._dispatch_entity_added_event(
-                        domain=ClimateEntityPlatform, event=event
+                        domain=Platform.CLIMATE, event=event
                     ),
                 ),
                 ATTR_CLIMATE_ENTITY_REMOVED: async_track_state_removed_domain(
                     hass=hass,
-                    domains=ClimateEntityPlatform,
+                    domains=Platform.CLIMATE,
                     action=lambda event: self._dispatch_entity_removed_event(
-                        domain=ClimateEntityPlatform, event=event
+                        domain=Platform.CLIMATE, event=event
                     ),
                 ),
             }
@@ -76,14 +98,16 @@ class EventDispatcher:
         """Subscriptions to entities added/removed from either the `switch` or the `climate` domain."""
 
         self._add_entity_listeners: dict[str, list[EntityEventCallback]] = {
-            ClimateEntityPlatform: [],
-            SchedulerEntityPlatform: [],
+            Platform.WATER_HEATER: [],
+            Platform.CLIMATE: [],
+            Platform.SWITCH: [],
         }
         """Listeners to entity-added events for either domain."""
 
         self._remove_entity_listeners: dict[str, list[EntityEventCallback]] = {
-            ClimateEntityPlatform: [],
-            SchedulerEntityPlatform: [],
+            Platform.WATER_HEATER: [],
+            Platform.CLIMATE: [],
+            Platform.SWITCH: [],
         }
         """Listeners to entity-removal events for either domain."""
 
@@ -121,11 +145,13 @@ class EventDispatcher:
             return False
 
         # Only these two domains are accepted.
-        if state.domain not in [SchedulerEntityPlatform, ClimateEntityPlatform]:
+        if state.domain not in [Platform.SWITCH, Platform.WATER_HEATER, Platform.CLIMATE]:
             return False
 
         acceptable_integrations = (
-            [DOMAIN] if state.domain == ClimateEntityPlatform else [DOMAIN, SchedulerDomain]
+            [DOMAIN]
+            if state.domain in [Platform.WATER_HEATER, Platform.CLIMATE]
+            else [DOMAIN, SchedulerDomain]
         )
         return entity_id in [
             entity
@@ -135,7 +161,9 @@ class EventDispatcher:
 
     @callback
     def _dispatch_entity_added_event(
-        self, domain: Literal["switch", "climate"], event: Event[EventStateChangedData]
+        self,
+        domain: Literal[Platform.SWITCH, Platform.WATER_HEATER, Platform.CLIMATE],
+        event: Event[EventStateChangedData],
     ) -> None:
         """Notify all listeners that a new entity was added to the domain they subscribed to.
 
@@ -150,7 +178,9 @@ class EventDispatcher:
 
     @callback
     def _dispatch_entity_removed_event(
-        self, domain: Literal["switch", "climate"], event: Event[EventStateChangedData]
+        self,
+        domain: Literal[Platform.SWITCH, Platform.WATER_HEATER, Platform.CLIMATE],
+        event: Event[EventStateChangedData],
     ) -> None:
         """Notify all listeners that an entity was removed from the domain they subscribed to.
 
@@ -163,7 +193,9 @@ class EventDispatcher:
                 cb(event)
 
     def track_added_entities(
-        self, domain: Literal["switch", "climate"], listener: EntityEventCallback
+        self,
+        domain: Literal[Platform.SWITCH, Platform.WATER_HEATER, Platform.CLIMATE],
+        listener: EntityEventCallback,
     ) -> UnsubscribeCallback:
         """Register a listener for entities that are added to the given entity domain.
 
@@ -193,7 +225,9 @@ class EventDispatcher:
         return unsubscribe
 
     def track_removed_entities(
-        self, domain: Literal["switch", "climate"], listener: EntityEventCallback
+        self,
+        domain: Literal[Platform.SWITCH, Platform.WATER_HEATER, Platform.CLIMATE],
+        listener: EntityEventCallback,
     ) -> UnsubscribeCallback:
         """Register the listener for entities that are removed from the given domain.
 
