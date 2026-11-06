@@ -4,8 +4,7 @@ import asyncio
 import logging
 from typing import Final, override
 
-from homeassistant.components.switch.const import DOMAIN as SwitchDomain
-from homeassistant.const import STATE_ON
+from homeassistant.const import STATE_ON, Platform
 from homeassistant.core import Event, HomeAssistant, State, callback
 from homeassistant.helpers.event import EventStateChangedData, async_track_state_change_event
 
@@ -36,7 +35,7 @@ from .event_dispatcher import EventDispatcher, UnsubscribeCallback
 _LOGGER = logging.getLogger(__name__)
 
 
-_SCHEDULE_SYNC_SWITCH_ENTITY_ID = f"{SwitchDomain}.{SWITCH_SCHEDULE_SYNC}"
+_SCHEDULE_SYNC_SWITCH_ENTITY_ID = f"{Platform.SWITCH}.{SWITCH_SCHEDULE_SYNC}"
 """The entity_id of the switch that controls whether zone schedules are synchronized with the scheduler component."""
 
 _SWITCH_ADDED_SUBSCRIPTION_KEY: Final[str] = "__switch_added__"
@@ -193,7 +192,7 @@ class SchedulerBlender(Blender):
 
         # Subscribe to newly added scheduler.schedule entities
         self._subscriptions[_SWITCH_ADDED_SUBSCRIPTION_KEY] = self._dispatcher.track_added_entities(
-            SwitchDomain, self._switch_entity_added
+            Platform.SWITCH, self._switch_entity_added
         )
 
         # Subscribe to ZoneSchedule updates if switch entity is enabled.
