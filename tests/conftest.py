@@ -42,7 +42,6 @@ from pytest_homeassistant_custom_component.common import (
     MockEntity,
     load_json_value_fixture,
 )
-from remeha_modbus.helpers.entities import generate_unique_id
 
 from custom_components.remeha_modbus.api.store import RemehaModbusStore
 from custom_components.remeha_modbus.const import (
@@ -65,6 +64,7 @@ from custom_components.remeha_modbus.const import (
     REMEHA_PRESET_SCHEDULE_1,
     WEATHER_ENTITY_ID,
 )
+from custom_components.remeha_modbus.helpers.entities import generate_unique_id
 from custom_components.remeha_modbus.services import register_services
 from custom_components.scheduler.store import ScheduleEntry
 from tests.util import SchedulerPlatformStub
