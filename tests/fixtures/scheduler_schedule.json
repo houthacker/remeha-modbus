@@ -6,10 +6,10 @@
     {
       "actions": [
         {
-          "entity_id": "climate.remeha_modbus_test_hub_dhw",
-          "service": "climate.set_preset_mode",
+          "entity_id": "water_heater.remeha_modbus_test_hub_dhw",
+          "service": "water_heater.set_operation_mode",
           "service_data": {
-            "preset_mode": "eco"
+            "operation_mode": "eco"
           }
         }
       ],
@@ -28,10 +28,10 @@
     {
       "actions": [
         {
-          "entity_id": "climate.remeha_modbus_test_hub_dhw",
-          "service": "climate.set_preset_mode",
+          "entity_id": "water_heater.remeha_modbus_test_hub_dhw",
+          "service": "water_heater.set_operation_mode",
           "service_data": {
-            "preset_mode": "comfort"
+            "operation_mode": "comfort"
           }
         }
       ],
@@ -50,10 +50,10 @@
     {
       "actions": [
         {
-          "entity_id": "climate.remeha_modbus_test_hub_dhw",
-          "service": "climate.set_preset_mode",
+          "entity_id": "water_heater.remeha_modbus_test_hub_dhw",
+          "service": "water_heater.set_operation_mode",
           "service_data": {
-            "preset_mode": "eco"
+            "operation_mode": "eco"
           }
         }
       ],
@@ -72,10 +72,10 @@
     {
       "actions": [
         {
-          "entity_id": "climate.remeha_modbus_test_hub_dhw",
-          "service": "climate.set_preset_mode",
+          "entity_id": "water_heater.remeha_modbus_test_hub_dhw",
+          "service": "water_heater.set_operation_mode",
           "service_data": {
-            "preset_mode": "comfort"
+            "operation_mode": "comfort"
           }
         }
       ],
@@ -94,10 +94,10 @@
     {
       "actions": [
         {
-          "entity_id": "climate.remeha_modbus_test_hub_dhw",
-          "service": "climate.set_preset_mode",
+          "entity_id": "water_heater.remeha_modbus_test_hub_dhw",
+          "service": "water_heater.set_operation_mode",
           "service_data": {
-            "preset_mode": "eco"
+            "operation_mode": "eco"
           }
         }
       ],

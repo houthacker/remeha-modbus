@@ -15,7 +15,7 @@ from homeassistant.components.climate.const import (
     HVACAction,
     HVACMode,
 )
-from homeassistant.const import STATE_OFF
+from homeassistant.const import STATE_OFF, Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ServiceNotSupported, ServiceValidationError
 
@@ -45,7 +45,10 @@ async def test_climates(hass: HomeAssistant, remeha_api, mock_config_entry, reme
         new=lambda *args, **kwargs: remeha_api,
     ):
         await setup_platform(
-            hass=hass, config_entry=mock_config_entry, remeha_modbus_unit=remeha_modbus_unit
+            hass=hass,
+            config_entry=mock_config_entry,
+            remeha_modbus_unit=remeha_modbus_unit,
+            require_dhw_climate_compatibility=True,
         )
         await hass.async_block_till_done()
 
@@ -60,7 +63,10 @@ async def test_dhw_climate(hass: HomeAssistant, remeha_api, mock_config_entry, r
         new=lambda *args, **kwargs: remeha_api,
     ):
         await setup_platform(
-            hass=hass, config_entry=mock_config_entry, remeha_modbus_unit=remeha_modbus_unit
+            hass=hass,
+            config_entry=mock_config_entry,
+            remeha_modbus_unit=remeha_modbus_unit,
+            require_dhw_climate_compatibility=True,
         )
         await hass.async_block_till_done()
 
@@ -337,7 +343,10 @@ async def test_dhw_temporary_setpoint_override_scheduling_mode(
         new=lambda *args, **kwargs: remeha_api,
     ):
         await setup_platform(
-            hass=hass, config_entry=mock_config_entry, remeha_modbus_unit=remeha_modbus_unit
+            hass=hass,
+            config_entry=mock_config_entry,
+            remeha_modbus_unit=remeha_modbus_unit,
+            require_dhw_climate_compatibility=True,
         )
         await hass.async_block_till_done()
 
@@ -383,7 +392,10 @@ async def test_dhw_climate_hvac_mode_off(
         new=lambda *args, **kwargs: remeha_api,
     ):
         await setup_platform(
-            hass=hass, config_entry=mock_config_entry, remeha_modbus_unit=remeha_modbus_unit
+            hass=hass,
+            config_entry=mock_config_entry,
+            remeha_modbus_unit=remeha_modbus_unit,
+            require_dhw_climate_compatibility=True,
         )
         await hass.async_block_till_done()
 
@@ -425,7 +437,10 @@ async def test_dhw_climate_hvac_mode_heat(
 
         # Then setup the platform and start testing.
         await setup_platform(
-            hass=hass, config_entry=mock_config_entry, remeha_modbus_unit=remeha_modbus_unit
+            hass=hass,
+            config_entry=mock_config_entry,
+            remeha_modbus_unit=remeha_modbus_unit,
+            require_dhw_climate_compatibility=True,
         )
         await hass.async_block_till_done()
 
@@ -466,7 +481,10 @@ async def test_dhw_climate_hvac_mode_auto(
 
         # Then setup platform.
         await setup_platform(
-            hass=hass, config_entry=mock_config_entry, remeha_modbus_unit=remeha_modbus_unit
+            hass=hass,
+            config_entry=mock_config_entry,
+            remeha_modbus_unit=remeha_modbus_unit,
+            require_dhw_climate_compatibility=True,
         )
         await hass.async_block_till_done()
 
@@ -520,7 +538,10 @@ async def test_dhw_climate_preset_mode_schedule(
 
         # Then setup platform.
         await setup_platform(
-            hass=hass, config_entry=mock_config_entry, remeha_modbus_unit=remeha_modbus_unit
+            hass=hass,
+            config_entry=mock_config_entry,
+            remeha_modbus_unit=remeha_modbus_unit,
+            require_dhw_climate_compatibility=True,
         )
         await hass.async_block_till_done()
 
@@ -562,7 +583,10 @@ async def test_dhw_climate_preset_mode_eco(
     ):
         # Then setup platform.
         await setup_platform(
-            hass=hass, config_entry=mock_config_entry, remeha_modbus_unit=remeha_modbus_unit
+            hass=hass,
+            config_entry=mock_config_entry,
+            remeha_modbus_unit=remeha_modbus_unit,
+            require_dhw_climate_compatibility=True,
         )
         await hass.async_block_till_done()
 
@@ -605,7 +629,10 @@ async def test_dhw_climate_preset_mode_comfort(
 
         # Then setup platform.
         await setup_platform(
-            hass=hass, config_entry=mock_config_entry, remeha_modbus_unit=remeha_modbus_unit
+            hass=hass,
+            config_entry=mock_config_entry,
+            remeha_modbus_unit=remeha_modbus_unit,
+            require_dhw_climate_compatibility=True,
         )
         await hass.async_block_till_done()
 
@@ -649,7 +676,10 @@ async def test_dhw_climate_preset_mode_none(
 
         # Then setup platform.
         await setup_platform(
-            hass=hass, config_entry=mock_config_entry, remeha_modbus_unit=remeha_modbus_unit
+            hass=hass,
+            config_entry=mock_config_entry,
+            remeha_modbus_unit=remeha_modbus_unit,
+            require_dhw_climate_compatibility=True,
         )
         await hass.async_block_till_done()
 
@@ -688,7 +718,10 @@ async def test_dhw_climate_preset_mode_invalid(
 
         # Then setup platform.
         await setup_platform(
-            hass=hass, config_entry=mock_config_entry, remeha_modbus_unit=remeha_modbus_unit
+            hass=hass,
+            config_entry=mock_config_entry,
+            remeha_modbus_unit=remeha_modbus_unit,
+            require_dhw_climate_compatibility=True,
         )
         await hass.async_block_till_done()
 
@@ -836,7 +869,10 @@ async def test_heat_pump_boiler_climate(
         new=lambda *args, **kwargs: remeha_api,
     ):
         await setup_platform(
-            hass=hass, config_entry=mock_config_entry, remeha_modbus_unit=remeha_modbus_unit
+            hass=hass,
+            config_entry=mock_config_entry,
+            remeha_modbus_unit=remeha_modbus_unit,
+            require_dhw_climate_compatibility=True,
         )
         await hass.async_block_till_done()
 
@@ -887,7 +923,10 @@ async def test_heat_pump_boiler_climate_turn_off_on(
         new=lambda *args, **kwargs: remeha_api,
     ):
         await setup_platform(
-            hass=hass, config_entry=mock_config_entry, remeha_modbus_unit=remeha_modbus_unit
+            hass=hass,
+            config_entry=mock_config_entry,
+            remeha_modbus_unit=remeha_modbus_unit,
+            require_dhw_climate_compatibility=True,
         )
         await hass.async_block_till_done()
 
@@ -896,7 +935,7 @@ async def test_heat_pump_boiler_climate_turn_off_on(
         assert hpb.state == "auto"
 
         await hass.services.async_call(
-            domain=ClimateDomain,
+            domain=Platform.CLIMATE,
             service="turn_off",
             service_data={"entity_id": hpb.entity_id},
             blocking=True,
@@ -908,7 +947,7 @@ async def test_heat_pump_boiler_climate_turn_off_on(
         assert hpb.attributes["preset_mode"] == PRESET_ECO
 
         await hass.services.async_call(
-            domain=ClimateDomain,
+            domain=Platform.CLIMATE,
             service="turn_on",
             service_data={"entity_id": hpb.entity_id},
             blocking=True,
@@ -931,7 +970,10 @@ async def test_heat_pump_boiler_climate_turn_off_when_off(
         new=lambda *args, **kwargs: remeha_api,
     ):
         await setup_platform(
-            hass=hass, config_entry=mock_config_entry, remeha_modbus_unit=remeha_modbus_unit
+            hass=hass,
+            config_entry=mock_config_entry,
+            remeha_modbus_unit=remeha_modbus_unit,
+            require_dhw_climate_compatibility=True,
         )
         await hass.async_block_till_done()
 
@@ -939,7 +981,7 @@ async def test_heat_pump_boiler_climate_turn_off_when_off(
         assert hpb is not None
 
         await hass.services.async_call(
-            domain=ClimateDomain,
+            domain=Platform.CLIMATE,
             service="turn_off",
             service_data={"entity_id": hpb.entity_id},
             blocking=True,
@@ -953,7 +995,7 @@ async def test_heat_pump_boiler_climate_turn_off_when_off(
             "aio_remeha_modbus.gtw08.climate_zone.ClimateZone.async_set_mode"
         ) as async_set_mode:
             await hass.services.async_call(
-                domain=ClimateDomain,
+                domain=Platform.CLIMATE,
                 service="turn_off",
                 service_data={"entity_id": hpb.entity_id},
                 blocking=True,

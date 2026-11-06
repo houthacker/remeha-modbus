@@ -6,8 +6,9 @@ import pytest
 from aio_remeha_modbus.gtw08 import GTW08
 from aio_remeha_modbus.gtw08.const import REMEHA_ZONE_RESERVED_REGISTERS
 from aio_remeha_modbus.gtw08.errors import DiscoveryTableCorruptedError
-from homeassistant.components.climate.const import ATTR_PRESET_MODE, PRESET_ECO
+from homeassistant.components.climate.const import PRESET_ECO
 from homeassistant.components.switch.const import DOMAIN as SwitchDomain
+from homeassistant.components.water_heater.const import ATTR_OPERATION_MODE
 from homeassistant.const import ATTR_ENTITY_ID, SERVICE_TURN_OFF, STATE_OFF, STATE_ON
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResultType
@@ -23,7 +24,7 @@ from custom_components.remeha_modbus.const import (
     ISSUE_INVALID_ZONE_SCHEDULE,
 )
 from custom_components.remeha_modbus.coordinator import RemehaUpdateCoordinator
-from custom_components.remeha_modbus.helpers.entities import get_climate_entity_id
+from custom_components.remeha_modbus.helpers.entities import get_entity_id_for_zone
 from tests.conftest import setup_platform
 from tests.util.repairs import get_repairs, process_repair_fix_flow, start_repair_fix_flow
 
@@ -200,33 +201,33 @@ async def test_undo_manual_schedule_execution_repair(
         )
         await hass.async_block_till_done()
 
-        entity_id = f"{SwitchDomain}.{HEATPUMP_MANAGED_SCHEDULES}"
+        switch_entity_id = f"{SwitchDomain}.{HEATPUMP_MANAGED_SCHEDULES}"
 
         # Switch must be on by default
-        state = hass.states.get(entity_id)
+        state = hass.states.get(switch_entity_id)
         assert state is not None
         assert state.state == STATE_ON
 
         # Retrieve the current DHW climate preset.
-        climate_entity_id = get_climate_entity_id(hass, 2)
-        state = hass.states.get(climate_entity_id)
+        zone_entity_id = get_entity_id_for_zone(hass, 2)
+        state = hass.states.get(zone_entity_id)
         assert state is not None
-        original_preset = state.attributes[ATTR_PRESET_MODE]
+        original_preset = state.attributes[ATTR_OPERATION_MODE]
 
         # Turn the switch off
         await hass.services.async_call(
-            domain=SwitchDomain, service=SERVICE_TURN_OFF, target={ATTR_ENTITY_ID: entity_id}
+            domain=SwitchDomain, service=SERVICE_TURN_OFF, target={ATTR_ENTITY_ID: switch_entity_id}
         )
 
         # Switch must be off now
-        state = hass.states.get(entity_id)
+        state = hass.states.get(switch_entity_id)
         assert state is not None
         assert state.state == STATE_OFF
 
         # DHW climate must be set to preset=ECO as a result.
-        state = hass.states.get(climate_entity_id)
+        state = hass.states.get(zone_entity_id)
         assert state is not None
-        assert state.attributes[ATTR_PRESET_MODE] == PRESET_ECO
+        assert state.attributes[ATTR_OPERATION_MODE] == PRESET_ECO
 
         # Start repair fix flow
         issue_registry = ir.async_get(hass)
@@ -250,11 +251,11 @@ async def test_undo_manual_schedule_execution_repair(
         assert issue_registry.async_get_issue(DOMAIN, ISSUE_HEATPUMP_MANAGED_SCHEDULES_OFF) is None
 
         # Switch is back on
-        state = hass.states.get(entity_id)
+        state = hass.states.get(switch_entity_id)
         assert state is not None
         assert state.state == STATE_ON
 
         # And climate is back to previous state
-        state = hass.states.get(climate_entity_id)
+        state = hass.states.get(zone_entity_id)
         assert state is not None
-        assert state.attributes[ATTR_PRESET_MODE] == original_preset
+        assert state.attributes[ATTR_OPERATION_MODE] == original_preset
