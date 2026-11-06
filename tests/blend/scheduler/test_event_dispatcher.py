@@ -2,7 +2,7 @@
 
 from unittest.mock import patch
 
-from homeassistant.components.climate.const import PRESET_COMFORT
+from homeassistant.components.water_heater.const import STATE_HEAT_PUMP
 from homeassistant.core import HomeAssistant
 
 from custom_components.remeha_modbus.blend.scheduler.event_dispatcher import EventDispatcher
@@ -24,7 +24,7 @@ async def test_subscribe_to_entity_updates(
         )
         await hass.async_block_till_done()
 
-        entity_id: str = "climate.remeha_modbus_test_hub_dhw"
+        entity_id: str = "water_heater.remeha_modbus_test_hub_dhw"
         dispatcher: EventDispatcher = EventDispatcher(hass=hass)
 
         def listener1(_):
@@ -56,7 +56,7 @@ async def test_entity_update_listener_gets_called(
         await hass.async_block_till_done()
 
         coordinator: RemehaUpdateCoordinator = mock_config_entry.runtime_data["coordinator"]
-        entity_id: str = "climate.remeha_modbus_test_hub_dhw"
+        entity_id: str = "water_heater.remeha_modbus_test_hub_dhw"
         dispatcher: EventDispatcher = EventDispatcher(hass=hass)
 
         parameters: dict = {"dhw_listener_calls": 0}
@@ -73,9 +73,9 @@ async def test_entity_update_listener_gets_called(
 
         # Update the DHW climate by putting it in manual mode.
         await hass.services.async_call(
-            domain="climate",
-            service="set_preset_mode",
-            service_data={"entity_id": entity_id, "preset_mode": PRESET_COMFORT},
+            domain="water_heater",
+            service="set_operation_mode",
+            service_data={"entity_id": entity_id, "operation_mode": STATE_HEAT_PUMP},
         )
 
         await hass.async_block_till_done(wait_background_tasks=True)
@@ -85,7 +85,7 @@ async def test_entity_update_listener_gets_called(
 
         # Update it again, the listener must not be called again.
         await hass.services.async_call(
-            domain="climate",
+            domain="water_heater",
             service="set_temperature",
             service_data={"entity_id": entity_id, "temperature": dhw_zone.current_setpoint - 1},
             blocking=False,

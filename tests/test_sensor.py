@@ -115,7 +115,10 @@ async def test_tank_temperature_sensors(
         new=lambda *args, **kwargs: remeha_api,
     ):
         await setup_platform(
-            hass=hass, config_entry=mock_config_entry, remeha_modbus_unit=remeha_modbus_unit
+            hass=hass,
+            config_entry=mock_config_entry,
+            remeha_modbus_unit=remeha_modbus_unit,
+            require_dhw_climate_compatibility=True,
         )
         await hass.async_block_till_done()
 

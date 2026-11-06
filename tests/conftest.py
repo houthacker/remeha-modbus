@@ -11,6 +11,11 @@ import probatio
 import pytest
 import pytest_asyncio
 from aio_remeha_modbus.gtw08 import GTW08
+from aio_remeha_modbus.gtw08.climate_zone import (
+    ClimateZoneFunction,
+    ClimateZoneType,
+    is_domestic_hot_water,
+)
 from aio_remeha_modbus.gtw08.const import BoilerEnergyLabel
 from dateutil import tz
 from homeassistant.components.modbus.const import RTUOVERTCP
@@ -24,8 +29,9 @@ from homeassistant.components.weather.const import (
     WeatherEntityFeature,
 )
 from homeassistant.components.weather.services import _async_get_forecasts_service
-from homeassistant.const import CONF_HOST, CONF_NAME, CONF_PORT, CONF_TYPE
+from homeassistant.const import CONF_HOST, CONF_NAME, CONF_PORT, CONF_TYPE, Platform
 from homeassistant.core import HomeAssistant, SupportsResponse
+from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.entity_component import EntityComponent
 from homeassistant.util import dt
@@ -36,6 +42,7 @@ from pytest_homeassistant_custom_component.common import (
     MockEntity,
     load_json_value_fixture,
 )
+from remeha_modbus.helpers.entities import generate_unique_id
 
 from custom_components.remeha_modbus.api.store import RemehaModbusStore
 from custom_components.remeha_modbus.const import (
@@ -164,12 +171,6 @@ def auto_enable_custom_integrations(enable_custom_integrations):
 
 
 @pytest.fixture
-def entity_registry(hass: HomeAssistant) -> er.EntityRegistry:
-    """Return the entity registry for the current hass instance."""
-    return er.async_get(hass)
-
-
-@pytest.fixture
 def mock_setup_entry() -> Generator[AsyncMock]:
     """Override async_setup_entry."""
     with patch(
@@ -246,6 +247,7 @@ async def setup_platform(
     add_schedule_callback: Callable[[ScheduleEntry], None] | None = None,
     edit_schedule_callback: Callable[[ScheduleEntry], None] | None = None,
     scheduler_entities: Iterable[MockEntity] = [],
+    require_dhw_climate_compatibility: bool = False,
 ):
     """Set up the platform based on the given `config_entry`, using a `RemehaUpdateCoordinator` that does not update.
 
@@ -266,6 +268,8 @@ async def setup_platform(
         add_schedule_callback (Callable[[ScheduleEntry], None] | None): A callback function for the `scheduler.add` service.
         edit_schedule_callback (Callable[[ScheduleEntry], None] | None): A callback function for the `scheduler.edit` service.
         scheduler_entities (Iterable[MockEntity]): An optional list of mock entities to add to the scheduler component.
+        require_dhw_climate_compatibility (bool): Whether to add a pre-existing DHW climate entity to enable testing backwards compatibility.
+        dhw_climate_zone_id (int): The one-based zone id of the pre-existing DHW climate entity, if any.
 
     """
 
@@ -308,6 +312,54 @@ async def setup_platform(
     await scheduler_component.async_add_entities(entities=scheduler_entities)
 
     config_entry.add_to_hass(hass=hass)
+
+    # Add a pre-existing DHW climate entity for backwards compatibility.
+    if require_dhw_climate_compatibility:
+        number_of_zones = (await remeha_modbus_unit.read_holding_registers(189, 1))[0]
+
+        async def _get_dhw_zone_id() -> int:
+            type_base_address = 640
+            function_base_address = 641
+
+            for zone_idx in range(number_of_zones):
+                type_address = type_base_address + (512 * zone_idx)
+                function_address = function_base_address + (512 * zone_idx)
+
+                zone_type_raw = (await remeha_modbus_unit.read_holding_registers(type_address, 1))[
+                    0
+                ]
+                zone_function_raw = (
+                    await remeha_modbus_unit.read_holding_registers(function_address, 1)
+                )[0]
+
+                if zone_type_raw == 0xFFFF or zone_function_raw == 0xFFFF:
+                    continue
+
+                zone_type = ClimateZoneType(zone_type_raw)
+                zone_function = ClimateZoneFunction(zone_function_raw)
+
+                if is_domestic_hot_water(zone_type, zone_function):
+                    return zone_idx + 1
+
+            raise ValueError("No DHW zone defined.")
+
+        device_registry = dr.async_get(hass)
+        device_entry = device_registry.async_get_or_create(
+            config_entry_id=config_entry.entry_id,
+            identifiers={(DOMAIN, "test_hub")},
+        )
+
+        entity_registry = er.async_get(hass)
+        _ = entity_registry.async_get_or_create(
+            Platform.CLIMATE,
+            DOMAIN,
+            generate_unique_id(await _get_dhw_zone_id()),
+            config_entry=config_entry,
+            has_entity_name=True,
+            device_id=device_entry.id,
+            original_name="dhw",
+            suggested_object_id="remeha_modbus_test_hub_dhw",
+        )
 
     # We don't want lingering timers after the tests are done, so disable the updates of the update coordinator.
     with (

@@ -4,12 +4,12 @@
   "attributes": {
     "weekdays": ["mon"],
     "timeslots": ["08:00:00 - 16:00:00"],
-    "entities": ["climate.remeha_modbus_test_hub_dhw"],
+    "entities": ["water_heater.remeha_modbus_test_hub_dhw"],
     "actions": [
       {
-        "service": "climate.set_preset_mode",
+        "service": "water_heater.set_operation_mode",
         "data": {
-          "preset_mode": "comfort"
+          "operation_mode": "comfort"
         }
       }
     ],
