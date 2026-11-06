@@ -6,7 +6,7 @@ from typing import overload
 from aio_remeha_modbus.gtw08.climate_zone import ClimateZone
 from homeassistant.components.climate.const import DOMAIN as ClimatePlatform
 from homeassistant.components.switch.const import DOMAIN as SwitchPlatform
-from homeassistant.const import STATE_ON
+from homeassistant.const import STATE_ON, Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry as er
 
@@ -92,17 +92,25 @@ def is_scheduler_switch(hass: HomeAssistant, entity_id: str) -> bool:
 
 
 @overload
-def get_climate_entity_id(hass: HomeAssistant, zone: ClimateZone) -> str:
+def get_entity_id_for_zone(hass: HomeAssistant, zone: ClimateZone) -> str:
     pass
 
 
 @overload
-def get_climate_entity_id(hass: HomeAssistant, zone: int) -> str:
+def get_entity_id_for_zone(hass: HomeAssistant, zone: int) -> str:
     pass
 
 
-def get_climate_entity_id(hass: HomeAssistant, zone: ClimateZone | int) -> str:
-    """Get the `entity_id` of the given climate zone.
+def get_entity_id_for_zone(hass: HomeAssistant, zone: ClimateZone | int) -> str:
+    """Get an `entity_id` of the given climate zone.
+
+    Until Home Assistant `2027.3.0`, this method returns an entity from either
+    the `water_heater` or the `climate` platform.
+
+    ### Note:
+    The returned entity id may not be the only entity id for the given `ClimateZone`,
+    since such a zone can have an entity in both the `water_heater` and `climate`
+    domain until backward compatibility ends in HA 2027.3.0
 
     Args:
         hass (HomeAssistant): The HA instance.
@@ -119,7 +127,12 @@ def get_climate_entity_id(hass: HomeAssistant, zone: ClimateZone | int) -> str:
     entity_registry = er.async_get(hass)
     zone_id = zone.id if isinstance(zone, ClimateZone) else zone
     unique_id = generate_unique_id(zone_id)
-    entity_id = entity_registry.async_get_entity_id(ClimatePlatform, DOMAIN, unique_id)
+    entity_id = entity_registry.async_get_entity_id(Platform.WATER_HEATER, DOMAIN, unique_id)
+    if entity_id is not None:
+        return entity_id
+
+    # TODO Remove backwards compatibility in HA 2027.3.0
+    entity_id = entity_registry.async_get_entity_id(Platform.CLIMATE, DOMAIN, unique_id)
     if entity_id is not None:
         return entity_id
 
