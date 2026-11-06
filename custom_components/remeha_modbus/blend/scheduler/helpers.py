@@ -328,7 +328,7 @@ async def to_scheduler_schedule(
         ],
     )
 
-    state = hass.states.get(entity_id[0])
+    state = hass.states.get(entity_id)
     assert state is not None
 
     zone_id_attr = state.attributes.get("zone_id")
