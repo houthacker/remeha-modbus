@@ -449,7 +449,6 @@ class RemehaDhwEntity(RemehaClimateEntity):
                 },
             )
 
-        # TODO Update HA setpoint until next poll
         self.async_write_ha_state()
 
 
@@ -467,6 +466,7 @@ class RemehaHeatPumpBoilerEntity(RemehaDhwEntity):
         """Create a new RemehaHeatPumpBoilerEntity."""
         super().__init__(api=api, coordinator=coordinator, climate_zone_id=climate_zone_id)
 
+    @override
     async def async_turn_off(self):
         """Turn the climate zone off."""
 
@@ -476,7 +476,6 @@ class RemehaHeatPumpBoilerEntity(RemehaDhwEntity):
         else:
             _LOGGER.debug("Turning off climate %s that is already off; ignoring.", self.name)
 
-        # TODO Update HA state until next poll
         self.async_write_ha_state()
 
 
