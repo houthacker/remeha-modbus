@@ -23,6 +23,7 @@ from homeassistant.components.water_heater.const import (
     WaterHeaterEntityFeature,
 )
 from homeassistant.const import ATTR_TEMPERATURE, PRECISION_TENTHS, UnitOfTemperature
+from homeassistant.core import callback
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
@@ -88,6 +89,7 @@ class RemehaWaterHeaterEntity(CoordinatorEntity[RemehaUpdateCoordinator], WaterH
         self._attr_unique_id = generate_unique_id(climate_zone_id)
         self._attr_extra_state_attributes = {
             "zone_id": climate_zone_id,
+            "flow_temperature": None,
         }
 
         _LOGGER.debug("Creating new RemehaWaterHeater entity [%s]", self._attr_unique_id)
@@ -247,6 +249,20 @@ class RemehaWaterHeaterEntity(CoordinatorEntity[RemehaUpdateCoordinator], WaterH
         """
 
         return self._zone.dhw_tank_temperature_top
+
+    @override
+    async def async_added_to_hass(self) -> None:
+        """Set extra attributes when being added to HA."""
+
+        self._attr_extra_state_attributes["flow_temperature"] = self._zone.flow_temperature
+        return await super().async_added_to_hass()
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        """Set flow_temperature as an extra attribute."""
+
+        self._attr_extra_state_attributes["flow_temperature"] = self._zone.flow_temperature
+        return super()._handle_coordinator_update()
 
     @override
     async def async_set_temperature(self, **kwargs: Any) -> None:
