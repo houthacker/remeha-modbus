@@ -22,7 +22,7 @@ Star remeha-modbus [on github  &#x2B50;](https://github.com/houthacker/remeha-mo
 ## Table of Contents
 - [Installation](#installation)
 - [Current features](#current-features)
-  - [Modbus Discovery Table](#modbus-discovery-table)
+- [Modbus Discovery Table](#modbus-discovery-table)
 - [DHW Auto Scheduling](#dhw-auto-scheduling)
 - [DHW Schedule Synchronization](#dhw-schedule-synchronization)
 - [Noteworthy entities](#entities)
@@ -43,9 +43,9 @@ Planned features and features under discussion are available in the [issues](htt
 - Connections:
   - Directly through a serial port
   - Indirectly through a proxy over WiFi or ethernet.
-- Supported climate zones are exposed as [climate](https://www.home-assistant.io/integrations/climate/) entities
-  - DHW (domestic hot water)
-  - CH (central heating)
+- Supported climate zones are exposed as the following entity types:
+  - DHW (domestic hot water): [water_heater](https://www.home-assistant.io/integrations/water_heater/)
+  - CH (central heating): [climate](https://www.home-assistant.io/integrations/climate/)
   - Automatically discovered once the integration has been set up.
   - Linked to a device, showing the type of board in the Remeha appliance, including its soft- and hardware versions.
   - Climate features are enabled depending on the climate zone type (for instance, a DHW zone is only able to heat, not cool).
@@ -75,7 +75,7 @@ According to Remeha, the following appliances can be extended with a GTW-08 (mod
 | Azorra Ace           |       &check;       | &check; | Heat pump boiler; support is experimental       |
 | Confida 40 / 10      |       &check;       | &check; |
 | Confida 50E          |       &check;       | &check; |
-| Elga Ace             |       &check;       | &cross; |
+| Elga Ace             |       &check;       | &check; |
 | Elga Ace MB          |       &check;       | &cross; |
 | Eria Tower           |       &check;       | &cross; |
 | Eria Tower Ace (S)   |       &check;       | &cross; |
@@ -158,7 +158,7 @@ Calling it multiple times has no additional effect, except possibly when the ble
 - Fields: no
 - Return value: no
 - Raised errors: `RemehaIncorrectServiceCall` if called when either:
-  - There is no DHW climate
+  - There is no DHW `climate` or `water_heater` entity.
   - The configured weather forecast does not supply a `solar_irradiance` field
 
 A description of this service is available in [DHW auto scheduling](#dhw-auto-scheduling)
