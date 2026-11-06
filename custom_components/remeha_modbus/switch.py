@@ -11,11 +11,14 @@ from homeassistant.components.climate.const import (
     PRESET_ECO,
     SERVICE_SET_PRESET_MODE,
 )
-from homeassistant.components.climate.const import DOMAIN as ClimateDomain
 from homeassistant.components.switch import SwitchEntity
 from homeassistant.components.switch.const import SwitchDeviceClass
+from homeassistant.components.water_heater.const import (
+    ATTR_OPERATION_MODE,
+    SERVICE_SET_OPERATION_MODE,
+)
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import STATE_ON
+from homeassistant.const import STATE_ON, Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import issue_registry as ir
 from homeassistant.helpers.device_registry import DeviceInfo
@@ -33,7 +36,7 @@ from custom_components.remeha_modbus.const import (
     SWITCH_SCHEDULE_SYNC,
 )
 from custom_components.remeha_modbus.coordinator import RemehaUpdateCoordinator
-from custom_components.remeha_modbus.helpers.entities import get_climate_entity_id
+from custom_components.remeha_modbus.helpers.entities import get_entity_id_for_zone
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -170,7 +173,7 @@ class RemehaHeatpumpManagedSchedulesSwitch(RemehaModbusSwitch):
         prev_presets: dict[str, str] = {}
         coordinator: RemehaUpdateCoordinator = self._config_entry.runtime_data["coordinator"]
         for climate in coordinator.get_climates(lambda c: c.is_domestic_hot_water()):
-            entity_id = get_climate_entity_id(self.hass, climate)
+            entity_id = get_entity_id_for_zone(self.hass, climate)
             state = self.hass.states.get(entity_id)
 
             # get_climate_entity_id already raises an exception if the entity doesn't exst.
@@ -181,19 +184,34 @@ class RemehaHeatpumpManagedSchedulesSwitch(RemehaModbusSwitch):
                 )
                 continue
 
-            prev_presets[entity_id] = state.attributes[ATTR_PRESET_MODE]
+            # TODO Remove ATTR_PRESET_MODE in HA 2027.3.0
+            prev_presets[entity_id] = (
+                state.attributes[ATTR_OPERATION_MODE]
+                if state.domain == Platform.WATER_HEATER
+                else state.attributes[ATTR_PRESET_MODE]
+            )
 
             _LOGGER.debug(
                 "Setting preset_mode of %s to %s to prevent scheduling conflicts between heat pump and Home Assistant.",
                 entity_id,
                 PRESET_ECO,
             )
-            await self.hass.services.async_call(
-                domain=ClimateDomain,
-                service=SERVICE_SET_PRESET_MODE,
-                service_data={ATTR_PRESET_MODE: PRESET_ECO},
-                target={"entity_id": entity_id},
-            )
+
+            # TODO Remove call to climate domain service in HA 2027.3.0
+            if state.domain == Platform.WATER_HEATER:
+                await self.hass.services.async_call(
+                    domain=Platform.WATER_HEATER,
+                    service=SERVICE_SET_OPERATION_MODE,
+                    service_data={ATTR_OPERATION_MODE: PRESET_ECO},
+                    target={"entity_id": entity_id},
+                )
+            else:
+                await self.hass.services.async_call(
+                    domain=Platform.CLIMATE,
+                    service=SERVICE_SET_PRESET_MODE,
+                    service_data={ATTR_PRESET_MODE: PRESET_ECO},
+                    target={"entity_id": entity_id},
+                )
 
         return prev_presets
 
