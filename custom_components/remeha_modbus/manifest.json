@@ -2,6 +2,7 @@
   "domain": "remeha_modbus",
   "name": "Remeha Modbus",
   "after_dependencies": ["knmi", "scheduler"],
+  "categories": ["climate"],
   "codeowners": ["@houthacker"],
   "config_flow": true,
   "dependencies": ["modbus"],
