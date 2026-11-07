@@ -6,7 +6,7 @@ from functools import cached_property
 from typing import cast, override
 
 from aio_remeha_modbus.gtw08.climate_zone import ClimateZone
-from aio_remeha_modbus.gtw08.system_discovery_table import DeviceBoard, DeviceBoardType
+from aio_remeha_modbus.gtw08.system_discovery_table import DeviceBoard
 from homeassistant.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
@@ -48,11 +48,7 @@ async def async_setup_entry(
         for sensor_description in REMEHA_SENSORS
     ]
 
-    if (
-        mainboard
-        and mainboard.board_category
-        and mainboard.board_category.type is DeviceBoardType.CU_HW
-    ):
+    if mainboard:
 
         def _get_dhw_zone(coordinator: RemehaUpdateCoordinator) -> ClimateZone:
             zones = coordinator.get_climates(lambda z: z.is_domestic_hot_water())
