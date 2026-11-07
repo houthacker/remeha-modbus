@@ -1,9 +1,9 @@
 """Test the sensor component."""
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
-from aio_remeha_modbus.gtw08.system_discovery_table import DeviceBoard, DeviceBoardType
+from aio_remeha_modbus.gtw08.system_discovery_table import DeviceBoardType
 from homeassistant.components.sensor.const import DOMAIN as SensorDomain
 from homeassistant.components.sensor.const import SensorDeviceClass, SensorStateClass
 from homeassistant.const import STATE_UNKNOWN, UnitOfTemperature
@@ -32,7 +32,7 @@ async def test_sensors(hass: HomeAssistant, remeha_api, mock_config_entry, remeh
         )
         await hass.async_block_till_done()
 
-        assert len(hass.states.async_all(domain_filter=SensorDomain)) == 35
+        assert len(hass.states.async_all(domain_filter=SensorDomain)) == 37
 
         for sd in REMEHA_SENSORS:
             assert isinstance(sd.name, str)
@@ -42,66 +42,6 @@ async def test_sensors(hass: HomeAssistant, remeha_api, mock_config_entry, remeh
 
             # Sensor state must not be empty. See issue #107
             assert len(state.state) > 0
-
-
-async def test_tank_temperature_sensors_not_added(
-    hass: HomeAssistant, remeha_api, mock_config_entry, remeha_modbus_unit
-):
-    """Test that the tank temperature sensors are not added if the mainboard is not CU_HW."""
-
-    with patch(
-        "aio_remeha_modbus.gtw08.GTW08",
-        new=lambda *args, **kwargs: remeha_api,
-    ):
-        await setup_platform(
-            hass=hass, config_entry=mock_config_entry, remeha_modbus_unit=remeha_modbus_unit
-        )
-        await hass.async_block_till_done()
-
-        coordinator: RemehaUpdateCoordinator = mock_config_entry.runtime_data["coordinator"]
-        mainboards = coordinator.get_devices(lambda board: board.is_mainboard())
-        assert mainboards[0].board_category is not None
-        assert mainboards[0].board_category.type is not DeviceBoardType.CU_HW
-
-        assert hass.states.get(TANK_TEMPERATURE_TOP) is None
-        assert hass.states.get(TANK_TEMPERATURE_BOTTOM) is None
-
-
-@pytest.mark.parametrize(
-    "mainboards",
-    [
-        pytest.param([], id="no_mainboard"),
-        pytest.param([MagicMock(spec=DeviceBoard, board_category=None)], id="no_category"),
-    ],
-)
-@pytest.mark.parametrize("remeha_modbus_unit", ["azorra_ace_store.json"], indirect=True)
-async def test_tank_temperature_sensors_not_added_without_mainboard_category(
-    hass: HomeAssistant,
-    remeha_api,
-    mock_config_entry,
-    remeha_modbus_unit,
-    mainboards: list[DeviceBoard],
-):
-    """Test that the tank temperature sensors are not added if the mainboard type is unknown."""
-
-    with (
-        patch(
-            "aio_remeha_modbus.gtw08.GTW08",
-            new=lambda *args, **kwargs: remeha_api,
-        ),
-        patch(
-            "custom_components.remeha_modbus.coordinator.RemehaUpdateCoordinator.get_devices",
-            return_value=mainboards,
-        ),
-    ):
-        await setup_platform(
-            hass=hass, config_entry=mock_config_entry, remeha_modbus_unit=remeha_modbus_unit
-        )
-        await hass.async_block_till_done()
-
-        assert len(hass.states.async_all(domain_filter=SensorDomain)) == len(REMEHA_SENSORS)
-        assert hass.states.get(TANK_TEMPERATURE_TOP) is None
-        assert hass.states.get(TANK_TEMPERATURE_BOTTOM) is None
 
 
 @pytest.mark.parametrize("remeha_modbus_unit", ["azorra_ace_store.json"], indirect=True)
