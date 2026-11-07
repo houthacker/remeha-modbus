@@ -31,4 +31,5 @@ pytest-asyncio
 pytest-cov
 pytest-homeassistant-custom-component
 serialx
+setuptools
 tenacity
