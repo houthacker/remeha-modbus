@@ -11,7 +11,7 @@
 [![pytest](https://github.com/houthacker/remeha-modbus/actions/workflows/pytest.yaml/badge.svg)](https://github.com/houthacker/remeha-modbus/actions/workflows/pytest.yaml)
 [![badge](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/houthacker/ff0da84bf72a3d20fb68db8cb9d3e38e/raw/coverage_badge.json)](https://github.com/houthacker/remeha-modbus/actions/workflows/coverage.yaml)
 [![GitHub Release](https://img.shields.io/github/v/release/houthacker/remeha-modbus)](https://github.com/houthacker/remeha-modbus/releases/latest)
-[![Static Badge](https://img.shields.io/badge/donate-Buy_me_a_coffee-yellow?style=flat&logo=buymeacoffee&logoColor=000000&labelColor=ffdd00&color=green)]((https://buymeacoffee.com/houthacker))
+[![Static Badge](https://img.shields.io/badge/donate-Buy_me_a_coffee-yellow?style=flat&logo=buymeacoffee&logoColor=000000&labelColor=ffdd00&color=green)](https://buymeacoffee.com/houthacker)
 
 This integration allows you to manage your Remeha heating/cooling appliance locally from Home Assistant.
 
