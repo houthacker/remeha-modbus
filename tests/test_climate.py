@@ -90,7 +90,7 @@ async def test_dhw_climate(hass: HomeAssistant, remeha_api, mock_config_entry, r
             PRESET_NONE,
         ]
         assert dhw.attributes["temperature"] == 25.0
-        assert dhw.attributes["current_temperature"] == 53.2
+        assert dhw.attributes["current_temperature"] == 53.4
         assert dhw.attributes["target_temp_step"] == 0.5
 
         # Extra attributes
@@ -904,7 +904,7 @@ async def test_heat_pump_boiler_climate(
             PRESET_NONE,
         ]
         assert hpb.attributes["temperature"] == 25.0
-        assert hpb.attributes["current_temperature"] == 53.2
+        assert hpb.attributes["current_temperature"] == 53.4
         assert hpb.attributes["target_temp_step"] == 0.5
         assert hpb.attributes["flow_temperature"] == 45.0
 

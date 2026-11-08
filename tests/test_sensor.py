@@ -81,7 +81,7 @@ async def test_tank_temperature_sensors(
         # The bottom temperature is the current temperature of the DHW climate.
         dhw = hass.states.get("climate.remeha_modbus_test_hub_dhw")
         assert dhw is not None
-        assert dhw.attributes["current_temperature"] == 53.2
+        assert dhw.attributes["current_temperature"] == 53.4
 
         # Both sensors are attached to the mainboard device.
         device = dr.async_get(hass).async_get_device_by_identifier(

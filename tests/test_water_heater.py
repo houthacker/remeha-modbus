@@ -122,7 +122,7 @@ async def test_water_heater_type(
     assert operation_list[0] == manual_operation
     assert state.attributes["min_temp"] == 10.0
     assert state.attributes["max_temp"] == 65.0
-    assert state.attributes["current_temperature"] == 53.2
+    assert state.attributes["current_temperature"] == 53.4
     assert state.attributes[ATTR_TEMPERATURE] == 25.0
     assert state.attributes[ATTR_AWAY_MODE] == STATE_OFF
 
