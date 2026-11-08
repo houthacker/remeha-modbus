@@ -67,7 +67,7 @@ async def async_setup_entry(
                 "dhw_tank_temperature_bottom",
                 coordinator=coordinator,
                 parent_device_id=mainboard.id,
-                native_value_func=lambda c: _get_dhw_zone(c).current_temparature,
+                native_value_func=lambda c: _get_dhw_zone(c).dhw_tank_temperature,
             ),
         ]
 
