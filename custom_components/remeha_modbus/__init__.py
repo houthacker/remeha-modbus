@@ -76,7 +76,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         name=modbus_hub_name,
         unit=RetryingModbusUnit(unit),
         time_zone=await hass.async_add_executor_job(tz.gettz, hass.config.time_zone),
-        request_timeout=0.5,
+        request_timeout=2,
     )
 
     # Setup the coordinator
