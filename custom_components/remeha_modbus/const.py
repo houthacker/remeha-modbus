@@ -486,6 +486,12 @@ REMEHA_SENSORS: tuple[SensorEntityDescription, ...] = (
         native_unit_of_measurement="°C",
         state_class=SensorStateClass.MEASUREMENT,
     ),
+    SensorEntityDescription(  # 9202
+        key="varHpInternalDhwSetpoint",
+        name="hybrid_internal_dhw_setpoint",
+        native_unit_of_measurement="°C",
+        state_class=SensorStateClass.MEASUREMENT,
+    ),
     SensorEntityDescription(  # 9230
         key="varHpCopCalculated",
         name="cop_calculated",
