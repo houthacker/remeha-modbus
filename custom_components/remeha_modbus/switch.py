@@ -336,9 +336,9 @@ class RemehaChEnabledSwitch(RemehaApplianceSwitch):
 
     async def _async_set_enabled(self, enabled: bool) -> None:
         if enabled:
-            await self.coordinator.get_appliance().async_set_ch_enabled()
+            await self.coordinator.get_appliance().async_enable_ch_processing()
         else:
-            await self.coordinator.get_appliance().async_set_ch_disabled()
+            await self.coordinator.get_appliance().async_disable_ch_processing()
 
         # TODO Reflect the change immediately, until the next coordinator refresh.
         self.async_write_ha_state()
