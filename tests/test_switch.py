@@ -15,6 +15,7 @@ from .conftest import setup_platform
 
 MAINBOARD_SWITCHES = [
     "switch.remeha_modbus_test_hub_ch_enabled",
+    "switch.remeha_modbus_test_hub_dhw_enabled",
     "switch.remeha_modbus_test_hub_cooling_enabled",
     "switch.remeha_modbus_test_hub_force_summer",
 ]
@@ -58,7 +59,7 @@ async def test_switch(hass: HomeAssistant, remeha_api, mock_config_entry, remeha
 async def test_appliance_switches(
     hass: HomeAssistant, remeha_api, mock_config_entry, remeha_modbus_unit
 ):
-    """Test the appliance-level modbus switches (AP016 / AP028)."""
+    """Test the appliance-level modbus switches (AP016 / AP017 / AP028)."""
 
     with patch(
         "aio_remeha_modbus.gtw08.GTW08",
@@ -69,10 +70,14 @@ async def test_appliance_switches(
         )
         await hass.async_block_till_done()
 
-        # Both are enabled in the modbus_store fixture (registers 500 and 502 are 1).
+        # All are enabled in the modbus_store fixture (registers 500, 501 and 502 are 1).
         ch_enabled = hass.states.get("switch.remeha_modbus_test_hub_ch_enabled")
         assert ch_enabled is not None
         assert ch_enabled.state == "on"
+
+        dhw_enabled = hass.states.get("switch.remeha_modbus_test_hub_dhw_enabled")
+        assert dhw_enabled is not None
+        assert dhw_enabled.state == "on"
 
         cooling_enabled = hass.states.get("switch.remeha_modbus_test_hub_cooling_enabled")
         assert cooling_enabled is not None
@@ -89,6 +94,28 @@ async def test_appliance_switches(
         ch_enabled = hass.states.get(ch_enabled.entity_id)
         assert ch_enabled is not None
         assert ch_enabled.state == "off"
+
+        await hass.services.async_call(
+            domain=SwitchDomain,
+            service="turn_off",
+            service_data={"entity_id": dhw_enabled.entity_id},
+            blocking=True,
+        )
+
+        dhw_enabled = hass.states.get(dhw_enabled.entity_id)
+        assert dhw_enabled is not None
+        assert dhw_enabled.state == "off"
+
+        await hass.services.async_call(
+            domain=SwitchDomain,
+            service="turn_on",
+            service_data={"entity_id": dhw_enabled.entity_id},
+            blocking=True,
+        )
+
+        dhw_enabled = hass.states.get(dhw_enabled.entity_id)
+        assert dhw_enabled is not None
+        assert dhw_enabled.state == "on"
 
 
 async def test_force_summer_switch(
@@ -136,7 +163,7 @@ async def test_mainboard_switches_added(
         )
         await hass.async_block_till_done()
 
-        assert len(hass.states.async_all(domain_filter=SwitchDomain)) == 5
+        assert len(hass.states.async_all(domain_filter=SwitchDomain)) == 6
         _assert_switches(hass, expect_mainboard_switches=True)
 
 
