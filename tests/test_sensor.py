@@ -32,7 +32,7 @@ async def test_sensors(hass: HomeAssistant, remeha_api, mock_config_entry, remeh
         )
         await hass.async_block_till_done()
 
-        assert len(hass.states.async_all(domain_filter=SensorDomain)) == 37
+        assert len(hass.states.async_all(domain_filter=SensorDomain)) == 38
 
         for sd in REMEHA_SENSORS:
             assert isinstance(sd.name, str)
