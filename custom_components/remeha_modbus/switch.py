@@ -63,6 +63,9 @@ async def async_setup_entry(
                 RemehaChEnabledSwitch(
                     api=api, coordinator=coordinator, parent_device_id=parent_device_id
                 ),
+                RemehaDhwEnabledSwitch(
+                    api=api, coordinator=coordinator, parent_device_id=parent_device_id
+                ),
                 RemehaCoolingEnabledSwitch(
                     api=api, coordinator=coordinator, parent_device_id=parent_device_id
                 ),
@@ -255,6 +258,7 @@ class RemehaApplianceSwitch(CoordinatorEntity[RemehaUpdateCoordinator], SwitchEn
 
     def __init__(
         self,
+        *,
         api: GTW08,
         coordinator: RemehaUpdateCoordinator,
         parent_device_id: int | None,
@@ -268,12 +272,7 @@ class RemehaApplianceSwitch(CoordinatorEntity[RemehaUpdateCoordinator], SwitchEn
         self._parent_device_id = parent_device_id
         self._attr_name = name
         self._attr_unique_id = name
-
-    @cached_property
-    def translation_key(self) -> str:
-        """Key to use when translating the name of this entity."""
-
-        return cast(str, self.name)
+        self._attr_translation_key = name
 
     @cached_property
     def device_info(self) -> DeviceInfo | None:
@@ -337,6 +336,40 @@ class RemehaChEnabledSwitch(RemehaApplianceSwitch):
         self.async_write_ha_state()
 
 
+class RemehaDhwEnabledSwitch(RemehaApplianceSwitch):
+    """Switch that enables/disables DHW demand processing (parameter AP017)."""
+
+    def __init__(
+        self, api: GTW08, coordinator: RemehaUpdateCoordinator, parent_device_id: int | None
+    ):
+        """Create the DHW switch."""
+
+        super().__init__(
+            api=api,
+            coordinator=coordinator,
+            parent_device_id=parent_device_id,
+            name="dhw_enabled",
+        )
+
+    @property
+    def is_on(self) -> bool:
+        """Return whether DHW demand processing is enabled."""
+
+        return self.coordinator.get_appliance().dhw_enabled or False
+
+    async def async_turn_on(self, **kwargs: Any) -> None:
+        """Enable DHW demand processing."""
+
+        await self.coordinator.get_appliance().async_enable_dhw_processing()
+        self.async_write_ha_state()
+
+    async def async_turn_off(self, **kwargs: Any) -> None:
+        """Disable DHW demand processing."""
+
+        await self.coordinator.get_appliance().async_disable_dhw_processing()
+        self.async_write_ha_state()
+
+
 class RemehaCoolingEnabledSwitch(RemehaApplianceSwitch):
     """Switch that enables/disables cooling (parameter AP028).
 
@@ -374,7 +407,6 @@ class RemehaCoolingEnabledSwitch(RemehaApplianceSwitch):
     async def _async_set_cooling(self, cooling_type: CoolingType) -> None:
         await self.coordinator.get_appliance().async_set_cooling_type(cooling_type)
 
-        # TODO set HA state values.
         self.async_write_ha_state()
 
 
@@ -406,18 +438,11 @@ class RemehaForceSummerSwitch(RemehaApplianceSwitch):
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Enable forced summer mode."""
 
-        await self._async_set_force_summer(enabled=True)
+        await self.coordinator.get_appliance().async_enable_forced_summer_mode()
+        self.async_write_ha_state()
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Disable forced summer mode."""
 
-        await self._async_set_force_summer(enabled=False)
-
-    async def _async_set_force_summer(self, enabled: bool) -> None:
-        if enabled:
-            await self.coordinator.get_appliance().async_enable_forced_summer_mode()
-        else:
-            await self.coordinator.get_appliance().async_disable_forced_summer_mode()
-
-        # TODO Reflect the change immediately, until the next coordinator refresh.
+        await self.coordinator.get_appliance().async_disable_forced_summer_mode()
         self.async_write_ha_state()
