@@ -36,24 +36,23 @@ async def async_setup_entry(
 
     # TODO Is this the correct parent device board?
     mainboards: list[DeviceBoard] = coordinator.get_devices(lambda device: device.is_mainboard())
-    if mainboards:
-        entities.append(
+    mainboard = mainboards[0] if mainboards else None
+    if mainboard:
+        entities += [
             RemehaSummerWinterNumber(
-                api=api, coordinator=coordinator, parent_device_id=mainboards[0].id
-            )
-        )
-        entities.append(
+                api=api, coordinator=coordinator, parent_device_id=mainboard.id
+            ),
             RemehaNeutralBandNumber(
-                api=api, coordinator=coordinator, parent_device_id=mainboards[0].id
-            )
-        )
+                api=api, coordinator=coordinator, parent_device_id=mainboard.id
+            ),
+        ]
 
-    climates: list[ClimateZone] = coordinator.get_climates(lambda c: c.is_domestic_hot_water())
-    if climates:
-        entities.extend(
+    dhw_climates: list[ClimateZone] = coordinator.get_climates(lambda c: c.is_domestic_hot_water())
+    if dhw_climates:
+        entities += [
             DhwHysteresisEntity(api=api, coordinator=coordinator, zone_id=climate.id)
-            for climate in climates
-        )
+            for climate in dhw_climates
+        ]
     else:
         _LOGGER.debug("No DHW climates found so not adding any DhwHysteresis entities.")
 
@@ -98,8 +97,6 @@ class DhwHysteresisEntity(CoordinatorEntity[RemehaUpdateCoordinator], NumberEnti
 
         zone: ClimateZone = self._zone
         await zone.async_set_dhw_calorifier_hysteresis(value)
-
-        # TODO Update the value so users don't have to wait until the next sync.
 
         self.async_write_ha_state()
 
