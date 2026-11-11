@@ -106,6 +106,19 @@ The following proxies are known to be working with this integration. Other gatew
 | ---------------------------------------- | ----------------------------------------------------------------------- | - |
 | Waveshare RS232/485 to WiFi and Ethernet | https://www.waveshare.com/product/rs232-485-to-wifi-eth-b.htm?sku=25222 | When setting a static ip, the device is only reachable in the same subnet since no default gateway can be set. |
 | PUSR USR-DR132 / USR-DR134 | https://www.pusr.com/products/Lipstick-Size-Serial-Device-Server.html | Seems most reliable in **Modbus Multi Host Polling** mode, probably avoids frame misalignment on L-bus |
+| Elfin EW1X | http://www.hi-flying.com/elfin-ew10-elfin-ew11 | - |
+
+### Modus proxy configuration
+The following proxy configurations are known to work with the GTW-08. If you're using different settings that also work, please let me know by creating [a new issue](https://github.com/houthacker/remeha-modbus/issues/new/choose).
+
+#### Elfin EW1X
+<summary>Configuration details of the Elfin EW1X</summary>
+<details>
+
+![Communication settings](/.github/assets/elfin-ew11-config-1.png)
+![Serial port settings](/.github/assets/elfin-ew11-config-2.png)
+
+</details>
 
 ## Entities
 
