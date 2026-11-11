@@ -327,20 +327,13 @@ class RemehaChEnabledSwitch(RemehaApplianceSwitch):
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Enable central heating demand processing."""
 
-        await self._async_set_enabled(enabled=True)
+        await self.coordinator.get_appliance().async_enable_ch_processing()
+        self.async_write_ha_state()
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Disable central heating demand processing."""
 
-        await self._async_set_enabled(enabled=False)
-
-    async def _async_set_enabled(self, enabled: bool) -> None:
-        if enabled:
-            await self.coordinator.get_appliance().async_enable_ch_processing()
-        else:
-            await self.coordinator.get_appliance().async_disable_ch_processing()
-
-        # TODO Reflect the change immediately, until the next coordinator refresh.
+        await self.coordinator.get_appliance().async_disable_ch_processing()
         self.async_write_ha_state()
 
 
