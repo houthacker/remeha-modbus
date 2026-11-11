@@ -1,4 +1,4 @@
-aio-remeha-modbus==4.10.0
+aio-remeha-modbus==4.11.0
 aiodhcpwatcher
 aiodiscover
 aiofiles
