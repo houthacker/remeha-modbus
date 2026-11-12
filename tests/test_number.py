@@ -22,7 +22,7 @@ async def test_climates(hass: HomeAssistant, remeha_api, mock_config_entry, reme
         await hass.async_block_till_done()
 
         # DhwHysteresisEntity + RemehaSummerWinterNumber + RemehaNeutralBandNumber.
-        assert len(hass.states.async_all(domain_filter="number")) == 3
+        assert len(hass.states.async_all(domain_filter="number")) == 5
 
 
 async def test_dhw_hysteresis(
@@ -76,7 +76,7 @@ async def test_summer_winter(
         )
         await hass.async_block_till_done()
 
-        summer_winter = hass.states.get("number.remeha_modbus_test_hub_summer_winter")
+        summer_winter = hass.states.get("number.remeha_modbus_test_hub_summer_winter_threshold")
         assert summer_winter is not None
         assert summer_winter.state == "22.0"
         assert summer_winter.domain == "number"
