@@ -494,6 +494,9 @@
     },
     "update_failed_modbus_exception": {
       "message": "Data update mislukt: Modbus exception {modbus_message}"
+    },
+    "value_not_an_int": {
+      "message": "De opgegeven waarde {value} is geen geheel getal. Verwijder de decimalen en probeer het opnieuw."
     }
   },
   "issues": {
