@@ -22,6 +22,7 @@ from homeassistant.core import (
     callback,
 )
 from homeassistant.helpers import config_validation as cv
+from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.dispatcher import async_dispatcher_send
 from homeassistant.helpers.entity import Entity
 from homeassistant.helpers.entity_platform import EntityPlatform
@@ -29,6 +30,7 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from homeassistant.util import slugify
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
+from custom_components.remeha_modbus.const import DOMAIN
 from custom_components.scheduler.const import (
     ADD_SCHEDULE_SCHEMA,
     ATTR_TAGS,
@@ -42,6 +44,15 @@ from custom_components.scheduler.store import ScheduleEntry, parse_schedule_data
 from custom_components.scheduler.switch import ScheduleEntity
 
 _LOGGER = logging.getLogger(__name__)
+
+
+def get_entity_id(
+    hass: HomeAssistant, unique_id: str, domain: str, integration=DOMAIN
+) -> str | None:
+    """Get the entity id of the entity having `unique_id`."""
+
+    registry = er.async_get(hass)
+    return registry.async_get_entity_id(domain=domain, platform=integration, unique_id=unique_id)
 
 
 def async_add_mock_service(

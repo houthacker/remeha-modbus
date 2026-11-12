@@ -169,8 +169,17 @@
       "dhw_hysteresis": {
         "name": "DHW hysteresis"
       },
+      "max_dhw_production_time": {
+        "name": "Maximum DHW production duration"
+      },
+      "min_time_between_dhw_productions": {
+        "name": "Minimum time between DHW productions"
+      },
       "neutral_band_summer_winter": {
         "name": "Summer/winter neutral band"
+      },
+      "starting_delay_ch_backup": {
+        "name": "CH backup delay"
       },
       "summer_winter_threshold": {
         "name": "Summer/winter threshold"

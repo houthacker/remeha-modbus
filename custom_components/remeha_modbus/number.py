@@ -11,7 +11,7 @@ from aio_remeha_modbus.gtw08.const import Limits
 from aio_remeha_modbus.gtw08.system_discovery_table import DeviceBoard
 from homeassistant.components.number import NumberDeviceClass, NumberEntity
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import UnitOfTemperature
+from homeassistant.const import UnitOfTemperature, UnitOfTime
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers.device_registry import DeviceInfo
@@ -173,6 +173,126 @@ class DhwHysteresisEntity(RemehaZonedNumberEntity):
         zone: ClimateZone = self._zone
         await zone.async_set_dhw_calorifier_hysteresis(value)
         self.async_write_ha_state()
+
+
+class MinChBeforeDhw(RemehaApplianceNumberEntity):
+    """Entity to configure the minimum (central) heating time before DHW production."""
+
+    _attr_has_entity_name = True
+    _attr_device_class = NumberDeviceClass.DURATION
+    _attr_native_min_value = 0
+    _attr_native_max_value = 10
+    _attr_native_step = 1
+    _attr_native_unit_of_measurement = UnitOfTime.HOURS
+    _attr_should_poll = False
+    _attr_translation_key = "min_time_between_dhw_productions"
+
+    def __init__(
+        self, api: GTW08, coordinator: RemehaUpdateCoordinator, owning_device_id: int | None
+    ):
+        """Create a min-heating before DHW production entity."""
+
+        super().__init__(api, coordinator, owning_device_id)
+
+        self._attr_unique_id = "min_time_between_dhw_productions"
+
+    @property
+    def native_value(self) -> float | None:
+        """Return the minimum heating time between DHW productions (parameter DP048)."""
+
+        return self.coordinator.get_appliance().min_time_between_dhw_productions
+
+    @override
+    async def async_set_native_value(self, value: float) -> None:
+        try:
+            await self.coordinator.get_appliance().async_set_min_time_between_dhw_productions(value)
+            self.async_write_ha_state()
+        except ValueError as ex:
+            raise ServiceValidationError(
+                translation_domain=DOMAIN,
+                translation_key="value_not_an_int",
+                translation_placeholders={"value": str(value)},
+            ) from ex
+
+
+class MaxDhwProductionTime(RemehaApplianceNumberEntity):
+    """Entity to configure the maximum time allowed for DHW production."""
+
+    _attr_has_entity_name = True
+    _attr_device_class = NumberDeviceClass.DURATION
+    _attr_native_min_value = 1
+    _attr_native_max_value = 10
+    _attr_native_step = 1
+    _attr_native_unit_of_measurement = UnitOfTime.HOURS
+    _attr_should_poll = False
+    _attr_translation_key = "max_dhw_production_time"
+
+    def __init__(
+        self, api: GTW08, coordinator: RemehaUpdateCoordinator, owning_device_id: int | None
+    ):
+        """Create a max DHW production time entity."""
+
+        super().__init__(api, coordinator, owning_device_id)
+
+        self._attr_unique_id = "max_dhw_production_time"
+
+    @property
+    def native_value(self) -> float | None:
+        """Return the maximum DHW production time in hours (parameter DP047)."""
+
+        return self.coordinator.get_appliance().max_dhw_production_time
+
+    @override
+    async def async_set_native_value(self, value: float) -> None:
+        try:
+            await self.coordinator.get_appliance().async_set_max_dhw_production_time(value)
+            self.async_write_ha_state()
+        except ValueError as ex:
+            raise ServiceValidationError(
+                translation_domain=DOMAIN,
+                translation_key="value_not_an_int",
+                translation_placeholders={"value": str(value)},
+            ) from ex
+
+
+class RemehaChBackupDelay(RemehaApplianceNumberEntity):
+    """Entity to configure the backup delay in CH heating mode."""
+
+    _attr_has_entity_name = True
+    _attr_device_class = NumberDeviceClass.DURATION
+    _attr_native_min_value = 0
+    _attr_native_max_value = 600
+    _attr_native_step = 1
+    _attr_native_unit_of_measurement = UnitOfTime.MINUTES
+    _attr_should_poll = False
+    _attr_translation_key = "starting_delay_ch_backup"
+
+    def __init__(
+        self, api: GTW08, coordinator: RemehaUpdateCoordinator, owning_device_id: int | None
+    ):
+        """Create a CH backup delay entity."""
+
+        super().__init__(api, coordinator, owning_device_id)
+
+        self._attr_unique_id = "starting_delay_ch_backup"
+
+    @property
+    def native_value(self) -> float | None:
+        """Return the backup delay in CH heating mode (parameter HP030)."""
+
+        return self.coordinator.get_appliance().starting_delay_ch_backup
+
+    @override
+    async def async_set_native_value(self, value: float) -> None:
+        try:
+            await self.coordinator.get_appliance().async_set_starting_delay_ch_backup(value)
+            self.async_write_ha_state()
+        except ValueError as ex:
+            raise ServiceValidationError(
+                translation_domain=DOMAIN,
+                translation_key="value_not_an_int",
+                translation_placeholders={"value": str(value)},
+            ) from ex
 
 
 class RemehaBivalentTemperature(RemehaApplianceNumberEntity):

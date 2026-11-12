@@ -166,10 +166,19 @@
         "name": "SWW compressor minimum temperatuur"
       },
       "dhw_hysteresis": {
-        "name": "DHW hysterese"
+        "name": "SWW hysterese"
+      },
+      "max_dhw_production_time": {
+        "name": "Maximale duur SWW productie"
+      },
+      "min_time_between_dhw_productions": {
+        "name": "Minimale tijd tussen SWW producties"
       },
       "neutral_band_summer_winter": {
         "name": "Zomer/winter verschiltemperatuur"
+      },
+      "starting_delay_ch_backup": {
+        "name": "Vertraging CV backup"
       },
       "summer_winter_threshold": {
         "name": "Temperatuur zomerbedrijf"
