@@ -46,6 +46,9 @@ async def async_setup_entry(
             RemehaNeutralBandNumber(api, coordinator, mainboard.id),
             RemehaBivalentTemperature(api, coordinator, mainboard.id),
             RemehaCompressorMinTemperature(api, coordinator, mainboard.id),
+            MinChBeforeDhw(api, coordinator, mainboard.id),
+            MaxDhwProductionTime(api, coordinator, mainboard.id),
+            RemehaChBackupDelay(api, coordinator, mainboard.id),
         ]
     else:
         _LOGGER.warning("No main board detected, skipping appliance-level Number entities.")

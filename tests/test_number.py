@@ -31,7 +31,7 @@ async def test_climates(hass: HomeAssistant, remeha_api, mock_config_entry, reme
 
         # DhwHysteresisEntity + RemehaSummerWinterNumber + RemehaNeutralBandNumber
         # + RemehaBivalentTemperature + RemehaCompressorMinTemperature.
-        assert len(hass.states.async_all(domain_filter="number")) == 5
+        assert len(hass.states.async_all(domain_filter="number")) == 8
 
 
 async def test_dhw_hysteresis(
