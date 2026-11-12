@@ -205,7 +205,7 @@ class RemehaBivalentTemperature(RemehaApplianceNumberEntity):
 
     @override
     async def async_set_native_value(self, value: float) -> None:
-        await self.coordinator.get_appliance().async_set_bivalent_temperature(int(value))
+        await self.coordinator.get_appliance().async_set_bivalent_temperature(value)
         self.async_write_ha_state()
 
 
@@ -239,9 +239,7 @@ class RemehaCompressorMinTemperature(RemehaApplianceNumberEntity):
 
     @override
     async def async_set_native_value(self, value: float) -> None:
-        await self.coordinator.get_appliance().async_set_heat_pump_compressor_min_temperature(
-            int(value)
-        )
+        await self.coordinator.get_appliance().async_set_heat_pump_compressor_min_temperature(value)
         self.async_write_ha_state()
 
 
