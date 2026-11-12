@@ -16,6 +16,20 @@
       }
     },
     {
+      "label": "Deploy to local HA instance",
+      "type": "shell",
+      "command": "${workspaceFolder}/scripts/deploy_locally ${workspaceFolder}/custom_components/remeha_modbus ${input:deploy_hostname}",
+      "group": "test",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": true,
+        "panel": "new",
+        "showReuseMessage": true,
+        "clear": false
+      }
+    },
+    {
       "label": "Run Home Assistant Core",
       "type": "shell",
       "command": "${command:python.interpreterPath} -m homeassistant -c ./config",
@@ -184,6 +198,11 @@
         "significant_change"
       ],
       "description": "Which scaffold should be run?"
+    },
+    {
+      "id": "deploy_hostname",
+      "type": "promptString",
+      "description": "To what hostname should the integration be deployed?"
     }
   ]
 }
