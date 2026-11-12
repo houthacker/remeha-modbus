@@ -158,6 +158,23 @@
         }
       }
     },
+    "number": {
+      "bivalent_temperature": {
+        "name": "Bivalente temperatuur"
+      },
+      "compressor_min_temperature": {
+        "name": "SWW compressor minimum temperatuur"
+      },
+      "dhw_hysteresis": {
+        "name": "DHW hysterese"
+      },
+      "neutral_band_summer_winter": {
+        "name": "Zomer/winter verschiltemperatuur"
+      },
+      "summer_winter_threshold": {
+        "name": "Temperatuur zomerbedrijf"
+      }
+    },
     "select": {
       "appliance_silent_mode": {
         "name": "Stille modus",

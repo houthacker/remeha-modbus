@@ -153,7 +153,6 @@ class DhwHysteresisEntity(RemehaZonedNumberEntity):
     _attr_native_unit_of_measurement = UnitOfTemperature.CELSIUS
     _attr_should_poll = False
     _attr_translation_key = "dhw_hysteresis"
-    _attr_name = "dhw_hysteresis"
 
     def __init__(self, api: GTW08, coordinator: RemehaUpdateCoordinator, zone_id: int):
         """Create a new DHW hysteresis entity."""
@@ -187,7 +186,6 @@ class RemehaBivalentTemperature(RemehaApplianceNumberEntity):
     _attr_native_unit_of_measurement = UnitOfTemperature.CELSIUS
     _attr_should_poll = False
     _attr_translation_key = "bivalent_temperature"
-    _attr_name = "bivalent_temperature"
 
     def __init__(
         self, api: GTW08, coordinator: RemehaUpdateCoordinator, owning_device_id: int | None
@@ -228,7 +226,6 @@ class RemehaCompressorMinTemperature(RemehaApplianceNumberEntity):
     _attr_native_unit_of_measurement = UnitOfTemperature.CELSIUS
     _attr_should_poll = False
     _attr_translation_key = "compressor_min_temperature"
-    _attr_name = "compressor_min_temperature"
 
     def __init__(
         self, api: GTW08, coordinator: RemehaUpdateCoordinator, owning_device_id: int | None
@@ -274,7 +271,6 @@ class RemehaSummerWinterNumber(RemehaApplianceNumberEntity):
     _attr_native_unit_of_measurement = "°C"
     _attr_should_poll = False
     _attr_translation_key = "summer_winter_threshold"
-    _attr_name = "summer_winter_threshold"
 
     def __init__(
         self, api: GTW08, coordinator: RemehaUpdateCoordinator, owning_device_id: int | None
@@ -312,7 +308,6 @@ class RemehaNeutralBandNumber(RemehaApplianceNumberEntity):
     _attr_native_unit_of_measurement = "°C"
     _attr_should_poll = False
     _attr_translation_key = "neutral_band_summer_winter"
-    _attr_name = "neutral_band_summer_winter"
 
     def __init__(
         self, api: GTW08, coordinator: RemehaUpdateCoordinator, owning_device_id: int | None
