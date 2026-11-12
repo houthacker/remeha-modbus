@@ -13,6 +13,7 @@ from homeassistant.components.number import NumberDeviceClass, NumberEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import UnitOfTemperature
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
@@ -205,8 +206,15 @@ class RemehaBivalentTemperature(RemehaApplianceNumberEntity):
 
     @override
     async def async_set_native_value(self, value: float) -> None:
-        await self.coordinator.get_appliance().async_set_bivalent_temperature(value)
-        self.async_write_ha_state()
+        try:
+            await self.coordinator.get_appliance().async_set_bivalent_temperature(value)
+            self.async_write_ha_state()
+        except ValueError as ex:
+            raise ServiceValidationError(
+                translation_domain=DOMAIN,
+                translation_key="value_not_an_int",
+                translation_placeholders={"value": str(value)},
+            ) from ex
 
 
 class RemehaCompressorMinTemperature(RemehaApplianceNumberEntity):
@@ -239,8 +247,17 @@ class RemehaCompressorMinTemperature(RemehaApplianceNumberEntity):
 
     @override
     async def async_set_native_value(self, value: float) -> None:
-        await self.coordinator.get_appliance().async_set_heat_pump_compressor_min_temperature(value)
-        self.async_write_ha_state()
+        try:
+            await self.coordinator.get_appliance().async_set_heat_pump_compressor_min_temperature(
+                value
+            )
+            self.async_write_ha_state()
+        except ValueError as ex:
+            raise ServiceValidationError(
+                translation_domain=DOMAIN,
+                translation_key="value_not_an_int",
+                translation_placeholders={"value": str(value)},
+            ) from ex
 
 
 class RemehaSummerWinterNumber(RemehaApplianceNumberEntity):
