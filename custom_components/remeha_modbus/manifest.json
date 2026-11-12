@@ -13,7 +13,7 @@
   "loggers": ["remeha_modbus"],
   "quality_scale": "bronze",
   "requirements": [
-    "aio-remeha-modbus==4.12.1",
+    "aio-remeha-modbus==4.12.2",
     "python-dateutil==2.9.0.post0",
     "serialx"
   ],
