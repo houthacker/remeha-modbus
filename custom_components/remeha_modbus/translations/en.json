@@ -159,6 +159,23 @@
         }
       }
     },
+    "number": {
+      "bivalent_temperature": {
+        "name": "Bivalent temperature"
+      },
+      "compressor_min_temperature": {
+        "name": "DHW compressor minimum temperature"
+      },
+      "dhw_hysteresis": {
+        "name": "DHW hysteresis"
+      },
+      "neutral_band_summer_winter": {
+        "name": "Summer/winter neutral band"
+      },
+      "summer_winter_threshold": {
+        "name": "Summer/winter threshold"
+      }
+    },
     "select": {
       "appliance_silent_mode": {
         "name": "Appliance silent mode",
