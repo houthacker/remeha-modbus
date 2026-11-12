@@ -84,7 +84,10 @@ class DhwHysteresisEntity(CoordinatorEntity[RemehaUpdateCoordinator], NumberEnti
     @property
     def _zone(self) -> ClimateZone:
         """Return the modbus climate zone."""
-        return self.coordinator.data["climates"][self._climate_zone_id]
+        zone = self.coordinator.get_climate(self._climate_zone_id)
+        assert zone is not None
+
+        return zone
 
     @property
     def native_value(self) -> float:
