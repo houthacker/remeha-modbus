@@ -14,6 +14,7 @@ from homeassistant.helpers import entity_registry as er
 from custom_components.remeha_modbus.const import DOMAIN
 
 from .conftest import setup_platform
+from .util import get_entity_id
 
 
 async def test_climates(hass: HomeAssistant, remeha_api, mock_config_entry, remeha_modbus_unit):
@@ -51,7 +52,7 @@ async def test_dhw_hysteresis(
         assert hysteresis is not None
         assert hysteresis.state == "3.0"
         assert hysteresis.domain == "number"
-        assert hysteresis.name == "Remeha Modbus test_hub dhw_hysteresis"
+        assert hysteresis.name == "Remeha Modbus test_hub DHW hysteresis"
 
         # Update the state
         # Update some attributes
@@ -116,7 +117,9 @@ async def test_neutral_band(hass: HomeAssistant, remeha_api, mock_config_entry, 
         )
         await hass.async_block_till_done()
 
-        neutral_band = hass.states.get("number.remeha_modbus_test_hub_neutral_band_summer_winter")
+        entity_id = get_entity_id(hass, "neutral_band_summer_winter", "number")
+        assert entity_id is not None
+        neutral_band = hass.states.get(entity_id)
         assert neutral_band is not None
         assert neutral_band.state == "4.0"
 
@@ -133,10 +136,10 @@ async def test_neutral_band(hass: HomeAssistant, remeha_api, mock_config_entry, 
 
 
 @pytest.mark.parametrize(
-    ("entity_id", "register", "initial", "min_value", "max_value", "new_value"),
+    ("unique_id", "register", "initial", "min_value", "max_value", "new_value"),
     [
         pytest.param(
-            "number.remeha_modbus_test_hub_bivalent_temperature",
+            "bivalent_temperature",
             487,
             "5.0",
             -10.0,
@@ -145,7 +148,7 @@ async def test_neutral_band(hass: HomeAssistant, remeha_api, mock_config_entry, 
             id="bivalent_temperature_HP000",
         ),
         pytest.param(
-            "number.remeha_modbus_test_hub_compressor_min_temperature",
+            "compressor_min_temperature",
             489,
             "-20.0",
             -20.0,
@@ -161,7 +164,7 @@ async def test_heat_pump_temperature_numbers(
     remeha_api,
     mock_config_entry,
     remeha_modbus_unit,
-    entity_id: str,
+    unique_id: str,
     register: int,
     initial: str,
     min_value: float,
@@ -179,6 +182,8 @@ async def test_heat_pump_temperature_numbers(
         )
         await hass.async_block_till_done()
 
+        entity_id = get_entity_id(hass, unique_id, "number")
+        assert entity_id is not None
         state = hass.states.get(entity_id)
         assert state is not None
         assert state.state == initial
@@ -205,16 +210,12 @@ async def test_heat_pump_temperature_numbers(
 
 
 @pytest.mark.parametrize(
-    ("entity_id", "value"),
+    ("unique_id", "value"),
     [
-        pytest.param("number.remeha_modbus_test_hub_bivalent_temperature", -11.0, id="HP000_low"),
-        pytest.param("number.remeha_modbus_test_hub_bivalent_temperature", 21.0, id="HP000_high"),
-        pytest.param(
-            "number.remeha_modbus_test_hub_compressor_min_temperature", -21.0, id="HP051_low"
-        ),
-        pytest.param(
-            "number.remeha_modbus_test_hub_compressor_min_temperature", 6.0, id="HP051_high"
-        ),
+        pytest.param("bivalent_temperature", -11.0, id="HP000_low"),
+        pytest.param("bivalent_temperature", 21.0, id="HP000_high"),
+        pytest.param("compressor_min_temperature", -21.0, id="HP051_low"),
+        pytest.param("compressor_min_temperature", 6.0, id="HP051_high"),
     ],
 )
 async def test_heat_pump_temperature_numbers_out_of_range(
@@ -223,7 +224,7 @@ async def test_heat_pump_temperature_numbers_out_of_range(
     remeha_api,
     mock_config_entry,
     remeha_modbus_unit,
-    entity_id: str,
+    unique_id: str,
     value: float,
 ):
     """Test that out-of-range values for HP000 and HP051 are rejected."""
@@ -237,6 +238,8 @@ async def test_heat_pump_temperature_numbers_out_of_range(
         )
         await hass.async_block_till_done()
 
+        entity_id = get_entity_id(hass, unique_id, "number")
+        assert entity_id is not None
         initial = hass.states.get(entity_id)
         assert initial is not None
 
@@ -254,10 +257,10 @@ async def test_heat_pump_temperature_numbers_out_of_range(
 
 
 @pytest.mark.parametrize(
-    ("entity_id", "register"),
+    ("unique_id", "register"),
     [
-        pytest.param("number.remeha_modbus_test_hub_bivalent_temperature", 487, id="HP000"),
-        pytest.param("number.remeha_modbus_test_hub_compressor_min_temperature", 489, id="HP051"),
+        pytest.param("bivalent_temperature", 487, id="HP000"),
+        pytest.param("compressor_min_temperature", 489, id="HP051"),
     ],
 )
 async def test_heat_pump_temperature_numbers_not_an_int(
@@ -266,7 +269,7 @@ async def test_heat_pump_temperature_numbers_not_an_int(
     remeha_api,
     mock_config_entry,
     remeha_modbus_unit,
-    entity_id: str,
+    unique_id: str,
     register: int,
 ):
     """Test that fractional values for HP000 and HP051 are rejected, since only whole degrees are supported."""
@@ -280,6 +283,8 @@ async def test_heat_pump_temperature_numbers_not_an_int(
         )
         await hass.async_block_till_done()
 
+        entity_id = get_entity_id(hass, unique_id, "number")
+        assert entity_id is not None
         initial = hass.states.get(entity_id)
         assert initial is not None
         (initial_raw,) = await remeha_api.async_read_registers(register, struct_format=">h")
@@ -319,19 +324,18 @@ async def test_heat_pump_temperature_numbers_device(
         await hass.async_block_till_done()
 
         entity_registry = er.async_get(hass)
-        summer_winter = entity_registry.async_get(
-            "number.remeha_modbus_test_hub_summer_winter_threshold"
-        )
+        entity_id = get_entity_id(hass, "summer_winter", "number")
+        assert entity_id is not None
+        summer_winter = entity_registry.async_get(entity_id)
         assert summer_winter is not None
         assert summer_winter.device_id is not None
 
-        for entity_id, unique_id in [
-            ("number.remeha_modbus_test_hub_bivalent_temperature", "bivalent_temperature"),
-            (
-                "number.remeha_modbus_test_hub_compressor_min_temperature",
-                "compressor_min_temperature",
-            ),
+        for unique_id in [
+            "bivalent_temperature",
+            "compressor_min_temperature",
         ]:
+            entity_id = get_entity_id(hass, unique_id, "number")
+            assert entity_id is not None
             entry = entity_registry.async_get(entity_id)
             assert entry is not None
             assert entry.unique_id == unique_id
