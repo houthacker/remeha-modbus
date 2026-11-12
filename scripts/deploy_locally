@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+
+# This script copies the remeha-modbus integration to a running local HA instance.
+# After copying, it restarts the HA instance to force-reload the integration.
+#
+# To be able to do that, the HA instance must meet the following requirements:
+# - The "Advanced SSH & Web Terminal" app must be installed
+# - 'ssh.username' must be 'root'
+# - 'authorized_keys' must contain at least one entry with your public ssh key
+# - 'ssh.allow_remote_port_forwarding' must be 'true'
+
+project_root=$1
+deploy_hostname=$2
+
+echo "Going to deploy to ${deploy_hostname}"
+
+if [ ! -d ${project_root} ]; then
+  echo "Provided project root '${project_root}' is not a directory." >&2
+fi
+
+cd $project_root
+scp -O -o StrictHostKeyChecking=no -r $project_root "root@"${deploy_hostname}":/homeassistant/custom_components"
+echo "Restarting HA core.."
+ssh "root@${deploy_hostname}" "ha core restart &"
