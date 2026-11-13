@@ -26,6 +26,7 @@ If applicable, add screenshots to help explain your problem.
 **Please complete the following information:**
  - Appliance: [e.g. Mercuria Ace MB 6kW)
  - GTW version: [e.g. 1.03, unknown]
+ - Modbus address: if a modbus address is mentioned in the error message, write it down here.
 
 **Additional context**
 Add any other context about the problem here.
