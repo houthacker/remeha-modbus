@@ -17,5 +17,5 @@
     "python-dateutil==2.9.0.post0",
     "serialx"
   ],
-  "version": "2.5.2"
+  "version": "2.5.3"
 }
