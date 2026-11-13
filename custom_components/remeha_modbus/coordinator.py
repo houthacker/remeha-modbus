@@ -238,7 +238,7 @@ class RemehaUpdateCoordinator(DataUpdateCoordinator):
                 is_fixable=True,
                 is_persistent=False,
                 severity=ir.IssueSeverity.ERROR,
-                translation_key=ex.translation_key,
+                translation_key=f"{ISSUE_INVALID_ZONE_SCHEDULE}{'' if address else '_unknown_address'}",
                 translation_placeholders=address_placeholder
                 | {"issue_tracker_url": ISSUE_TRACKER_URL},
             )
