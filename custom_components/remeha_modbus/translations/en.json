@@ -516,8 +516,11 @@
     "update_failed_discovery_table_corrupted": {
       "message": "Modbus discovery table corrupted. Please visit your repairs dashboard to fix this."
     },
-    "update_failed_invalid_zone_schedule": {
+    "update_failed_invalid_zone_schedule_unknown_address": {
       "message": "Failed to update: one of the selected zone schedules failed to decode. Please visit your repairs dashboard to fix this."
+    },
+    "update_failed_invalid_zone_schedule": {
+      "message": "Failed to update: the zone schedule containing modbus address {address} failed to decode. Please visit your repairs dashboard to fix this."
     },
     "update_failed_modbus_exception": {
       "message": "Failed to update due to modbus exception: {modbus_message}"
@@ -557,13 +560,24 @@
         }
       }
     },
-    "invalid_zone_schedule": {
+    "invalid_zone_schedule_unknown_address": {
       "title": "Invalid zone schedule",
       "fix_flow": {
         "step": {
           "confirm_overwrite": {
             "title": "Overwrite faulty schedule",
             "description": "> [!WARNING]\n> A zone schedule failed to parse. To fix this issue, overwrite all zone schedules with a default schedule that only uses the anti-frost/eco preset, depending on the zone type.\n\n> If you suspect this is a bug rather than a faulty zone schema, please report an issue [here]({issue_tracker_url})."
+          }
+        }
+      }
+    },
+    "invalid_zone_schedule": {
+      "title": "Invalid zone schedule",
+      "fix_flow": {
+        "step": {
+          "confirm_overwrite": {
+            "title": "Overwrite faulty schedule",
+            "description": "> [!WARNING]\n> A zone schedule failed to parse at modbus address {address}. To fix this issue, overwrite all zone schedules with a default schedule that only uses the anti-frost/eco preset, depending on the zone type.\n\n> If you suspect this is a bug rather than a faulty zone schema, please report an issue [here]({issue_tracker_url})."
           }
         }
       }
