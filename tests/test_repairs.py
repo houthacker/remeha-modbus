@@ -5,7 +5,7 @@ from unittest.mock import patch
 import pytest
 from aio_remeha_modbus.gtw08 import GTW08
 from aio_remeha_modbus.gtw08.const import REMEHA_ZONE_RESERVED_REGISTERS
-from aio_remeha_modbus.gtw08.errors import DiscoveryTableCorruptedError
+from aio_remeha_modbus.gtw08.errors import DiscoveryTableCorruptedError, InvalidZoneSchedule
 from homeassistant.components.climate.const import PRESET_ECO
 from homeassistant.components.switch.const import DOMAIN as SwitchDomain
 from homeassistant.components.water_heater.const import ATTR_OPERATION_MODE
@@ -13,6 +13,8 @@ from homeassistant.const import ATTR_ENTITY_ID, SERVICE_TURN_OFF, STATE_OFF, STA
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResultType
 from homeassistant.helpers import issue_registry as ir
+from homeassistant.helpers.translation import async_get_translations
+from homeassistant.helpers.update_coordinator import UpdateFailed
 from modbus_connection.mock import MockModbusUnit
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
@@ -22,6 +24,7 @@ from custom_components.remeha_modbus.const import (
     ISSUE_DISCOVERY_TABLE_CORRUPTED,
     ISSUE_HEATPUMP_MANAGED_SCHEDULES_OFF,
     ISSUE_INVALID_ZONE_SCHEDULE,
+    ISSUE_TRACKER_URL,
 )
 from custom_components.remeha_modbus.coordinator import RemehaUpdateCoordinator
 from custom_components.remeha_modbus.helpers.entities import get_entity_id_for_zone
@@ -179,6 +182,117 @@ async def test_auto_resolve_schedule_repair(
 
     # The issue must be gone.
     assert issue_registry.async_get_issue(DOMAIN, ISSUE_INVALID_ZONE_SCHEDULE) is None
+
+
+async def _assert_invalid_zone_schedule_translations(
+    hass: HomeAssistant,
+    language: str,
+    update_failed: UpdateFailed,
+    issue: ir.IssueEntry,
+) -> None:
+    """Assert the translation keys of the raised `UpdateFailed` and created issue exist and render."""
+
+    assert update_failed.translation_domain == DOMAIN
+    assert update_failed.translation_key is not None
+    exception_translations = await async_get_translations(hass, language, "exceptions", {DOMAIN})
+    message_key = f"component.{DOMAIN}.exceptions.{update_failed.translation_key}.message"
+    assert message_key in exception_translations
+    message = exception_translations[message_key].format(
+        **(update_failed.translation_placeholders or {})
+    )
+    assert "{" not in message
+
+    assert issue.translation_key is not None
+    issue_translations = await async_get_translations(hass, language, "issues", {DOMAIN})
+    issue_prefix = f"component.{DOMAIN}.issues.{issue.translation_key}"
+    title_key = f"{issue_prefix}.title"
+    description_key = f"{issue_prefix}.fix_flow.step.confirm_overwrite.description"
+    assert title_key in issue_translations
+    assert description_key in issue_translations
+    description = issue_translations[description_key].format(
+        **(issue.translation_placeholders or {})
+    )
+    assert "{" not in description
+
+
+@pytest.mark.parametrize("language", ["en", "nl"])
+async def test_invalid_zone_schedule_with_address(
+    hass: HomeAssistant,
+    mock_config_entry: MockConfigEntry,
+    remeha_modbus_unit: MockModbusUnit,
+    language: str,
+):
+    """Test that a zone schedule parse failure with a known modbus address reports that address."""
+
+    await hass.config.async_update(language=language)
+    await setup_platform(
+        hass=hass, config_entry=mock_config_entry, remeha_modbus_unit=remeha_modbus_unit
+    )
+    await hass.async_block_till_done()
+
+    coordinator: RemehaUpdateCoordinator = mock_config_entry.runtime_data["coordinator"]
+
+    # Corrupt a timeslot register, causing the library to raise an `InvalidZoneSchedule`
+    # that includes the address of the failing field.
+    address = 689 + REMEHA_ZONE_RESERVED_REGISTERS
+    remeha_modbus_unit.holding[address] = 0xA105
+
+    with pytest.raises(UpdateFailed) as exc_info:
+        await coordinator._async_update_data()  # noqa: SLF001
+
+    assert isinstance(exc_info.value.__cause__, InvalidZoneSchedule)
+    assert exc_info.value.translation_key == "update_failed_invalid_zone_schedule"
+    assert exc_info.value.translation_placeholders == {"address": str(address)}
+
+    issue = ir.async_get(hass).async_get_issue(DOMAIN, ISSUE_INVALID_ZONE_SCHEDULE)
+    assert issue is not None
+    assert issue.translation_key == "invalid_zone_schedule"
+    assert issue.translation_placeholders == {
+        "address": str(address),
+        "issue_tracker_url": ISSUE_TRACKER_URL,
+    }
+
+    await _assert_invalid_zone_schedule_translations(hass, language, exc_info.value, issue)
+
+
+@pytest.mark.parametrize("language", ["en", "nl"])
+async def test_invalid_zone_schedule_without_address(
+    hass: HomeAssistant,
+    mock_config_entry: MockConfigEntry,
+    remeha_modbus_unit: MockModbusUnit,
+    language: str,
+):
+    """Test that a zone schedule parse failure without a known modbus address uses the fallback translations."""
+
+    await hass.config.async_update(language=language)
+    await setup_platform(
+        hass=hass, config_entry=mock_config_entry, remeha_modbus_unit=remeha_modbus_unit
+    )
+    await hass.async_block_till_done()
+
+    coordinator: RemehaUpdateCoordinator = mock_config_entry.runtime_data["coordinator"]
+
+    # The library raises this when it cannot determine the address of the failing field.
+    with (
+        patch.object(
+            coordinator._api,  # noqa: SLF001
+            "async_update",
+            side_effect=InvalidZoneSchedule(translation_key="invalid_time_program_unknown_address"),
+        ),
+        pytest.raises(UpdateFailed) as exc_info,
+    ):
+        await coordinator._async_update_data()  # noqa: SLF001
+
+    assert isinstance(exc_info.value.__cause__, InvalidZoneSchedule)
+    assert exc_info.value.translation_key == "update_failed_invalid_zone_schedule_unknown_address"
+    assert not exc_info.value.translation_placeholders
+
+    issue = ir.async_get(hass).async_get_issue(DOMAIN, ISSUE_INVALID_ZONE_SCHEDULE)
+    assert issue is not None
+    assert issue.translation_key == "invalid_zone_schedule_unknown_address"
+    assert issue.translation_placeholders == {"issue_tracker_url": ISSUE_TRACKER_URL}
+
+    await _assert_invalid_zone_schedule_translations(hass, language, exc_info.value, issue)
 
 
 async def test_undo_manual_schedule_execution_repair(
