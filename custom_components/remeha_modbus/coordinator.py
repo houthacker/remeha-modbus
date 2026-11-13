@@ -224,6 +224,12 @@ class RemehaUpdateCoordinator(DataUpdateCoordinator):
             _LOGGER.warning(
                 "Failed to parse zone schedule", exc_info=ex, stack_info=True, stacklevel=10
             )
+
+            address_placeholder = {}
+            address = ex.translation_placeholders.get("address")
+            if address:
+                address_placeholder["address"] = str(address)
+
             ir.async_create_issue(
                 hass=self.hass,
                 domain=DOMAIN,
@@ -232,12 +238,14 @@ class RemehaUpdateCoordinator(DataUpdateCoordinator):
                 is_fixable=True,
                 is_persistent=False,
                 severity=ir.IssueSeverity.ERROR,
-                translation_key="invalid_zone_schedule",
-                translation_placeholders={"issue_tracker_url": ISSUE_TRACKER_URL},
+                translation_key=ex.translation_key,
+                translation_placeholders=address_placeholder
+                | {"issue_tracker_url": ISSUE_TRACKER_URL},
             )
             raise UpdateFailed(
                 translation_domain=DOMAIN,
-                translation_key="update_failed_invalid_zone_schedule",
+                translation_key=f"update_failed_invalid_zone_schedule{'' if address else '_unknown_address'}",
+                translation_placeholders=address_placeholder,
             ) from ex
 
         # Log ignored zones
