@@ -224,5 +224,7 @@ async def test_mainboard_switches_not_added_without_mainboard_category(
         )
         await hass.async_block_till_done()
 
-        assert len(hass.states.async_all(domain_filter=SwitchDomain)) == 2
-        _assert_switches(hass, expect_mainboard_switches=False)
+        assert len(hass.states.async_all(domain_filter=SwitchDomain)) == (2 if mainboards else 0)
+        if mainboards:
+            # No entities are added if no mainboard exists.
+            _assert_switches(hass, expect_mainboard_switches=False)

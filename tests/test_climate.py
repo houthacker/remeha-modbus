@@ -33,6 +33,7 @@ from custom_components.remeha_modbus.const import (
     REMEHA_PRESET_SCHEDULE_4,
 )
 from custom_components.remeha_modbus.coordinator import RemehaUpdateCoordinator
+from custom_components.remeha_modbus.errors import MainboardNotFound
 
 from .conftest import setup_platform
 
@@ -741,15 +742,6 @@ async def test_dhw_climate_preset_mode_invalid(
             )
 
 
-def _get_mainboard(coordinator: RemehaUpdateCoordinator) -> DeviceBoard:
-    """Return the first main board known to the coordinator."""
-
-    mainboards: list[DeviceBoard] = coordinator.get_devices(lambda board: board.is_mainboard())
-    assert len(mainboards) > 0
-
-    return mainboards[0]
-
-
 async def test_create_instance_default_appliance(
     hass: HomeAssistant, remeha_api, mock_config_entry, remeha_modbus_unit
 ):
@@ -765,7 +757,7 @@ async def test_create_instance_default_appliance(
         await hass.async_block_till_done()
 
         coordinator: RemehaUpdateCoordinator = mock_config_entry.runtime_data["coordinator"]
-        mainboard = _get_mainboard(coordinator)
+        mainboard: DeviceBoard = coordinator.get_mainboard()
         assert mainboard.board_category is not None
         assert mainboard.board_category.type != DeviceBoardType.CU_HW
 
@@ -795,7 +787,7 @@ async def test_create_instance_heat_pump_boiler(
         await hass.async_block_till_done()
 
         coordinator: RemehaUpdateCoordinator = mock_config_entry.runtime_data["coordinator"]
-        mainboard = _get_mainboard(coordinator)
+        mainboard: DeviceBoard = coordinator.get_mainboard()
         assert mainboard.board_category is not None
         assert mainboard.board_category.type == DeviceBoardType.CU_HW
 
@@ -824,7 +816,7 @@ async def test_create_instance_no_mainboard(
 
         with (
             patch.object(coordinator, "get_devices", return_value=[]),
-            pytest.raises(ValueError, match="No mainboard detected"),
+            pytest.raises(MainboardNotFound, match="No mainboard found."),
         ):
             RemehaClimateEntity.create_instance(remeha_api, coordinator, dhw_zone.id)
 

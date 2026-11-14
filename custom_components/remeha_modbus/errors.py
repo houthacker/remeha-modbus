@@ -23,6 +23,10 @@ class InvalidClimateContext(RemehaModbusError):
     """Exception to indicate an operation was attempted that is invalid in a given climate context."""
 
 
+class MainboardNotFound(RemehaModbusError):
+    """Exception to indicate no mainboard could be found."""
+
+
 class MissingExternalComponent(RemehaModbusError):
     """Exception to indicate that a component is missing which is required for some action."""
 

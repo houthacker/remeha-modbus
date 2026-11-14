@@ -48,38 +48,32 @@ async def async_setup_entry(
 
     api: GTW08 = entry.runtime_data["api"]
     coordinator: RemehaUpdateCoordinator = entry.runtime_data["coordinator"]
-    mainboards: list[DeviceBoard] = coordinator.get_devices(lambda device: device.is_mainboard())
-    parent_device_id: int | None = mainboards[0].id if mainboards else None
+    mainboard: DeviceBoard = coordinator.get_mainboard()
+    parent_device_id: int = mainboard.id
 
     entities = [
         RemehaScheduleSynchronizationSwitch(SWITCH_SCHEDULE_SYNC, entry),
         RemehaHeatpumpManagedSchedulesSwitch(HEATPUMP_MANAGED_SCHEDULES, entry),
     ]
 
-    if mainboards:
-        mainboard = mainboards[0]
-        if mainboard.board_category and mainboard.board_category.type is not DeviceBoardType.CU_HW:
-            entities += [
-                RemehaChEnabledSwitch(
-                    api=api, coordinator=coordinator, parent_device_id=parent_device_id
-                ),
-                RemehaDhwEnabledSwitch(
-                    api=api, coordinator=coordinator, parent_device_id=parent_device_id
-                ),
-                RemehaCoolingEnabledSwitch(
-                    api=api, coordinator=coordinator, parent_device_id=parent_device_id
-                ),
-                RemehaForceSummerSwitch(
-                    api=api, coordinator=coordinator, parent_device_id=parent_device_id
-                ),
-            ]
-        else:
-            _LOGGER.debug(
-                "Not adding CH, cooling and force-summer switches since mainboard does not support them."
-            )
+    if mainboard.board_category and mainboard.board_category.type is not DeviceBoardType.CU_HW:
+        entities += [
+            RemehaChEnabledSwitch(
+                api=api, coordinator=coordinator, parent_device_id=parent_device_id
+            ),
+            RemehaDhwEnabledSwitch(
+                api=api, coordinator=coordinator, parent_device_id=parent_device_id
+            ),
+            RemehaCoolingEnabledSwitch(
+                api=api, coordinator=coordinator, parent_device_id=parent_device_id
+            ),
+            RemehaForceSummerSwitch(
+                api=api, coordinator=coordinator, parent_device_id=parent_device_id
+            ),
+        ]
     else:
-        _LOGGER.warning(
-            "Not adding mainboard-dependent switches because no mainboard has been detected."
+        _LOGGER.debug(
+            "Not adding CH, cooling and force-summer switches since mainboard does not support them."
         )
 
     async_add_entities(entities)

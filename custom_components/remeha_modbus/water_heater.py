@@ -107,15 +107,9 @@ class RemehaWaterHeaterEntity(CoordinatorEntity[RemehaUpdateCoordinator], WaterH
 
         """
 
-        mainboards: list[DeviceBoard] = coordinator.get_devices(lambda board: board.is_mainboard())
+        mainboard: DeviceBoard = coordinator.get_mainboard()
         zone: ClimateZone | None = coordinator.get_climate(climate_zone_id)
 
-        if not mainboards:
-            raise ValueError(
-                "No mainboard detected: cannot determine correct water_heater entity type to create."
-            )
-
-        mainboard = mainboards[0]
         if mainboard.board_category is None:
             raise ValueError(
                 "Detected main board does not designate a category: cannot determine correct water_heater entity type to create."

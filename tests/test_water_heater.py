@@ -41,6 +41,7 @@ from custom_components.remeha_modbus.const import (
     WATER_HEATER_STATE_OIL,
 )
 from custom_components.remeha_modbus.coordinator import RemehaUpdateCoordinator
+from custom_components.remeha_modbus.errors import MainboardNotFound
 from custom_components.remeha_modbus.water_heater import (
     RemehaElectricWaterHeaterEntity,
     RemehaGasWaterHeaterEntity,
@@ -292,7 +293,7 @@ async def test_create_instance_errors(
 
     with (
         patch.object(coordinator, "get_devices", return_value=[]),
-        pytest.raises(ValueError, match="No mainboard detected"),
+        pytest.raises(MainboardNotFound, match="No mainboard found"),
     ):
         RemehaWaterHeaterEntity.create_instance(remeha_api, coordinator, dhw_zone_id)
 

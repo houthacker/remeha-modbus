@@ -3,7 +3,7 @@
 from unittest.mock import patch
 
 import pytest
-from aio_remeha_modbus.gtw08.system_discovery_table import DeviceBoardType
+from aio_remeha_modbus.gtw08.system_discovery_table import DeviceBoard, DeviceBoardType
 from homeassistant.components.sensor.const import DOMAIN as SensorDomain
 from homeassistant.components.sensor.const import SensorDeviceClass, SensorStateClass
 from homeassistant.const import STATE_UNKNOWN, UnitOfTemperature
@@ -63,7 +63,7 @@ async def test_tank_temperature_sensors(
         await hass.async_block_till_done()
 
         coordinator: RemehaUpdateCoordinator = mock_config_entry.runtime_data["coordinator"]
-        mainboard = coordinator.get_devices(lambda board: board.is_mainboard())[0]
+        mainboard: DeviceBoard = coordinator.get_mainboard()
         assert mainboard.board_category is not None
         assert mainboard.board_category.type is DeviceBoardType.CU_HW
 
