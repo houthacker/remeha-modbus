@@ -38,20 +38,16 @@ async def async_setup_entry(
     entities: list[NumberEntity] = []
 
     # TODO Is this the correct parent device board?
-    mainboards: list[DeviceBoard] = coordinator.get_devices(lambda device: device.is_mainboard())
-    mainboard = mainboards[0] if mainboards else None
-    if mainboard:
-        entities += [
-            RemehaSummerWinterNumber(api, coordinator, mainboard.id),
-            RemehaNeutralBandNumber(api, coordinator, mainboard.id),
-            RemehaBivalentTemperature(api, coordinator, mainboard.id),
-            RemehaCompressorMinTemperature(api, coordinator, mainboard.id),
-            MinChBeforeDhw(api, coordinator, mainboard.id),
-            MaxDhwProductionTime(api, coordinator, mainboard.id),
-            RemehaChBackupDelay(api, coordinator, mainboard.id),
-        ]
-    else:
-        _LOGGER.warning("No main board detected, skipping appliance-level Number entities.")
+    mainboard: DeviceBoard = coordinator.get_mainboard()
+    entities += [
+        RemehaSummerWinterNumber(api, coordinator, mainboard.id),
+        RemehaNeutralBandNumber(api, coordinator, mainboard.id),
+        RemehaBivalentTemperature(api, coordinator, mainboard.id),
+        RemehaCompressorMinTemperature(api, coordinator, mainboard.id),
+        MinChBeforeDhw(api, coordinator, mainboard.id),
+        MaxDhwProductionTime(api, coordinator, mainboard.id),
+        RemehaChBackupDelay(api, coordinator, mainboard.id),
+    ]
 
     dhw_climates: list[ClimateZone] = coordinator.get_climates(lambda c: c.is_domestic_hot_water())
     if dhw_climates:

@@ -36,26 +36,24 @@ async def async_setup_entry(
     """Create the sensor entities based on the given config entry."""
 
     coordinator: RemehaUpdateCoordinator = entry.runtime_data["coordinator"]
-    mainboards: list[DeviceBoard] = coordinator.get_devices(lambda device: device.is_mainboard())
-    mainboard = mainboards[0] if mainboards else None
+    mainboard: DeviceBoard = coordinator.get_mainboard()
 
     entities = [
         RemehaSensorEntity(
             coordinator=coordinator,
-            parent_device_id=mainboard.id if mainboard else None,
+            parent_device_id=mainboard.id,
             description=sensor_description,
         )
         for sensor_description in REMEHA_SENSORS
     ]
 
-    if mainboard:
+    def _get_dhw_zone(coordinator: RemehaUpdateCoordinator) -> ClimateZone:
+        zones = coordinator.get_climates(lambda z: z.is_domestic_hot_water())
 
-        def _get_dhw_zone(coordinator: RemehaUpdateCoordinator) -> ClimateZone:
-            zones = coordinator.get_climates(lambda z: z.is_domestic_hot_water())
+        assert len(zones) > 0
+        return zones[0]
 
-            assert len(zones) > 0
-            return zones[0]
-
+    if coordinator.has_climates(lambda z: z.is_domestic_hot_water()):
         entities += [
             RemehaTemperatureSensorEntity(
                 "dhw_tank_temperature_top",

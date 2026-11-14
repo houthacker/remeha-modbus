@@ -68,6 +68,7 @@ from custom_components.remeha_modbus.const import (
 )
 from custom_components.remeha_modbus.errors import (
     IncorrectEntityPlatformError,
+    MainboardNotFound,
     RemehaIncorrectServiceCall,
     RemehaServiceError,
 )
@@ -101,6 +102,20 @@ def _config_to_pv_config(config: ConfigEntry) -> PVSystem:
         installation_date=(
             parse(section[PV_INSTALLATION_DATE]).date() if PV_INSTALLATION_DATE in section else None
         ),
+    )
+
+
+def _issue_discovery_table_repair(hass: HomeAssistant) -> None:
+    ir.async_create_issue(
+        hass=hass,
+        domain=DOMAIN,
+        issue_domain=DOMAIN,
+        issue_id=ISSUE_DISCOVERY_TABLE_CORRUPTED,
+        is_fixable=True,
+        is_persistent=False,
+        learn_more_url=ISSUE_DISCOVERY_TABLE_CORRUPTED_LEARN_MORE_URL,
+        severity=ir.IssueSeverity.ERROR,
+        translation_key="discovery_table_corrupted",
     )
 
 
@@ -200,17 +215,8 @@ class RemehaUpdateCoordinator(DataUpdateCoordinator):
             ir.async_delete_issue(self.hass, domain=DOMAIN, issue_id=ISSUE_INVALID_ZONE_SCHEDULE)
 
         except DiscoveryTableCorruptedError as ex:
-            ir.async_create_issue(
-                hass=self.hass,
-                domain=DOMAIN,
-                issue_domain=DOMAIN,
-                issue_id=ISSUE_DISCOVERY_TABLE_CORRUPTED,
-                is_fixable=True,
-                is_persistent=False,
-                learn_more_url=ISSUE_DISCOVERY_TABLE_CORRUPTED_LEARN_MORE_URL,
-                severity=ir.IssueSeverity.ERROR,
-                translation_key="discovery_table_corrupted",
-            )
+            _issue_discovery_table_repair(self.hass)
+
             raise UpdateFailed(
                 translation_domain=DOMAIN, translation_key="update_failed_discovery_table_corrupted"
             ) from ex
@@ -372,6 +378,26 @@ class RemehaUpdateCoordinator(DataUpdateCoordinator):
 
         return [d for d in self._device_boards.values() if predicate(d) is True]
 
+    def get_mainboard(self) -> DeviceBoard:
+        """Return the mainboard device.
+
+        If no mainboard is found, this method issues a repair and raises an error afterwards.
+
+        Returns:
+            DeviceBoard: The mainboard device (e.g. EHC-10)
+
+        Raises:
+            MainboardNotFound: If there is no mainboard device.
+
+        """
+
+        devices = self.get_devices(lambda board: board.is_mainboard())
+        if devices:
+            return devices[0]
+
+        _issue_discovery_table_repair(self.hass)
+        raise MainboardNotFound(translation_domain=DOMAIN, translation_key="mainboard_not_found")
+
     def get_main_control_monitoring(self) -> MainControlMonitoring:
         """Return the status- and control fields of the appliance."""
 
@@ -407,6 +433,11 @@ class RemehaUpdateCoordinator(DataUpdateCoordinator):
         """
 
         return await self._api.async_repair_invalid_schedules()
+
+    def has_climates(self, predicate: Callable[[ClimateZone], bool]) -> bool:
+        """Return whether at least one climate matching `predicate` exists."""
+
+        return len(self.get_climates(predicate)) > 0
 
     def get_climates(self, predicate: Callable[[ClimateZone], bool]) -> list[ClimateZone]:
         """Return all climate that match the given predicate."""

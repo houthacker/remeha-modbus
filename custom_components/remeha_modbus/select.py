@@ -35,11 +35,8 @@ async def async_setup_entry(
 
     api: GTW08 = entry.runtime_data["api"]
     coordinator: RemehaUpdateCoordinator = entry.runtime_data["coordinator"]
-    mainboards: list[DeviceBoard] = coordinator.get_devices(
-        predicate=lambda device: device.is_mainboard()
-    )
-    mainboard = mainboards[0] if mainboards else None
-    parent_device_id: int | None = mainboard.id if mainboard else None
+    mainboard: DeviceBoard = coordinator.get_mainboard()
+    parent_device_id: int = mainboard.id
 
     entities = [
         RemehaSelectEntity(
@@ -54,11 +51,7 @@ async def async_setup_entry(
     ]
 
     # Add select entities that are only available on CU_HW boards
-    if (
-        mainboard
-        and mainboard.board_category
-        and mainboard.board_category.type is DeviceBoardType.CU_HW
-    ):
+    if mainboard.board_category and mainboard.board_category.type is DeviceBoardType.CU_HW:
         entities += [
             RemehaSelectEntity(
                 api=api,

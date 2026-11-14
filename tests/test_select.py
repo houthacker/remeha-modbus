@@ -70,7 +70,7 @@ async def test_cu_hw_selects_not_added(
         await hass.async_block_till_done()
 
         coordinator: RemehaUpdateCoordinator = mock_config_entry.runtime_data["coordinator"]
-        mainboard = coordinator.get_devices(lambda board: board.is_mainboard())[0]
+        mainboard: DeviceBoard = coordinator.get_mainboard()
         assert mainboard.board_category is not None
         assert mainboard.board_category.type is not DeviceBoardType.CU_HW
 
@@ -110,8 +110,10 @@ async def test_cu_hw_selects_not_added_without_mainboard_category(
         )
         await hass.async_block_till_done()
 
-        assert len(hass.states.async_all(domain_filter=SelectDomain)) == 1
-        _assert_cu_hw_selects(hass, expect_cu_hw_selects=False)
+        assert len(hass.states.async_all(domain_filter=SelectDomain)) == (1 if mainboards else 0)
+        if mainboards:
+            # No entities are added if no mainboard exists
+            _assert_cu_hw_selects(hass, expect_cu_hw_selects=False)
 
 
 @pytest.mark.parametrize("remeha_modbus_unit", ["azorra_ace_store.json"], indirect=True)
@@ -130,7 +132,7 @@ async def test_cu_hw_selects(
         await hass.async_block_till_done()
 
         coordinator: RemehaUpdateCoordinator = mock_config_entry.runtime_data["coordinator"]
-        mainboard = coordinator.get_devices(lambda board: board.is_mainboard())[0]
+        mainboard: DeviceBoard = coordinator.get_mainboard()
         assert mainboard.board_category is not None
         assert mainboard.board_category.type is DeviceBoardType.CU_HW
 
