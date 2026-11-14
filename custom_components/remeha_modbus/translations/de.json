@@ -539,7 +539,7 @@
     },
     "deprecated_climate_entity_used": {
       "title": "Veraltete TWW-Entität erkannt",
-      "description": "Die TWW-Climate-Entität `{entity_id}` wird durch `{replacement_entity_id}` ersetzt.\nSie wird hier verwendet: {references}\n\nAktualisiere deine Dashboards, Vorlagen und Automationen mit der neuen Entität, deaktiviere die veraltete TWW-Entität und starte Home Assistant neu."
+      "description": "Die TWW-Climate-Entität `{entity_id}` wird durch `{replacement_entity_id}` ersetzt.\nSie wird hier verwendet: {references}.\nDashboards und Vorlagen musst du manuell überprüfen.\n\nAktualisiere deine Dashboards, Vorlagen, Automationen und Skripte mit der neuen Entität, deaktiviere die veraltete TWW-Entität und starte Home Assistant neu."
     },
     "discovery_table_corrupted": {
       "title": "Modbus-Discovery-Tabelle beschädigt",
