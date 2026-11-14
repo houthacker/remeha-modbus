@@ -1,5 +1,248 @@
 {
+  "config": {
+    "abort": {
+      "already_configured": "Gerät ist bereits konfiguriert"
+    },
+    "error": {
+      "cannot_connect": "Verbindung fehlgeschlagen",
+      "unknown": "Unerwarteter Fehler"
+    },
+    "step": {
+      "modbus_serial": {
+        "data": {
+          "baudrate": "Baudrate",
+          "bytesize": "Bytegröße",
+          "method": "Methode",
+          "parity": "Parität",
+          "port": "Port",
+          "stopbits": "Stoppbits"
+        },
+        "data_description": {
+          "baudrate": "Geschwindigkeit der seriellen Verbindung, eine höhere Geschwindigkeit sorgt für eine bessere Leistung.",
+          "bytesize": "Datengröße jedes Bytes in Bits.",
+          "method": "Methode der Verbindung mit Modbus.",
+          "parity": "Parität der Datenbytes.",
+          "port": "Serieller Port oder USB-Gerät, über das dein Modbus-Gerät mit Home Assistant verbunden ist.",
+          "stopbits": "Stoppbits der Datenbytes."
+        }
+      },
+      "modbus_socket": {
+        "data": {
+          "host": "Host",
+          "port": "Port"
+        },
+        "data_description": {
+          "host": "IP-Adresse oder Hostname deines Modbus-Geräts, z. B. `192.168.1.1`",
+          "port": "Netzwerkport für die Kommunikation."
+        }
+      },
+      "user": {
+        "data": {
+          "name": "Name",
+          "slave": "Modbus-Adresse",
+          "type": "Verbindungstyp",
+          "auto_schedule": "TWW-Planung"
+        },
+        "data_description": {
+          "name": "Der Name des Modbus-Hubs. Muss eindeutig sein.",
+          "slave": "Die Modbus-Adresse des GTW-08",
+          "type": "Die Art der Modbus-Verbindung.",
+          "auto_schedule": "Automatische TWW-Planung einrichten"
+        }
+      },
+      "reconfigure": {
+        "data": {
+          "slave": "Modbus-Adresse",
+          "type": "Verbindungstyp",
+          "auto_schedule": "TWW-Planung"
+        },
+        "data_description": {
+          "slave": "Die Modbus-Adresse des GTW-08",
+          "type": "Die Art der Modbus-Verbindung.",
+          "auto_schedule": "Automatische TWW-Planung einrichten"
+        }
+      },
+      "auto_scheduling": {
+        "title": "Konfiguration der automatischen Planung",
+        "description": "Wähle eine Wetter-Entität und gib die Konfiguration deiner PV-Anlage an.",
+        "data": {
+          "weather_entity_id": "Wetter-Entität",
+          "selected_schedule": "Wähle ein Zeitprogramm"
+        },
+        "data_description": {
+          "weather_entity_id": "Wetter-Entität, deren Vorhersage abgerufen wird.",
+          "selected_schedule": "Zeitprogramm, das für die automatische Planung verwendet wird."
+        },
+        "sections": {
+          "pv_options": {
+            "name": "Konfiguration der PV-Anlage",
+            "data": {
+              "weather_entity_id": "Wetter-Entität",
+              "nominal_power_wp": "Nennleistung (Wp)",
+              "orientation": "Ausrichtung",
+              "tilt": "Neigung (Grad)",
+              "annual_efficiency_decrease": "Jährlicher Wirkungsgradverlust (%)",
+              "pv_installation_date": "Installationsdatum"
+            },
+            "data_description": {
+              "nominal_power_wp": "Die Gesamtleistung der PV-Anlage in Wp",
+              "orientation": "Wähle die Richtung, in die die PV-Module ausgerichtet sind. Wähle bei Ost/West-Ausrichtung 'EW' für eine 50/50-Verteilung der gesamten Wp.",
+              "annual_efficiency_decrease": "Gib den jährlichen Wirkungsgradverlust in Prozent ein. Lass den Wert auf `0`, wenn er unbekannt ist.",
+              "pv_installation_date": "Das (ungefähre) Installationsdatum zur Berechnung des aktuellen Wirkungsgrads der Anlage."
+            }
+          },
+          "dhw_boiler_options": {
+            "name": "Konfiguration des TWW-Speichers",
+            "data": {
+              "dhw_boiler_volume": "Volumen des TWW-Speichers",
+              "dhw_heat_loss_rate": "Wärmeverlust des TWW-Speichers",
+              "dhw_boiler_energy_label": "Energieeffizienzklasse des TWW-Speichers"
+            },
+            "data_description": {
+              "dhw_boiler_volume": "Das Volumen des TWW-Speichers in L",
+              "dhw_heat_loss_rate": "Der Wärmeverlust des TWW-Speichers in Watt",
+              "dhw_boiler_energy_label": "Energieeffizienzklasse des TWW-Speichers. Wird verwendet, wenn der Wärmeverlust `0` ist, ansonsten ignoriert."
+            }
+          }
+        }
+      }
+    }
+  },
+  "selector": {
+    "schedule_id": {
+      "options": {
+        "schedule_1": "Zeitprogramm 1",
+        "schedule_2": "Zeitprogramm 2",
+        "schedule_3": "Zeitprogramm 3",
+        "schedule_4": "Kühlprogramm"
+      }
+    },
+    "weekday": {
+      "options": {
+        "mon": "Montag",
+        "tue": "Dienstag",
+        "wed": "Mittwoch",
+        "thu": "Donnerstag",
+        "fri": "Freitag",
+        "sat": "Samstag",
+        "sun": "Sonntag"
+      }
+    },
+    "modbus_type": {
+      "options": {
+        "tcp": "TCP",
+        "udp": "UDP",
+        "rtuovertcp": "RTU über TCP",
+        "serial": "Seriell"
+      }
+    },
+    "modbus_register": {},
+    "register_count": {},
+    "struct_format": {}
+  },
   "entity": {
+    "climate": {
+      "remeha_modbus": {
+        "state_attributes": {
+          "preset_mode": {
+            "state": {
+              "anti_frost": "Frostschutz",
+              "comfort": "Komfort",
+              "eco": "ECO",
+              "manual": "Manuell",
+              "schedule_1": "Zeitprogramm 1",
+              "schedule_2": "Zeitprogramm 2",
+              "schedule_3": "Zeitprogramm 3",
+              "schedule_4": "Kühlprogramm"
+            }
+          }
+        }
+      }
+    },
+    "number": {
+      "bivalent_temperature": {
+        "name": "Bivalenztemperatur"
+      },
+      "compressor_min_temperature": {
+        "name": "TWW-Mindesttemperatur Verdichter"
+      },
+      "dhw_hysteresis": {
+        "name": "TWW-Hysterese"
+      },
+      "max_dhw_production_time": {
+        "name": "Maximale Dauer der TWW-Bereitung"
+      },
+      "min_time_between_dhw_productions": {
+        "name": "Mindestzeit zwischen TWW-Bereitungen"
+      },
+      "neutral_band_summer_winter": {
+        "name": "Neutralzone Sommer/Winter"
+      },
+      "starting_delay_ch_backup": {
+        "name": "Verzögerung Zusatzerzeuger Heizung"
+      },
+      "summer_winter_threshold": {
+        "name": "Sommer/Winter-Schwellenwert"
+      }
+    },
+    "select": {
+      "appliance_silent_mode": {
+        "name": "Geräuscharmer Betriebsmodus",
+        "state": {
+          "off": "Aus",
+          "level_1": "Stufe 1",
+          "level_2": "Stufe 2"
+        }
+      },
+      "digital_input_1_configuration": {
+        "name": "Digitaleingang 1",
+        "state": {
+          "off": "Aus",
+          "smart_grid": "Smart Grid",
+          "release_compressor": "Freigabe Verdichter",
+          "release_backup": "Freigabe Zusatzerzeuger"
+        }
+      },
+      "digital_input_2_configuration": {
+        "name": "Digitaleingang 2",
+        "state": {
+          "off": "Aus",
+          "smart_grid": "Smart Grid",
+          "release_compressor": "Freigabe Verdichter",
+          "release_backup": "Freigabe Zusatzerzeuger"
+        }
+      },
+      "digital_input_1_contact_logic": {
+        "name": "Kontaktlogik Digitaleingang 1",
+        "state": {
+          "normally_open": "Schließer (Eingang aktiv bei geschlossenem Kontakt)",
+          "normally_closed": "Öffner (Eingang aktiv bei geöffnetem Kontakt)"
+        }
+      },
+      "digital_input_2_contact_logic": {
+        "name": "Kontaktlogik Digitaleingang 2",
+        "state": {
+          "normally_open": "Schließer (Eingang aktiv bei geschlossenem Kontakt)",
+          "normally_closed": "Öffner (Eingang aktiv bei geöffnetem Kontakt)"
+        }
+      }
+    },
+    "switch": {
+      "enable_schedule_sync": {
+        "name": "Synchronisierung der Zeitprogramme"
+      },
+      "heatpump_managed_schedules": {
+        "name": "Wärmepumpe steuert die Ausführung der Zeitprogramme."
+      }
+    },
+    "time": {
+      "silent_mode_start_time": {
+        "name": "Startzeit geräuscharmer Betrieb"
+      },
+      "silent_mode_end_time": {
+        "name": "Endzeit geräuscharmer Betrieb"
+      }
+    },
     "sensor": {
       "season_mode": {
         "name": "Jahreszeit",
@@ -16,25 +259,25 @@
           "standby": "Standby",
           "heat_demand": "Wärmeanforderung",
           "generator_start": "Erzeugerstart",
-          "generator_heating": "Erzeuger Heizung",
-          "generator_dhw": "Erzeuger Trinkwarmwasser",
-          "generator_stop": "Erzeugerstopp",
-          "pump_post_run": "Pumpennachlauf",
+          "generator_heating": "Erzeuger im Heizbetrieb",
+          "generator_dhw": "Erzeuger im TWW-Betrieb",
+          "generator_stop": "Erzeuger aus",
+          "pump_post_run": "Pumpe im Nachlauf",
           "cooling": "Kühlbetrieb",
-          "controlled_shutdown": "Regelabschaltung",
-          "start_prevention": "Startverhinderung",
-          "locking_mode": "Verriegelungsmodus",
-          "load_test_min": "Lasttest min.",
-          "load_test_heating_max": "Lasttest Heizung max.",
-          "load_test_dhw_max": "Lasttest Trinkwarmwasser max.",
+          "controlled_shutdown": "Erzeuger aus bis zum Erreichen des Sollwerts",
+          "start_prevention": "Vorübergehende Störung",
+          "locking_mode": "Dauerhafte Störung",
+          "load_test_min": "Schornsteinfegerfunktion bei minimaler Leistung",
+          "load_test_heating_max": "Schornsteinfegerfunktion bei maximaler Leistung im Heizbetrieb",
+          "load_test_dhw_max": "Schornsteinfegerfunktion bei maximaler Leistung im TWW-Betrieb",
           "manual_heat_demand": "Manuelle Wärmeanforderung",
-          "frost_protection": "Frostschutz",
-          "venting": "Entlüftung",
+          "frost_protection": "Frostschutzfunktion aktiv",
+          "venting": "Entlüftungsfunktion aktiv",
           "control_unit_cooling": "Regelungseinheit kühlen",
-          "resetting": "Zurücksetzen läuft",
-          "automatic_filling": "Automatische Befüllung",
+          "resetting": "Gerät wird zurückgesetzt",
+          "automatic_filling": "Automatische Befüllung läuft",
           "stopped": "Angehalten",
-          "calibration": "Kalibrierung",
+          "calibration": "Zwangskalibrierung aktiv",
           "factory_test": "Werkstest",
           "hydraulic_balancing": "Hydraulischer Abgleich",
           "device_mode": "Gerätemodus",
@@ -45,15 +288,15 @@
         "name": "Substatus",
         "state": {
           "standby": "Standby",
-          "anti_cyclus": "Pausenzeit / Kurzzyklus-Sicherung",
+          "anti_cyclus": "Wartezeit bis zum nächsten Start",
           "close_hydraulic_valve": "Hydraulikventil schließen",
           "stop_pump": "Pumpe stoppen",
-          "wait_start_release": "Warte auf Startfreigabe",
+          "wait_start_release": "Das Gerät wartet, bis die Temperatur die Startbedingungen erfüllt",
           "generator_starting": "Erzeuger startet",
-          "internal_setpoint": "Interner Sollwert",
-          "limited_internal_setpoint": "Begrenzter interner Sollwert",
-          "power_controlled": "Leistungsgeregelt",
-          "pump_post_run": "Pumpennachlauf",
+          "internal_setpoint": "Betrieb am eingestellten Temperatursollwert",
+          "limited_internal_setpoint": "Betrieb bei begrenztem Temperatursollwert",
+          "power_controlled": "Betrieb mit gewünschter Leistung",
+          "pump_post_run": "Pumpe im Nachlauf",
           "start_pump": "Pumpe starten",
           "start_pause_time": "Pausenzeit starten",
           "compressor_unloaded": "Verdichter entlastet",
@@ -70,14 +313,14 @@
           "hp_unloaded_cooling": "WP entlastet Kühlung",
           "hp_stop_outside_temp": "WP Stopp Außentemperatur",
           "hp_off_flow_tmax": "WP aus Vorlauf Tmax",
-          "bl_backup_off": "BL Zusatzerzeuger aus",
-          "bl_heat_pump_off": "BL Wärmepumpe aus",
-          "bl_hp_and_backup_off": "BL WP und Zusatzerzeuger aus",
+          "bl_backup_off": "Sperrung: Zusatzerzeuger aus",
+          "bl_heat_pump_off": "Sperrung: Wärmepumpe aus",
+          "bl_hp_and_backup_off": "Sperrung: WP und Zusatzerzeuger aus",
           "low_tariff": "Niedertarif",
           "pv_with_heat_pump": "PV mit Wärmepumpe",
           "pv_hp_and_backup": "PV WP und Zusatzerzeuger",
           "smart_grid": "Smart Grid",
-          "wait_water_pressure": "Warte auf Wasserdruck",
+          "wait_water_pressure": "Standby, bis der Wasserdruck ausreichend ist",
           "no_generator_available": "Kein Erzeuger verfügbar",
           "free_cooling_pump_off": "Freie Kühlung Pumpe aus",
           "free_cooling_pump_on": "Freie Kühlung Pumpe ein",
@@ -94,25 +337,264 @@
           "unknown": "Substatus unbekannt",
           "safety_shutdown": "Sicherheitsabschaltung / Rücksetzwartezeit"
         }
+      },
+      "dhw_tank_temperature_top": {
+        "name": "TWW-Speichertemperatur (oberer Fühler)"
+      },
+      "dhw_tank_temperature_bottom": {
+        "name": "TWW-Speichertemperatur (unterer Fühler)"
+      }
+    },
+    "water_heater": {
+      "heat_pump_boiler": {
+        "state_attributes": {
+          "operation_mode": {
+            "state": {
+              "schedule_1": "Zeitprogramm 1",
+              "schedule_2": "Zeitprogramm 2",
+              "schedule_3": "Zeitprogramm 3"
+            }
+          }
+        }
+      },
+      "water_heater_electric": {
+        "state_attributes": {
+          "operation_mode": {
+            "state": {
+              "schedule_1": "Zeitprogramm 1"
+            }
+          }
+        }
+      },
+      "water_heater_gas": {
+        "state_attributes": {
+          "operation_mode": {
+            "state": {
+              "schedule_1": "Zeitprogramm 1",
+              "schedule_2": "Zeitprogramm 2",
+              "schedule_3": "Zeitprogramm 3"
+            }
+          }
+        }
+      },
+      "water_heater_oil": {
+        "state_attributes": {
+          "operation_mode": {
+            "state": {
+              "schedule_1": "Zeitprogramm 1",
+              "schedule_2": "Zeitprogramm 2",
+              "schedule_3": "Zeitprogramm 3"
+            }
+          }
+        }
+      }
+    }
+  },
+  "services": {
+    "bootstrap_blenders": {
+      "name": "Blender initialisieren",
+      "description": "Verbindungen mit anderen Integrationen initialisieren. Mehrfaches Aufrufen hat keine zusätzliche Wirkung."
+    },
+    "create_default_zone_schema": {
+      "name": "Standard-Zonen-Zeitprogramm erstellen",
+      "description": "Erstellt ein Standard-Zonen-Zeitprogramm für das angegebene Zeitprogramm und den angegebenen Tag.",
+      "fields": {
+        "schedule_id": {
+          "name": "Wähle das zu verwendende Zeitprogramm"
+        },
+        "weekday": {
+          "name": "Wähle den Wochentag, für den das Zeitprogramm gelten soll"
+        }
+      }
+    },
+    "dhw_auto_schedule": {
+      "name": "Automatische TWW-Planung",
+      "description": "Erstellt ein TWW-Zeitprogramm für den nächsten Tag anhand der Wettervorhersage und der Speicher-/PV-Konfiguration. Erfordert eine Wetter-Integration, die die Globalstrahlung (GHI) in stündlichen Vorhersagen liefert."
+    },
+    "force_system_rediscovery": {
+      "name": "Automatische Erkennung erzwingen",
+      "description": "Zwingt dein Remeha-Gerät, die Geräte- und Zonen-Metadaten erneut zu erkennen. Nach Ausführung dieses Dienstes ist ein Neustart von Home Assistant erforderlich."
+    },
+    "read_registers": {
+      "name": "Modbus-Register lesen",
+      "description": "Liest eine Reihe aufeinanderfolgender Modbus-Register aus dem GTW-08",
+      "fields": {
+        "start_register": {
+          "name": "Startregister",
+          "description": "Das erste zu lesende Register"
+        },
+        "register_count": {
+          "name": "Anzahl Register",
+          "description": "Die Anzahl der zu lesenden Register"
+        },
+        "struct_format": {
+          "name": "Struct-Format",
+          "description": "Das Struct-Format gemäß dem [Python3-Struct-Format]({python_struct_format_docs_url})."
+        }
       }
     }
   },
   "exceptions": {
+    "auto_schedule_unsupported_temperature_unit": {
+      "message": "Entität {entity_id} verwendet eine nicht unterstützte Temperatureinheit {unit_of_temperature}."
+    },
+    "auto_schedule_no_dhw_climate": {
+      "message": "Automatische Planung nicht möglich: In der Remeha Modbus Integration existiert keine TWW-Entität."
+    },
+    "auto_schedule_no_forecasts": {
+      "message": "Automatische Planung nicht möglich: Keine Wettervorhersagen verfügbar."
+    },
+    "auto_schedule_forecast_not_enough_hours": {
+      "message": "Automatische Planung nicht möglich: Die letzte verfügbare Vorhersagezeit ist {max_forecast_time}, für eine Planung für den nächsten Tag muss sie aber mindestens {min_required_end_time} sein. Warte bis zu diesem Zeitpunkt und versuche es erneut."
+    },
+    "auto_schedule_no_solar_irradiance": {
+      "message": "Automatische Planung nicht möglich: `solar_irradiance` ist ein Pflichtfeld in der stündlichen Wettervorhersage. Verwende eine Wetter-Integration, die dies unterstützt."
+    },
+    "auto_schedule_modbus_error": {
+      "message": "Automatische Planung nicht möglich: Es ist ein Modbus-Fehler aufgetreten, Details findest du in den Logs. Versuche es später erneut."
+    },
+    "auto_schedule_value_error": {
+      "message": "Automatische Planung nicht möglich: Fehler beim Deserialisieren der Modbus-Antwort, Details findest du in den Logs."
+    },
+    "bootstrap_blenders_error": {
+      "message": "Fehler beim Einrichten der Verknüpfungen mit anderen Integrationen."
+    },
+    "climate_invalid_operation_ctx": {
+      "message": "Die angeforderte Aktion {operation} ist in der Voreinstellung {preset_mode} ungültig."
+    },
+    "climate_invalid_operation_ctx_hvac": {
+      "message": "Das Setzen des HVAC-Modus auf {hvac_mode} wird für Zone {zone_name} nicht unterstützt."
+    },
+    "climate_unsupported_preset_mode": {
+      "message": "Die angeforderte Voreinstellung {preset_mode} wird nicht unterstützt."
+    },
     "config_entry_error_connection_type": {
-      "message": "{connection_type} ist kein gültiger Verbindungstyp. Verwenden Sie einen der folgenden [{connection_types}]"
+      "message": "{connection_type} ist kein gültiger Verbindungstyp. Verwende einen der folgenden [{connection_types}]"
     },
     "config_entry_key_error": {
-      "message": "Konfigurationsfehler: das Feld {key} ist ungültig order erforderlich und nicht vorhanden."
+      "message": "Konfigurationsfehler: Das Feld {key} ist ungültig oder erforderlich und nicht vorhanden."
+    },
+    "incorrect_entity_platform": {
+      "message": "Entität {entity_id} gehört nicht zur erwarteten Plattform {expected_platform} und/oder zur Integration {expected_component}."
+    },
+    "mainboard_not_found": {
+      "message": "Keine Hauptleiterplatte gefunden. Setze die Modbus-Discovery-Tabelle über das Reparaturen-Dashboard zurück, um dies zu beheben."
+    },
+    "missing_external_component": {
+      "message": "Externe Komponente {component} fehlt. Installiere sie und versuche es erneut; Installationsanweisungen findest du unter {url}."
+    },
+    "parse_error_entity_not_found": {
+      "message": "ZoneSchedule kann nicht in ein Scheduler-Zeitprogramm umgewandelt werden: Die erforderliche Climate-Entität wurde nicht gefunden."
+    },
+    "parse_error_multiple_weekdays": {
+      "message": "Status {schedule_entity_id} kann nicht in ZoneSchedule umgewandelt werden: Das Zeitprogramm gilt für mehrere Wochentage, erforderlich ist genau einer."
+    },
+    "parse_error_scheduler_state_action": {
+      "message": "Status {schedule_entity_id} kann nicht in ZoneSchedule umgewandelt werden: Der erforderliche Dienstaufruf zum Setzen der Voreinstellung fehlt."
+    },
+    "parse_error_time_slot": {
+      "message": "Status {schedule_entity_id} kann nicht in ZoneSchedule umgewandelt werden: Der Zeitfenster-String {time_slot} muss genau zwei Teile haben, hat aber {part_count}."
+    },
+    "read_registers_modbus_error": {
+      "message": "Modbus-Fehler beim Lesen der Register."
+    },
+    "read_registers_illegal_struct_format": {
+      "message": "Ergebnis kann nicht verarbeitet werden: ungültiges Struct-Format {struct_format}."
+    },
+    "read_registers_unknown_error": {
+      "message": "Beim Lesen der Modbus-Register ist ein unbekannter Fehler aufgetreten. Details findest du im Log."
+    },
+    "schedule_update_non_equal_climates": {
+      "message": "Aktualisierungen der Zonen-Zeitprogramme können nicht ermittelt werden: Eine Klimazone wurde hinzugefügt oder entfernt."
+    },
+    "scenario_execution_error_missing_required_state": {
+      "message": "Szenario {scenario} kann nicht ausgeführt werden: Der erforderliche Entitätsstatus der Integration {component} fehlt."
+    },
+    "scenario_execution_error_missing_climate": {
+      "message": "Szenario {scenario} kann nicht ausgeführt werden: Die mit scheduler.schedule {scheduler_entity} verknüpfte Climate-Entität fehlt."
+    },
+    "service_error_missing_state": {
+      "message": "Neu hinzugefügte Entität {entity_id} kann nicht verarbeitet werden: Der neue Status ist nicht verfügbar."
+    },
+    "update_failed_discovery_table_corrupted": {
+      "message": "Modbus-Discovery-Tabelle beschädigt. Öffne dein Reparaturen-Dashboard, um dies zu beheben."
+    },
+    "update_failed_invalid_zone_schedule_unknown_address": {
+      "message": "Aktualisierung fehlgeschlagen: Eines der ausgewählten Zonen-Zeitprogramme konnte nicht dekodiert werden. Öffne dein Reparaturen-Dashboard, um dies zu beheben."
+    },
+    "update_failed_invalid_zone_schedule": {
+      "message": "Aktualisierung fehlgeschlagen: Das Zonen-Zeitprogramm mit der Modbus-Adresse {address} konnte nicht dekodiert werden. Öffne dein Reparaturen-Dashboard, um dies zu beheben."
+    },
+    "update_failed_modbus_exception": {
+      "message": "Aktualisierung aufgrund einer Modbus-Ausnahme fehlgeschlagen: {modbus_message}"
+    },
+    "value_not_an_int": {
+      "message": "Der übergebene Wert {value} ist keine ganze Zahl. Entferne die Nachkommastellen und versuche es erneut."
     }
   },
   "issues": {
     "deprecated_climate_entity": {
-      "title": "Veraltetes TWW entity erkannt",
-      "description": "Die TWW climate Entität `{entity_id}` wird durch `{replacement_entity_id}` ersetzt.\nAktualisiere deine Dashboards, Vorlagen, Automationen und Skripte mit der neuen Entität, deaktiviere die veraltete TWW Entität und starte Home Assistant neu."
+      "title": "Veraltete TWW-Entität erkannt",
+      "description": "Die TWW-Climate-Entität `{entity_id}` wird durch `{replacement_entity_id}` ersetzt.\nAktualisiere deine Dashboards, Vorlagen, Automationen und Skripte mit der neuen Entität, deaktiviere die veraltete TWW-Entität und starte Home Assistant neu."
     },
     "deprecated_climate_entity_used": {
-      "title": "Veraltetes TWW entity erkannt",
-      "description": "Die TWW climate Entität `{entity_id}` wird durch `{replacement_entity_id}` ersetzt.\nSie wird hier verwendet: {references}\n\nAktualisiere deine Dashboards, Vorlagen und Automationen mit der neuen Entität, deaktiviere die veraltete TWW Entität und starte Home Assistant neu."
+      "title": "Veraltete TWW-Entität erkannt",
+      "description": "Die TWW-Climate-Entität `{entity_id}` wird durch `{replacement_entity_id}` ersetzt.\nSie wird hier verwendet: {references}\n\nAktualisiere deine Dashboards, Vorlagen und Automationen mit der neuen Entität, deaktiviere die veraltete TWW-Entität und starte Home Assistant neu."
+    },
+    "discovery_table_corrupted": {
+      "title": "Modbus-Discovery-Tabelle beschädigt",
+      "fix_flow": {
+        "step": {
+          "confirm_force_rediscovery": {
+            "title": "Automatische Erkennung erzwingen",
+            "description": "Die Discovery-Tabelle des GTW-08 scheint beschädigt zu sein. Du kannst dies beheben, indem du eine automatische Erkennung erzwingst und Home Assistant neu startest. Die Einstellungen deines Remeha-Geräts werden dadurch nicht beeinflusst."
+          }
+        }
+      }
+    },
+    "heatpump_managed_schedules_turned_off": {
+      "title": "Zeitprogramme werden nicht vom Gerät verwaltet",
+      "fix_flow": {
+        "step": {
+          "confirm_undo": {
+            "title": "Zeitprogramme vom Gerät verwalten lassen",
+            "description": "Du hast einen Schalter ausgeschaltet, wodurch Home Assistant die Zeitprogramme direkt verwaltet, anstatt dies dem Remeha-Gerät zu überlassen. Klicke auf Absenden, um dies rückgängig zu machen, oder starte Home Assistant neu, um dieses Problem zu ignorieren."
+          }
+        }
+      }
+    },
+    "invalid_zone_schedule_unknown_address": {
+      "title": "Ungültiges Zonen-Zeitprogramm",
+      "fix_flow": {
+        "step": {
+          "confirm_overwrite": {
+            "title": "Fehlerhaftes Zeitprogramm überschreiben",
+            "description": "> [!WARNING]\n> Ein Zonen-Zeitprogramm konnte nicht verarbeitet werden. Um dieses Problem zu beheben, überschreibe alle Zonen-Zeitprogramme mit einem Standard-Zeitprogramm, das je nach Zonentyp nur die Voreinstellung Frostschutz/Eco verwendet.\n\n> Wenn du vermutest, dass es sich um einen Fehler und nicht um ein fehlerhaftes Zonen-Zeitprogramm handelt, melde bitte [hier]({issue_tracker_url}) ein Problem."
+          }
+        }
+      }
+    },
+    "invalid_zone_schedule": {
+      "title": "Ungültiges Zonen-Zeitprogramm",
+      "fix_flow": {
+        "step": {
+          "confirm_overwrite": {
+            "title": "Fehlerhaftes Zeitprogramm überschreiben",
+            "description": "> [!WARNING]\n> Ein Zonen-Zeitprogramm an Modbus-Adresse {address} konnte nicht verarbeitet werden. Um dieses Problem zu beheben, überschreibe alle Zonen-Zeitprogramme mit einem Standard-Zeitprogramm, das je nach Zonentyp nur die Voreinstellung Frostschutz/Eco verwendet.\n\n> Wenn du vermutest, dass es sich um einen Fehler und nicht um ein fehlerhaftes Zonen-Zeitprogramm handelt, melde bitte [hier]({issue_tracker_url}) ein Problem."
+          }
+        }
+      }
+    },
+    "restart_required_force_system_rediscovery": {
+      "title": "Neustart erforderlich",
+      "fix_flow": {
+        "step": {
+          "confirm_restart": {
+            "title": "Neustart erforderlich",
+            "description": "Dein Remeha-Gerät hat eine automatische Erkennung ausgeführt, und ein Neustart von Home Assistant ist erforderlich. Klicke auf Absenden, um jetzt neu zu starten."
+          }
+        }
+      }
     }
   }
 }

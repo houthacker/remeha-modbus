@@ -476,6 +476,9 @@
     "incorrect_entity_platform": {
       "message": "Entity {entity_id} hoort niet bij platform {expected_platform} en/of integratie {expected_component}."
     },
+    "mainboard_not_found": {
+      "message": "Geen hoofdprint gevonden. Reset de modbus discovery tabel vanuit het repairs dashboard om dit op te lossen."
+    },
     "missing_external_component": {
       "message": "Integratie '{component}' niet gevonden. Installeer de integratie en probeer het opnieuw. Installatie-instructies zijn te vinden op {url}."
     },

@@ -215,15 +215,15 @@
       "digital_input_1_contact_logic": {
         "name": "Logic contact digital input 1",
         "state": {
-          "normally_open": "Input active when contact is open",
-          "normally_closed": "Input active when contact is closed"
+          "normally_open": "Normally open (input active when contact is closed)",
+          "normally_closed": "Normally closed (input active when contact is open)"
         }
       },
       "digital_input_2_contact_logic": {
         "name": "Logic contact digital input 2",
         "state": {
-          "normally_open": "Input active when contact is open",
-          "normally_closed": "Input active when contact closed"
+          "normally_open": "Normally open (input active when contact is closed)",
+          "normally_closed": "Normally closed (input active when contact is open)"
         }
       }
     },
@@ -476,6 +476,9 @@
     },
     "incorrect_entity_platform": {
       "message": "Entity {entity_id} doesn't belong to the expected platform {expected_platform} and/or the integration {expected_component}."
+    },
+    "mainboard_not_found": {
+      "message": "No mainboard found. Reset the modbus discovery table from the repairs dashboard to resolve this."
     },
     "missing_external_component": {
       "message": "Missing external component {component}. Please install it and retry; installation instructions are at {url}."
