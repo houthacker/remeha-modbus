@@ -104,12 +104,80 @@ The following proxies are known to be working with this integration. Other gatew
 
 | Device type                              | URL                                                                     | Notes |
 | ---------------------------------------- | ----------------------------------------------------------------------- | - |
+| ESPHome Modbus TCP to RTU Bridge         | https://github.com/rosenrot00/esphome_modbus_bridge                     | Connect to the Remeha appliance without a dedicated USB/RS485 adapter or gateway. |
 | Waveshare RS232/485 to WiFi and Ethernet | https://www.waveshare.com/product/rs232-485-to-wifi-eth-b.htm?sku=25222 | When setting a static ip, the device is only reachable in the same subnet since no default gateway can be set. |
 | PUSR USR-DR132 / USR-DR134 | https://www.pusr.com/products/Lipstick-Size-Serial-Device-Server.html | Seems most reliable in **Modbus Multi Host Polling** mode, probably avoids frame misalignment on L-bus |
 | Elfin EW1X | http://www.hi-flying.com/elfin-ew10-elfin-ew11 | - |
 
 ### Modus proxy configuration
 The following proxy configurations are known to work with the GTW-08. If you're using different settings that also work, please let me know by creating [a new issue](https://github.com/houthacker/remeha-modbus/issues/new/choose).
+
+#### ESPHome Modbus TCP to RTU Bridge
+The ESP32 reads and writes the RS485 bus and exposes it as a Modbus TCP server on the configured port (502 in the example yaml).
+The integration connects to the ESPHome device over the network, as it would to any Modbus TCP gateway.
+
+##### Notes:
+* In the integration, use the IP address (or hostname) of the ESPHome device as the host and use the configured port number. The slave address is the one of your Remeha appliance, for example 100.
+* The pins (TX 19, RX 22, flow control 5) are for the Atom Lite with the RS485 Base. Other hardware needs different pins.
+* Do not add a modbus_controller to this ESPHome config. It would poll the bus itself and compete with the integration. Trusted_networks should match your own network.
+
+<summary>Minimal ESPHome config</summary>
+<details>
+
+```yaml
+esphome:
+  name: modbus-proxy
+  friendly_name: Modbus Proxy
+
+esp32:
+  board: esp32dev
+  framework:
+    type: esp-idf
+
+logger:
+
+api:
+  encryption:
+    key: !secret api_key
+
+ota:
+  - platform: esphome
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+
+uart:
+  id: uart_modbus
+  tx_pin: 19
+  rx_pin: 22
+  baud_rate: 9600
+  stop_bits: 1
+
+external_components:
+  - source:
+      type: git
+      url: https://github.com/rosenrot00/esphome_modbus_bridge
+    components: [modbus_bridge]
+
+modbus:
+  id: modbus1
+  uart_id: uart_modbus
+  role: client
+  flow_control_pin: 5
+  send_wait_time: 500ms
+  turnaround_time: 50ms
+
+modbus_bridge:
+  id: mb_bridge
+  modbus_id: modbus1
+  tcp_port: 502
+  tcp_allowed_clients: 2
+  trusted_networks:
+    - 192.168.1.0/24   # adjust to your LAN
+```
+
+</details>
 
 #### Elfin EW1X
 <summary>Configuration details of the Elfin EW1X</summary>
