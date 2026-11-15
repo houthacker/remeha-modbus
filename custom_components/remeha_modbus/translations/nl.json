@@ -416,7 +416,7 @@
     },
     "read_registers": {
       "name": "Lees modbus registers",
-      "description": "Lees een aantal opeenvolgende modbus registers van de GTW-08",
+      "description": "Lees een aantal opeenvolgende modbus registers van de GTW-08. Niet-ondersteunde registers opvragen geeft een foutmelding.",
       "fields": {
         "start_register": {
           "name": "Startregister",
@@ -493,6 +493,12 @@
     },
     "parse_error_time_slot": {
       "message": "Kan state {schedule_entity_id} niet vertalen naar ZoneSchedule: timeslot {time_slot} moet uit precies 2 delen bestaan, maar heeft er {part_count}."
+    },
+    "read_registers_illegal_data_address": {
+      "message": "Minstens één van de gevraagde registers wordt niet geleverd door het apparaat. Verklein het aantal registers, of pas het register zelf aan."
+    },
+    "read_registers_illegal_data_value": {
+      "message": "Een van de opgegeven parameters bevat een niet-toegestane waarde."
     },
     "read_registers_modbus_error": {
       "message": "Modbus fout tijdens het lezen van de registers."

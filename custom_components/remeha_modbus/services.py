@@ -12,7 +12,11 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import UnitOfTemperature
 from homeassistant.core import HomeAssistant, ServiceCall, ServiceResponse, State, SupportsResponse
 from homeassistant.helpers import issue_registry as ir
-from pymodbus import ModbusException
+from modbus_connection.exceptions import (
+    IllegalDataAddressError,
+    IllegalDataValueError,
+    ModbusError,
+)
 
 from custom_components.remeha_modbus.blend.scheduler.blender import (
     EventDispatcher as SchedulerEventDispatcher,
@@ -103,7 +107,15 @@ def register_services(  # noqa: C901
                 },
             )
 
-        except ModbusException as e:
+        except IllegalDataAddressError as e:
+            raise RemehaServiceError(
+                translation_domain=DOMAIN, translation_key="read_registers_illegal_data_address"
+            ) from e
+        except IllegalDataValueError as e:
+            raise RemehaServiceError(
+                translation_domain=DOMAIN, translation_key="read_registers_illegal_data_value"
+            ) from e
+        except ModbusError as e:
             raise RemehaServiceError(
                 translation_domain=DOMAIN, translation_key="read_registers_modbus_error"
             ) from e
@@ -143,7 +155,7 @@ def register_services(  # noqa: C901
                 severity=ir.IssueSeverity.WARNING,
                 translation_key="restart_required_force_system_rediscovery",
             )
-        except ModbusException as e:
+        except ModbusError as e:
             raise RemehaServiceError(
                 translation_domain=DOMAIN, translation_key="service_error_force_system_rediscovery"
             ) from e
