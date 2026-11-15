@@ -231,7 +231,7 @@ def _modbus_serial_schema(current: ConfigEntry | None = None) -> probatio.Schema
             probatio.Required(
                 CONF_PORT,
                 default=current.data.get(CONF_PORT, probatio.UNDEFINED)
-                if current
+                if current and current.data.get(CONF_TYPE) == SERIAL
                 else probatio.UNDEFINED,
             ): SerialPortSelector(),
             probatio.Required(
@@ -243,13 +243,21 @@ def _modbus_serial_schema(current: ConfigEntry | None = None) -> probatio.Schema
 
 
 def _modbus_socket_schema(current: ConfigEntry | None = None) -> probatio.Schema:
+    # Only reuse prior values if they belong to a socket connection.
+    is_socket = current is not None and current.data.get(CONF_TYPE) != SERIAL
     return probatio.Schema(
         {
             probatio.Required(
-                CONF_HOST, default=current.data[CONF_HOST] if current else probatio.UNDEFINED
+                CONF_HOST,
+                default=current.data.get(CONF_HOST, probatio.UNDEFINED)
+                if current and is_socket
+                else probatio.UNDEFINED,
             ): cv.string,
             probatio.Required(
-                CONF_PORT, default=current.data[CONF_PORT] if current else probatio.UNDEFINED
+                CONF_PORT,
+                default=current.data.get(CONF_PORT, probatio.UNDEFINED)
+                if current and is_socket
+                else probatio.UNDEFINED,
             ): cv.port,
         }
     )
@@ -289,11 +297,38 @@ def _validate_auto_scheduling_config(data: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+# Connection keys that only apply to one connection type. CONF_PORT is shared.
+_SERIAL_KEYS = frozenset(
+    {CONF_BAUDRATE, CONF_BYTESIZE, MODBUS_SERIAL_METHOD, CONF_PARITY, CONF_STOPBITS}
+)
+_SOCKET_KEYS = frozenset({CONF_HOST})
+_AUTO_SCHEDULE_KEYS = frozenset(
+    {
+        WEATHER_ENTITY_ID,
+        AUTO_SCHEDULE_SELECTED_SCHEDULE,
+        PV_CONFIG_SECTION,
+        DHW_BOILER_CONFIG_SECTION,
+    }
+)
+
+
 class RemehaConfigFlow(ConfigFlow, domain=DOMAIN):
     """Handle a config flow for Remeha Modbus."""
 
     VERSION = HA_CONFIG_VERSION
     MINOR_VERSION = HA_CONFIG_MINOR_VERSION
+
+    def _async_reconfigure_connection(
+        self, stale_keys: frozenset[str], data: dict[str, Any]
+    ) -> ConfigFlowResult:
+        """Update the reconfigured entry, dropping stale connection and auto scheduling keys."""
+
+        if not data[CONFIG_AUTO_SCHEDULE]:
+            stale_keys |= _AUTO_SCHEDULE_KEYS
+
+        entry = self._get_reconfigure_entry()
+        current = {k: v for k, v in entry.data.items() if k not in stale_keys}
+        return self.async_update_reload_and_abort(entry, data=current | data)
 
     async def async_step_user(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         """Configure the modbus settings."""
@@ -417,8 +452,8 @@ class RemehaConfigFlow(ConfigFlow, domain=DOMAIN):
                 errors["base"] = "cannot_connect"
 
             if self.source == SOURCE_RECONFIGURE:
-                return self.async_update_reload_and_abort(
-                    self._get_reconfigure_entry(), data_updates=self.data | user_input
+                return self._async_reconfigure_connection(
+                    stale_keys=_SOCKET_KEYS, data=self.data | user_input
                 )
             return self.async_create_entry(title="Remeha Modbus", data=self.data | user_input)
 
@@ -445,9 +480,7 @@ class RemehaConfigFlow(ConfigFlow, domain=DOMAIN):
                 errors["base"] = "cannot_connect"
 
             if self.source == SOURCE_RECONFIGURE:
-                return self.async_update_reload_and_abort(
-                    self._get_reconfigure_entry(), data_updates=data
-                )
+                return self._async_reconfigure_connection(stale_keys=_SERIAL_KEYS, data=data)
             return self.async_create_entry(title="Remeha Modbus", data=data)
 
         return self.async_show_form(
