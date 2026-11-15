@@ -431,6 +431,68 @@ async def test_reconfigure_non_unique_id(
         }
 
 
+async def test_reconfigure_enable_auto_scheduling(
+    hass: HomeAssistant, remeha_api, mock_config_entry, remeha_modbus_unit
+) -> None:
+    """Test that enabling auto scheduling on reconfigure works if it was not configured before."""
+
+    auto_scheduling_input = {
+        WEATHER_ENTITY_ID: "weather.fake_weather",
+        AUTO_SCHEDULE_SELECTED_SCHEDULE: REMEHA_PRESET_SCHEDULE_1,
+        PV_CONFIG_SECTION: {
+            PV_NOMINAL_POWER_WP: 1375,
+            PV_ORIENTATION: PVSystemOrientation.SOUTH,
+            PV_TILT: 30,
+            PV_ANNUAL_EFFICIENCY_DECREASE: 0.54,
+        },
+        DHW_BOILER_CONFIG_SECTION: {DHW_BOILER_VOLUME: 300, DHW_BOILER_HEAT_LOSS_RATE: 2.19},
+    }
+
+    with (
+        patch("aio_remeha_modbus.gtw08.GTW08", new=lambda *args, **kwargs: remeha_api),
+        patch(
+            "modbus_connection.tmodbus.TmodbusUnit", new=lambda *args, **kwargs: remeha_modbus_unit
+        ),
+    ):
+        await setup_platform(
+            hass=hass, config_entry=mock_config_entry, remeha_modbus_unit=remeha_modbus_unit
+        )
+        await hass.async_block_till_done()
+        assert mock_config_entry.data[CONFIG_AUTO_SCHEDULE] is False
+
+        result = await hass.config_entries.flow.async_init(
+            DOMAIN,
+            context={
+                "source": config_entries.SOURCE_RECONFIGURE,
+                "entry_id": mock_config_entry.entry_id,
+            },
+        )
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"], {CONF_TYPE: RTUOVERTCP, CONFIG_AUTO_SCHEDULE: True}
+        )
+        assert result.get("type") is FlowResultType.FORM
+        assert result.get("step_id") == "auto_scheduling"
+
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"], auto_scheduling_input
+        )
+        assert result.get("type") is FlowResultType.FORM
+        assert result.get("step_id") == "modbus_socket"
+        assert result.get("errors") == {}
+
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"], {CONF_HOST: "does.not.matter", CONF_PORT: 8899}
+        )
+        await hass.async_block_till_done()
+
+        assert result.get("type") is FlowResultType.ABORT
+        assert result.get("reason") == "reconfigure_successful"
+        assert mock_config_entry.data[CONFIG_AUTO_SCHEDULE] is True
+        assert mock_config_entry.data[WEATHER_ENTITY_ID] == "weather.fake_weather"
+        assert mock_config_entry.data[PV_CONFIG_SECTION][PV_NOMINAL_POWER_WP] == 1375
+        assert mock_config_entry.data[DHW_BOILER_CONFIG_SECTION][DHW_BOILER_VOLUME] == 300
+
+
 @pytest.mark.parametrize("mock_config_entry", [{"version": 1, "minor_version": 0}], indirect=True)
 async def test_migrate_from_config_v1_0(
     hass: HomeAssistant, remeha_api, mock_config_entry, remeha_modbus_unit
