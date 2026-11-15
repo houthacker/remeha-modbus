@@ -74,12 +74,14 @@ def _auto_scheduling_schema(current: ConfigEntry | None = None) -> probatio.Sche
         {
             probatio.Required(
                 WEATHER_ENTITY_ID,
-                default=current.data[WEATHER_ENTITY_ID] if current else probatio.UNDEFINED,
+                default=current.data.get(WEATHER_ENTITY_ID, probatio.UNDEFINED)
+                if current
+                else probatio.UNDEFINED,
             ): selector({"entity": {"filter": {"domain": WeatherDomain}}}),
             probatio.Required(
                 AUTO_SCHEDULE_SELECTED_SCHEDULE,
                 default=(
-                    current.data[AUTO_SCHEDULE_SELECTED_SCHEDULE]
+                    current.data.get(AUTO_SCHEDULE_SELECTED_SCHEDULE, REMEHA_PRESET_SCHEDULE_1)
                     if current
                     else REMEHA_PRESET_SCHEDULE_1
                 ),
@@ -102,8 +104,10 @@ def _auto_scheduling_schema(current: ConfigEntry | None = None) -> probatio.Sche
                         probatio.Required(
                             PV_NOMINAL_POWER_WP,
                             default=(
-                                current.data[PV_CONFIG_SECTION][PV_NOMINAL_POWER_WP]
-                                if current
+                                current.data[PV_CONFIG_SECTION].get(
+                                    PV_NOMINAL_POWER_WP, probatio.UNDEFINED
+                                )
+                                if current and current.data.get(PV_CONFIG_SECTION)
                                 else probatio.UNDEFINED
                             ),
                         ): cv.positive_int,
@@ -113,7 +117,7 @@ def _auto_scheduling_schema(current: ConfigEntry | None = None) -> probatio.Sche
                                 current.data[PV_CONFIG_SECTION].get(
                                     PV_ORIENTATION, probatio.UNDEFINED
                                 )
-                                if current
+                                if current and current.data.get(PV_CONFIG_SECTION)
                                 else PVSystemOrientation.SOUTH
                             ),
                         ): remeha_cv.str_enum(PVSystemOrientation),
@@ -121,7 +125,7 @@ def _auto_scheduling_schema(current: ConfigEntry | None = None) -> probatio.Sche
                             PV_TILT,
                             default=(
                                 current.data[PV_CONFIG_SECTION].get(PV_TILT, probatio.UNDEFINED)
-                                if current
+                                if current and current.data.get(PV_CONFIG_SECTION)
                                 else 30.0
                             ),
                         ): probatio.All(
@@ -134,7 +138,7 @@ def _auto_scheduling_schema(current: ConfigEntry | None = None) -> probatio.Sche
                                 current.data[PV_CONFIG_SECTION].get(
                                     PV_ANNUAL_EFFICIENCY_DECREASE, probatio.UNDEFINED
                                 )
-                                if current
+                                if current and current.data.get(PV_CONFIG_SECTION)
                                 else 0.0
                             ),
                         ): cv.positive_float,
@@ -144,7 +148,7 @@ def _auto_scheduling_schema(current: ConfigEntry | None = None) -> probatio.Sche
                                 current.data[PV_CONFIG_SECTION].get(
                                     PV_INSTALLATION_DATE, probatio.UNDEFINED
                                 )
-                                if current
+                                if current and current.data.get(PV_CONFIG_SECTION)
                                 else probatio.UNDEFINED
                             ),
                         ): selector({"date": {}}),
@@ -158,8 +162,10 @@ def _auto_scheduling_schema(current: ConfigEntry | None = None) -> probatio.Sche
                         probatio.Required(
                             DHW_BOILER_VOLUME,
                             default=(
-                                current.data[DHW_BOILER_CONFIG_SECTION][DHW_BOILER_VOLUME]
-                                if current
+                                current.data[DHW_BOILER_CONFIG_SECTION].get(
+                                    DHW_BOILER_VOLUME, probatio.UNDEFINED
+                                )
+                                if current and current.data.get(DHW_BOILER_CONFIG_SECTION)
                                 else probatio.UNDEFINED
                             ),
                         ): cv.positive_int,
@@ -169,7 +175,7 @@ def _auto_scheduling_schema(current: ConfigEntry | None = None) -> probatio.Sche
                                 current.data[DHW_BOILER_CONFIG_SECTION].get(
                                     DHW_BOILER_HEAT_LOSS_RATE, probatio.UNDEFINED
                                 )
-                                if current
+                                if current and current.data.get(DHW_BOILER_CONFIG_SECTION)
                                 else 0.0
                             ),
                         ): cv.positive_float,
@@ -179,7 +185,7 @@ def _auto_scheduling_schema(current: ConfigEntry | None = None) -> probatio.Sche
                                 current.data[DHW_BOILER_CONFIG_SECTION].get(
                                     DHW_BOILER_ENERGY_LABEL, probatio.UNDEFINED
                                 )
-                                if current
+                                if current and current.data.get(DHW_BOILER_CONFIG_SECTION)
                                 else probatio.UNDEFINED
                             ),
                         ): remeha_cv.str_enum(BoilerEnergyLabel),
