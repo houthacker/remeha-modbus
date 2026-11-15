@@ -130,6 +130,11 @@ The climates exposed by this integration are unavailable if their zone function 
 is `0: Disabled`. If a zone is enabled in your Remeha appliance, Home Assistant must be restarted or this integration
 disabled and then enabled to see those changes.
 
+### `number.compressor_min_temperature`
+
+This entity depicts the minimum _outside_ temperature at which the heat pump compressor will work. Below that temperature
+the compressor will stop and a backup power generator will take over (like mains power).
+
 ### `switch.heatpump_managed_schedules`
 
 This entity is switched on by default, and is unavailable if the `scheduler-component` integration is not installed.
