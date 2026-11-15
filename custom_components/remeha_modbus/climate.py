@@ -10,6 +10,7 @@ from aio_remeha_modbus.gtw08.climate_zone import (
     ClimateZoneFunction,
     ClimateZoneHeatingMode,
     ClimateZoneMode,
+    ClimateZoneType,
 )
 from aio_remeha_modbus.gtw08.const import (
     ClimateZoneScheduleId,
@@ -516,16 +517,18 @@ class RemehaChEntity(RemehaClimateEntity):
             case ClimateZoneMode.ANTI_FROST:
                 return HVACMode.OFF
             case ClimateZoneMode.MANUAL:
-                return (
-                    HVACMode.COOL
-                    if self.coordinator.get_appliance().forced_cooling_mode
-                    else HVACMode.HEAT_COOL
-                )
+                if self.coordinator.get_appliance().forced_cooling_mode:
+                    return HVACMode.COOL
+
+                if self._zone.type is ClimateZoneType.CH_ONLY:
+                    return HVACMode.HEAT
+
+                return HVACMode.HEAT_COOL
 
     @cached_property
     def hvac_modes(self) -> list[HVACMode]:
         """Return the available HVAC modes for this zone."""
-        return [HVACMode.OFF, HVACMode.HEAT_COOL, HVACMode.COOL, HVACMode.AUTO]
+        return [HVACMode.OFF, HVACMode.HEAT, HVACMode.HEAT_COOL, HVACMode.COOL, HVACMode.AUTO]
 
     @property
     def preset_mode(self) -> str | None:
