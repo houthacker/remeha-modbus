@@ -202,27 +202,23 @@ def _modbus_serial_schema(current: ConfigEntry | None = None) -> probatio.Schema
         {
             probatio.Required(
                 CONF_BAUDRATE,
-                default=current.data[CONF_BAUDRATE]
-                if current and CONF_BAUDRATE in current.data
-                else 115200,
+                default=current.data.get(CONF_BAUDRATE, 115200) if current else 115200,
             ): cv.positive_int,
             probatio.Required(
                 CONF_BYTESIZE,
-                default=current.data[CONF_BYTESIZE]
-                if current and CONF_BYTESIZE in current.data
-                else 8,
+                default=current.data.get(CONF_BYTESIZE, 8) if current else 8,
             ): probatio.All(int, probatio.In([5, 6, 7, 8])),
             probatio.Required(
                 MODBUS_SERIAL_METHOD,
-                default=current.data[MODBUS_SERIAL_METHOD]
-                if current and MODBUS_SERIAL_METHOD in current.data
+                default=current.data.get(MODBUS_SERIAL_METHOD, MODBUS_SERIAL_METHOD_RTU)
+                if current
                 else MODBUS_SERIAL_METHOD_RTU,
             ): probatio.In([MODBUS_SERIAL_METHOD_RTU, MODBUS_SERIAL_METHOD_ASCII]),
             probatio.Required(
                 CONF_PARITY,
                 default=(
-                    current.data[CONF_PARITY]
-                    if current and CONF_PARITY in current.data
+                    current.data.get(CONF_PARITY, MODBUS_SERIAL_PARITY_NONE)
+                    if current
                     else MODBUS_SERIAL_PARITY_NONE
                 ),
             ): probatio.In(
@@ -233,13 +229,14 @@ def _modbus_serial_schema(current: ConfigEntry | None = None) -> probatio.Schema
                 ]
             ),
             probatio.Required(
-                CONF_PORT, default=current.data[CONF_PORT] if current else probatio.UNDEFINED
+                CONF_PORT,
+                default=current.data.get(CONF_PORT, probatio.UNDEFINED)
+                if current
+                else probatio.UNDEFINED,
             ): SerialPortSelector(),
             probatio.Required(
                 CONF_STOPBITS,
-                default=current.data[CONF_STOPBITS]
-                if current and CONF_STOPBITS in current.data
-                else 2,
+                default=current.data.get(CONF_STOPBITS, 2) if current else 2,
             ): probatio.All(int, probatio.In([1, 2])),
         }
     )
