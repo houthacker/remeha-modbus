@@ -417,7 +417,7 @@
     },
     "read_registers": {
       "name": "Modbus-Register lesen",
-      "description": "Liest eine Reihe aufeinanderfolgender Modbus-Register aus dem GTW-08",
+      "description": "Liest eine Reihe aufeinanderfolgender Modbus-Register aus dem GTW-08. Das Lesen nicht unterstützter Register führt zu einem Fehler.",
       "fields": {
         "start_register": {
           "name": "Startregister",
@@ -494,6 +494,12 @@
     },
     "parse_error_time_slot": {
       "message": "Status {schedule_entity_id} kann nicht in ZoneSchedule umgewandelt werden: Der Zeitfenster-String {time_slot} muss genau zwei Teile haben, hat aber {part_count}."
+    },
+    "read_registers_illegal_data_address": {
+      "message": "Mindestens eines der angeforderten Register wird vom Gerät nicht bereitgestellt. Verringere die Anzahl der Register oder passe das Register selbst an."
+    },
+    "read_registers_illegal_data_value": {
+      "message": "Einer der Parameter enthält einen unzulässigen Wert."
     },
     "read_registers_modbus_error": {
       "message": "Modbus-Fehler beim Lesen der Register."
