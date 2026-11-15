@@ -4,7 +4,7 @@ import logging
 from collections.abc import Callable
 from enum import IntFlag
 from functools import cached_property
-from typing import cast
+from typing import Final, cast
 
 from aio_remeha_modbus.gtw08.main_control_monitoring import ApplianceDemandStatus, MonitoringStatus
 from aio_remeha_modbus.gtw08.system_discovery_table import DeviceBoard
@@ -36,6 +36,37 @@ def _state_fn(
     return _has_state
 
 
+APPLIANCE_DEMAND_STATUS_DEVICE_CLASSES: Final[
+    dict[ApplianceDemandStatus, BinarySensorDeviceClass]
+] = {
+    ApplianceDemandStatus.UNMIXED_CIRCUITS_RELEASED: BinarySensorDeviceClass.LOCK,
+    ApplianceDemandStatus.MIXED_CIRCUITS_RELEASED: BinarySensorDeviceClass.LOCK,
+    ApplianceDemandStatus.VALVES_OPEN_OR_PUMP_RUNNING_SAFETY: BinarySensorDeviceClass.LOCK,
+    ApplianceDemandStatus.MANUAL_HEAT_DEMAND_ACTIVE: BinarySensorDeviceClass.HEAT,
+    ApplianceDemandStatus.COOLING_ALLOWED: BinarySensorDeviceClass.COLD,
+    ApplianceDemandStatus.DHW_CIRCUITS_RELEASED: BinarySensorDeviceClass.LOCK,
+    ApplianceDemandStatus.BURNER_UNIT_ACTIVE: BinarySensorDeviceClass.RUNNING,
+}
+
+MONITORING_STATUS_DEVICE_CLASSES: Final[dict[MonitoringStatus, BinarySensorDeviceClass | None]] = {
+    MonitoringStatus.FLAME_ON: BinarySensorDeviceClass.RUNNING,
+    MonitoringStatus.HEAT_PUMP_ON: BinarySensorDeviceClass.RUNNING,
+    MonitoringStatus.ELECTRICAL_BACKUP_ON: BinarySensorDeviceClass.RUNNING,
+    MonitoringStatus.ELECTRICAL_BACKUP2_ON: BinarySensorDeviceClass.RUNNING,
+    MonitoringStatus.DHW_ELECTRICAL_BACKUP_ON: BinarySensorDeviceClass.RUNNING,
+    MonitoringStatus.SERVICE_REQUIRED: BinarySensorDeviceClass.SAFETY,
+    MonitoringStatus.POWER_DOWN_RESET_NEEDED: BinarySensorDeviceClass.PROBLEM,
+    MonitoringStatus.WATER_PRESSURE_LOW: BinarySensorDeviceClass.PROBLEM,
+    MonitoringStatus.APPLIANCE_PUMP_ON: BinarySensorDeviceClass.RUNNING,
+    MonitoringStatus.THREE_WAY_VALVE_OPEN: BinarySensorDeviceClass.LOCK,
+    MonitoringStatus.THREE_WAY_VALVE: BinarySensorDeviceClass.LOCK,
+    MonitoringStatus.THREE_WAY_VALVE_CLOSED: None,
+    MonitoringStatus.DHW_ACTIVE: BinarySensorDeviceClass.HEAT,
+    MonitoringStatus.CH_ACTIVE: BinarySensorDeviceClass.RUNNING,
+    MonitoringStatus.COOLING_ACTIVE: BinarySensorDeviceClass.COLD,
+}
+
+
 async def async_setup_entry(
     hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
 ) -> None:
@@ -54,7 +85,7 @@ async def async_setup_entry(
                     coordinator=coordinator,
                     parent_device_id=parent_device_id,
                     name=cast(str, demand_status.name).lower(),
-                    device_class=None,
+                    device_class=APPLIANCE_DEMAND_STATUS_DEVICE_CLASSES.get(demand_status),
                     state_func=_state_fn(
                         lambda: coordinator.get_main_control_monitoring().demand_status,
                         demand_status,
@@ -67,7 +98,7 @@ async def async_setup_entry(
                     coordinator=coordinator,
                     parent_device_id=parent_device_id,
                     name=cast(str, status.name).lower(),
-                    device_class=None,
+                    device_class=MONITORING_STATUS_DEVICE_CLASSES.get(status),
                     state_func=_state_fn(
                         lambda: coordinator.get_main_control_monitoring().monitoring_status, status
                     ),
