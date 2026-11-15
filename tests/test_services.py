@@ -10,7 +10,7 @@ from aio_remeha_modbus.gtw08.climate_zone import (
 from aio_remeha_modbus.gtw08.const import ClimateZoneScheduleId, Weekday
 from aio_remeha_modbus.gtw08.time_program import Timeslot
 from homeassistant.core import HomeAssistant
-from pymodbus import ModbusException
+from modbus_connection.exceptions import ModbusError
 
 from custom_components.remeha_modbus.const import (
     DOMAIN,
@@ -112,7 +112,7 @@ async def test_read_registers_service_exceptions(
             "custom_components.remeha_modbus.coordinator.RemehaUpdateCoordinator.async_read_registers"
         ) as mock,
     ):
-        mock.side_effect = ModbusException("Oops!")
+        mock.side_effect = ModbusError("Oops!")
         await setup_platform(
             hass=hass, config_entry=mock_config_entry, remeha_modbus_unit=remeha_modbus_unit
         )
