@@ -181,6 +181,7 @@ async def test_ch_climate(hass: HomeAssistant, remeha_api, mock_config_entry, re
         assert circa1.attributes["hvac_action"] == HVACAction.COOLING
         assert circa1.attributes["hvac_modes"] == [
             HVACMode.OFF,
+            HVACMode.HEAT,
             HVACMode.HEAT_COOL,
             HVACMode.COOL,
             HVACMode.AUTO,
