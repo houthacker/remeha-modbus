@@ -102,21 +102,101 @@ This integration is known to be working with the tested devices, but since the m
 
 The following proxies are known to be working with this integration. Other gateways or proxies probably work as well, but haven't been tested.
 
-| Device type                              | URL                                                                     | Notes |
-| ---------------------------------------- | ----------------------------------------------------------------------- | - |
-| ESPHome Modbus TCP to RTU Bridge         | https://github.com/rosenrot00/esphome_modbus_bridge                     | Connect to the Remeha appliance without a dedicated USB/RS485 adapter or gateway. |
-| Waveshare RS232/485 to WiFi and Ethernet | https://www.waveshare.com/product/rs232-485-to-wifi-eth-b.htm?sku=25222 | When setting a static ip, the device is only reachable in the same subnet since no default gateway can be set. |
-| PUSR USR-DR132 / USR-DR134 | https://www.pusr.com/products/Lipstick-Size-Serial-Device-Server.html | Seems most reliable in **Modbus Multi Host Polling** mode, probably avoids frame misalignment on L-bus |
-| Elfin EW1X | http://www.hi-flying.com/elfin-ew10-elfin-ew11 | - |
+| Device type                                               | URL                                                                     | Notes |
+| --------------------------------------------------------- | ----------------------------------------------------------------------- | - |
+| Home Assistant Connect AUX-2 & Waveshare USB to RS485 (B) | https://www.home-assistant.io/connect/aux-2/                            | - |
+| ESPHome Modbus TCP to RTU Bridge                          | https://github.com/rosenrot00/esphome_modbus_bridge                     | Connect to the Remeha appliance without a dedicated USB/RS485 adapter or gateway. |
+| Waveshare RS232/485 to WiFi and Ethernet                  | https://www.waveshare.com/product/rs232-485-to-wifi-eth-b.htm?sku=25222 | When setting a static ip, the device is only reachable in the same subnet since no default gateway can be set. |
+| PUSR USR-DR132 / USR-DR134                                | https://www.pusr.com/products/Lipstick-Size-Serial-Device-Server.html   | Seems most reliable in **Modbus Multi Host Polling** mode, probably avoids frame misalignment on L-bus |
+| Elfin EW1X                                                | http://www.hi-flying.com/elfin-ew10-elfin-ew11                          | - |
 
-### Modus proxy configuration
+### General
 The following proxy configurations are known to work with the GTW-08. If you're using different settings that also work, please let me know by creating [a new issue](https://github.com/houthacker/remeha-modbus/issues/new/choose).
 
-#### ESPHome Modbus TCP to RTU Bridge
+### Home Assistant Connect AUX-2
+
+#### Connecting the AUX-2 to your appliance
+Refer to the images below to see how the AUX-2 should be connected to your appliance. In general, you can connect the ground, A and B lines to their counterparts on the Waveshare dongle.
+For some older GTW-08 versions, the A and B must be switched.
+
+Connecting to the GTW-08
+<details>
+
+<img src=".github/assets/GTW-08.jpg" alt="GTW-08 wire connections" width="30%" />
+
+</details>
+
+Connecting to the Waveshare dongle
+<details>
+
+<img src=".github/assets/aux-2-installed.jpg" alt="Waveshare wire connections" width="30%" />
+
+</details>
+
+#### Configuring the AUX-2
+You can use the AUX-2 as a serial proxy. To set it up, use the instructions over at [Nabu Casa](https://support.nabucasa.com/hc/en-us/articles/40527754954653-Set-up-Home-Assistant-Connect-AUX-2#set-up-the-device).
+
+After setting it up, follow instructions [here](https://support.nabucasa.com/hc/en-us/articles/40528804425245-Using-Connect-AUX-2-with-Modbus-devices) to use the Waveshare USB to RS485 (B) to connect the GTW-08
+to the AUX-2.
+This dongle is supported by Home Assistant but you can of course use different ones. Just make sure you set the correct `vid` and `pid` in the `usb_uart` section of the yaml, and adjust `aux-2.yaml` to your needs.
+
+#### Configuring remeha-modbus
+When the proxy is set up successfully, (re)configure this integration to use it. To do that, select the `serial` connection method and choose the AUX-2 sourced serial port.
+
+<summary>Screenshot of remeha-modbus configuration</summary>
+<details>
+
+<img src=".github/assets/remeha_modbus-config-aux-2.png" alt="remeha-modbus configuration screenshot" width="30%" />
+
+</details>
+
+An example ESPHome yaml configuration using the Waveshare dongle is listed below.
+<details>
+
+```yaml
+substitutions:
+  name: connect-aux-2
+  friendly_name: Home Assistant Connect AUX-2
+
+packages:
+  Nabu Casa.Home Assistant Connect AUX-2: "github://NabuCasa/aux-2/packages/aux-2.yaml@main"
+
+esphome:
+  name: ${name}
+  name_add_mac_suffix: false
+  friendly_name: ${friendly_name}
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+
+api:
+  encryption:
+    key: !secret connect_aux_2_encryption_key
+
+usb_uart:
+  - type: FT232
+    vid: 0x0403
+    pid: 0x6001
+    channels:
+      - id: uch_ftdi_serial
+        baud_rate: 57600
+        buffer_size: 1024
+
+serial_proxy:
+  - id: usb_serial_proxy_ftdi
+    uart_id: uch_ftdi_serial
+    name: USB Serial Port FTDI
+    port_type: RS485
+```
+
+</details>
+
+### ESPHome Modbus TCP to RTU Bridge
 The ESP32 reads and writes the RS485 bus and exposes it as a Modbus TCP server on the configured port (502 in the example yaml).
 The integration connects to the ESPHome device over the network, as it would to any Modbus TCP gateway.
 
-##### Notes:
+#### Notes:
 * In the integration, use the IP address (or hostname) of the ESPHome device as the host and use the configured port number. The slave address is the one of your Remeha appliance, for example 100.
 * The pins (TX 19, RX 22, flow control 5) are for the Atom Lite with the RS485 Base. Other hardware needs different pins.
 * Do not add a modbus_controller to this ESPHome config. It would poll the bus itself and compete with the integration. Trusted_networks should match your own network.
@@ -179,12 +259,15 @@ modbus_bridge:
 
 </details>
 
-#### Elfin EW1X
+### Elfin EW1X
 <summary>Configuration details of the Elfin EW1X</summary>
 <details>
 
-![Communication settings](/.github/assets/elfin-ew11-config-1.png)
-![Serial port settings](/.github/assets/elfin-ew11-config-2.png)
+#### Configuration settings
+<img src=".github/assets/elfin-ew11-config-1.png" alt="Elfin EW1X configuration settings" width="30%" />
+
+#### Serial port settings
+<img src=".github/assets/elfin-ew11-config-2.png" alt="Elfin EW1X serial port settings" width="30%" />
 
 </details>
 
