@@ -52,7 +52,7 @@ jobs:
       - name: Update version in required files
         run: |
           sed -i "s/^version = .*/version = \"${{ steps.version.outputs.py440_version }}\"/g" pyproject.toml
-          sed -i "s/\"version\": \".*/\"version\": \"${{ steps.version.outputs.py440_version }}\"/g" /custom_components/remeha_modbus/manifest.json
+          sed -i "s/\"version\": \".*/\"version\": \"${{ steps.version.outputs.py440_version }}\"/g" custom_components/remeha_modbus/manifest.json
 
       - name: Install uv and dependencies
         uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e
