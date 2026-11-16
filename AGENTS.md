@@ -8,7 +8,8 @@ This repository contains the Remeha modbus integration for Home Assistant
 
 ## Pull Requests
 
-Only open a pull request after a code owner (`.github/CODEOWNERS`) has instructed you to do so in a related github issue. Otherwise, create a github issue first.
+- Only open a pull request after a code owner (`.github/CODEOWNERS`) has instructed you to do so in a related github issue. Otherwise, create a github issue first.
+- - When opening a pull request, use the repository's PR template (`.github/PULL_REQUEST_TEMPLATE.md`). NEVER REMOVE ANYTHING from the template.
 
 ## Code review
 
