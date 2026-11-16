@@ -1,0 +1,70 @@
+# Force PEP 440 formatting by removing hyphens before the pre-release identifier
+name-template: "v$RESOLVED_VERSION"
+tag-template: "v$RESOLVED_VERSION"
+exclude-contributors: ["${{ vars.RELEASE_BOT_COMMITTER_NAME }}"]
+
+autolabeler:
+  - label: "documentation"
+    files:
+      - "*.md"
+    branch:
+      - "/docs\/.+/"
+
+  - label: "bug"
+    branch:
+      - "/bugfix\/.+/"
+
+  - label: "enhancement"
+    branch:
+      - "/feature\/.+/"
+
+  - label: "chore"
+    files:
+      - ".github/workflows/*.yaml"
+      - ".github/*.yml"
+    branch:
+      - "/chore\/.+/"
+
+categories:
+  - title: "Breaking changes"
+    semver-increment: major
+    when:
+      labels:
+        - "breaking"
+  - title: "What's new"
+    semver-increment: minor
+    when:
+      labels:
+        - "enhancement"
+  - title: "Bugfixes"
+    when:
+      labels:
+        - "fix"
+        - "bug"
+  - title: "Maintenance"
+    when:
+      labels:
+        - "docs"
+        - "documentation"
+        - "spelling"
+        - "typo"
+        - "typos"
+        - "chore"
+  - title: "Dependencies"
+    collapse-after: 1
+    when:
+      label: "dependencies"
+  - type: "pre-exclude"
+    when:
+      label: "skip-changelog"
+  - type: "version-resolver"
+    semver-increment: major
+    when:
+      label: "major"
+  - type: "version-resolver"
+    semver-increment: patch
+change-template: "* $TITLE (#$NUMBER) @$AUTHOR"
+template: |
+  ## Changes
+
+  $CHANGES
