@@ -1,6 +1,6 @@
 [project]
 name = "remeha-modbus"
-version = "2.6.0"
+version = "2.6.1"
 description = "Home Assistant integration for Remeha appliances over modbus"
 readme = "README.md"
 authors = [
