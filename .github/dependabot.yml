@@ -1,0 +1,31 @@
+version: 2
+updates:
+  - package-ecosystem: pip
+    directory: /
+    schedule:
+      interval: weekly
+    # 7-day cooldown: don't update packages published < 7 days ago
+    # Mitigates supply chain attacks via malicious updates
+    cooldown:
+      default-days: 7
+    # Group minor/patch updates to reduce PR noise
+    groups:
+      dev-dependencies:
+        dependency-type: development
+        update-types: [minor, patch]
+      production-dependencies:
+        dependency-type: production
+        update-types: [patch]
+    labels: [dependencies]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    # One grouped PR for all action updates, majors included
+    groups:
+      actions:
+        patterns: ["*"]
+    labels: [dependencies]
