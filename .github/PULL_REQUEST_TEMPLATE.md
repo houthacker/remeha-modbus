@@ -72,5 +72,5 @@ If the code communicates with devices, web services, or third-party tools:
 
 - [ ] The [manifest file][manifest-docs] has all fields filled out correctly.
       Updated and included derived files by running: `python3 -m script.hassfest`.
-- [ ] New or updated dependencies have been added to `requirements.test.txt` _and_ to `custom_components/remeha_modbus/manifest.json`.
+- [ ] New or updated dependencies have been added to `pyptoject.toml`. Non-dev dependencies must also be added to `custom_components/remeha_modbus/manifest.json`.
 - [ ] For the updated dependencies a diff between library versions and ideally a link to the changelog/release notes is added to the PR description.

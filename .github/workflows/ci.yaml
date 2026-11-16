@@ -1,0 +1,78 @@
+name: ci
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+  pull_request:
+    types: [opened, reopened, synchronize]
+
+# Permissions for default token
+permissions:
+  contents: read
+  artifact-metadata: write
+
+jobs:
+  build:
+    if: ${{ github.actor != vars.RELEASE_BOT_COMMITTER_NAME }}
+    runs-on: ubuntu-latest
+    strategy:
+      max-parallel: 4
+      matrix:
+        python-version: [3.14]
+
+    steps:
+      # Fork pull requests do not receive secrets under the pull_request
+      # trigger, so they skip the bot token and check out with the default
+      # token. The repository is public, so no elevated access is needed.
+      - name: Create releaser-bot token
+        id: app-token
+        if: github.event_name != 'pull_request' || !github.event.pull_request.head.repo.fork
+        uses: actions/create-github-app-token@v3
+        with:
+          client-id: ${{ vars.RELEASE_BOT_CLIENT_ID }}
+          private-key: ${{ secrets.RELEASE_BOT_PRIVATE_KEY }}
+
+      - uses: actions/checkout@v7
+        with:
+          submodules: "recursive"
+          token: ${{ steps.app-token.outputs.token || github.token }}
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v7
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Set PY env
+        run: echo "PY=$(python -VV | sha256sum | cut -d' ' -f1)" >> $GITHUB_ENV
+
+      - name: Install uv and dependencies
+        uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e
+
+      - name: Install the project
+        run: uv sync --locked --all-extras --dev
+
+      - name: prek
+        run: uv run --no-sync prek run --all-files
+
+      - name: pytest
+        id: run_pytest
+        run: |
+          uv run --no-sync pytest --cov-report=term-missing --junitxml=${{ github.workspace }}/junit-coverage.xml --cov=custom_components/remeha_modbus | tee ${{ github.workspace }}/pytest-coverage.txt
+          if [ "${PIPESTATUS[0]}" != "0" ]; then
+            exit 1
+          fi
+      - name: Check for test failures
+        if: ${{ failure() }}
+        run: |
+          echo ${{ steps.run_pytest.outcome }}
+          exit 1
+
+      - name: Upload coverage reports
+        uses: actions/upload-artifact@v7
+        with:
+          name: coverage-reports
+          path: |
+            ${{ github.workspace }}/junit-coverage.xml
+            ${{ github.workspace }}/pytest-coverage.txt

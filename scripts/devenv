@@ -14,4 +14,4 @@ cd "$(dirname "$0")/.."
 source ${VIRTUAL_ENV}/bin/activate
 
 # Ensure pre-commit hooks are installed
-pre-commit install
+prek install

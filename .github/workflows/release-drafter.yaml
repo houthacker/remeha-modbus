@@ -1,0 +1,70 @@
+name: Release Drafter
+
+on:
+  pull_request_target:
+    types: [closed]
+    branches: [main]
+
+env:
+  PRERELEASE_IDENTIFIER: beta
+
+# Permissions for default token
+permissions:
+  contents: write
+  pull-requests: read
+
+jobs:
+  update_release_draft:
+    # Prevent endless loops, only run on merged PR, not on declined etc.
+    if: ${{ github.event.pull_request.merged == true && github.actor != vars.RELEASE_BOT_COMMITTER_NAME }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create release-bot token
+        id: app-token
+        uses: actions/create-github-app-token@v3
+        with:
+          client-id: ${{ vars.RELEASE_BOT_CLIENT_ID }}
+          private-key: ${{ secrets.RELEASE_BOT_PRIVATE_KEY }}
+
+      - name: Run Release Drafter
+        uses: release-drafter/release-drafter@v7
+        id: release-drafter
+        with:
+          config-name: release-drafter.yml
+          prerelease: ${{ contains(github.event.pull_request.labels.*.name, 'pre-release') }}
+          prerelease-identifier: ${{ contains(github.event.pull_request.labels.*.name, 'pre-release') && env.PRERELEASE_IDENTIFIER || '' }}
+          token: ${{ steps.app-token.outputs.token }}
+
+      # Update version number in manifest.json
+      - uses: actions/checkout@v7
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+
+      - name: Store tag version
+        id: version
+        run: |
+          tag="${{ steps.release-drafter.outputs.tag_name }}"
+          naked_tag=${tag:1}
+          py440_version="${naked_tag//-${{ env.PRERELEASE_IDENTIFIER }}./${{ env.PRERELEASE_IDENTIFIER }}}"
+          echo "version=${naked_tag}" >> $GITHUB_OUTPUT
+          echo "py440_version=${py440_version}" >> $GITHUB_OUTPUT
+
+      - name: Update version in required files
+        run: |
+          sed -i "s/^version = .*/version = \"${{ steps.version.outputs.py440_version }}\"/g" pyproject.toml
+          sed -i "s/\"version\": \".*/\"version\": \"${{ steps.version.outputs.py440_version }}\"/g" /custom_components/remeha_modbus/manifest.json
+
+      - name: Install uv and dependencies
+        uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e
+
+      - name: Synchronize uv.lock file
+        run: uv sync
+
+      - name: Commit version changes
+        run: |
+          if ! git diff --quiet; then
+            git config user.name "${{ vars.RELEASE_BOT_COMMITTER_NAME }}"
+            git config user.email "${{ vars.RELEASE_BOT_COMMITTER_EMAIL }}"
+            git commit -am "Bump version to ${{ steps.version.outputs.version }}"
+            git push
+          fi

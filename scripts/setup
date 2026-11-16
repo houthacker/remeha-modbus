@@ -10,5 +10,5 @@ fi
 
 if ! [ -d ".venv" ]; then
   uv venv $VIRTUAL_ENV
-  uv pip install -r requirements.test.txt
+  uv sync --locked --all-extras --dev
 fi

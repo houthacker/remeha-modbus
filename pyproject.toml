@@ -1,9 +1,99 @@
+[project]
+name = "remeha-modbus"
+version = "2.6.0"
+description = "Home Assistant integration for Remeha appliances over modbus"
+readme = "README.md"
+authors = [
+  { name = "houthacker" }
+]
+requires-python = ">=3.14.2"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent"
+]
+dependencies = [
+  "aio-remeha-modbus==4.14.1",
+  "serialx",
+]
+
+license = "Apache-2.0"
+license-files = ["LICENSE.md"]
+
+[project.urls]
+Homepage = "https://github.com/houthacker/remeha-modbus"
+Issues = "https://github.com/houthacker/remeha-modbus/issues"
+Funding = "https://buymeacoffee.com/houthacker"
+Documentation = "https://github.com/houthacker/remeha-modbus"
+
+[build-system]
+requires = ["uv_build>=0.11.26,<0.14.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+  "aiodhcpwatcher",
+  "aiodiscover",
+  "aiofiles",
+  "aiousbwatcher",
+  "async-upnp-client",
+  "av",
+  "colorlog",
+  "ffmpeg",
+  "freezegun~=1.5.5",
+  "gazetteer-matcher",
+  "go2rtc-client",
+  "ha-ffmpeg",
+  "hassil",
+  "home-assistant-frontend",
+  "home-assistant-intents",
+  "homeassistant>=2026.10.4",
+  "modbus-connection[tmodbus]==4.12.4",
+  "mutagen",
+  "pre-commit",
+  "prek>=0.5.4",
+  "propcache",
+  "PyTurboJPEG",
+  "pycares",
+  "pyclean",
+  "pymicro-vad",
+  "pymodbus", # HA depends on this in some generic modbus modules.
+  "pyserial",
+  "pyspeex-noise",
+  "pytest",
+  "pytest-asyncio",
+  "pytest-cov",
+  "pytest-homeassistant-custom-component",
+  "setuptools",
+  "tenacity",
+]
 
 [tool.black]
 line-length = 100
 
 [tool.coverage.run]
-omit = ["*submodules/*"]
+branch = true
+omit = ["*submodules/*", "tests/*"]
+
+[tool.coverage.report]
+fail_under = 85
+
+[tool.mypy]
+files = ["custom_components/remeha_modbus"]
+python_version = "3.14"
+strict = true
+ignore_errors = true
+follow_imports = "silent"
+ignore_missing_imports = true
+warn_incomplete_stub = true
+warn_redundant_casts = true
+warn_unused_configs = true
+
+[tool.ruff]
+preview = true # Markdown formatting
+line-length = 100
 
 [tool.ruff.lint.per-file-ignores]
 "tests/test_repairs.py" = ["PLR0917"]
+
+[tool.uv.build-backend]
+module-root = "custom_components"
