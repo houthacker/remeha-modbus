@@ -20,16 +20,16 @@ wheels = [
 
 [[package]]
 name = "aio-remeha-modbus"
-version = "4.14.1"
+version = "4.15.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "modbus-connection" },
     { name = "pydantic" },
     { name = "python-dateutil" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/09/10/6d95292d1c167b7e4633596480a39c765c9c3e55e36485fadf8ad821bad5/aio_remeha_modbus-4.14.1.tar.gz", hash = "sha256:df599e23c79f6fc0d2fabc2abfa4944abd100d10999807383aa1fb5037ad3dac", size = 82156, upload-time = "2026-11-14T10:48:37.226Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/6a/fe/de1bbc8a4a4e16b6d84c75898885934e1363526e78180eee95f62d2c61fd/aio_remeha_modbus-4.15.0.tar.gz", hash = "sha256:3fbc18de50d0fe732c9322aeaae29db79cf46e35d0d0d5e7d79a3d978268c551", size = 83238, upload-time = "2026-11-20T16:03:56.608Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/b6/f2/23dd960fc9e51a064568ae0c20a86fee8d7b4140cd434517bed2fc109e37/aio_remeha_modbus-4.14.1-py3-none-any.whl", hash = "sha256:863c88124861bee10501c70e638c603c10991cb1a59133934451502ae3351a33", size = 91745, upload-time = "2026-11-14T10:48:36.052Z" },
+    { url = "https://files.pythonhosted.org/packages/29/e1/c8eb01b986f43f4a2c0235a7d38a909dc320287ef19b8c589b7d79130f48/aio_remeha_modbus-4.15.0-py3-none-any.whl", hash = "sha256:351c03246e3038287efbf8970a416e8cdde995114aa26627ede8f075b6985678", size = 92775, upload-time = "2026-11-20T16:03:55.707Z" },
 ]
 
 [[package]]
@@ -3175,7 +3175,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "aio-remeha-modbus", specifier = "==4.14.1" },
+    { name = "aio-remeha-modbus", specifier = "==4.15.0" },
     { name = "serialx" },
 ]
 
