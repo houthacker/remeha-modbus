@@ -350,10 +350,10 @@
         "state_attributes": {
           "activity": {
             "state": {
-              "ANTI_FROST": "Frostschutz",
-              "REDUCED": "Eco",
-              "COMFORT": "Komfort",
-              "LEGIONNEL": "Anti-Legionellen"
+              "anti_frost": "Frostschutz",
+              "reduced": "Eco",
+              "comfort": "Komfort",
+              "legionnel": "Anti-Legionellen"
             }
           },
           "operation_mode": {
@@ -369,10 +369,10 @@
         "state_attributes": {
           "activity": {
             "state": {
-              "ANTI_FROST": "Frostschutz",
-              "REDUCED": "Eco",
-              "COMFORT": "Komfort",
-              "LEGIONNEL": "Anti-Legionellen"
+              "anti_frost": "Frostschutz",
+              "reduced": "Eco",
+              "comfort": "Komfort",
+              "legionnel": "Anti-Legionellen"
             }
           },
           "operation_mode": {
@@ -386,10 +386,10 @@
         "state_attributes": {
           "activity": {
             "state": {
-              "ANTI_FROST": "Frostschutz",
-              "REDUCED": "Eco",
-              "COMFORT": "Komfort",
-              "LEGIONNEL": "Anti-Legionellen"
+              "anti_frost": "Frostschutz",
+              "reduced": "Eco",
+              "comfort": "Komfort",
+              "legionnel": "Anti-Legionellen"
             }
           },
           "operation_mode": {
@@ -405,10 +405,10 @@
         "state_attributes": {
           "activity": {
             "state": {
-              "ANTI_FROST": "Frostschutz",
-              "REDUCED": "Eco",
-              "COMFORT": "Komfort",
-              "LEGIONNEL": "Anti-Legionellen"
+              "anti_frost": "Frostschutz",
+              "reduced": "Eco",
+              "comfort": "Komfort",
+              "legionnel": "Anti-Legionellen"
             }
           },
           "operation_mode": {

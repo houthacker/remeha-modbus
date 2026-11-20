@@ -251,7 +251,7 @@ class RemehaWaterHeaterEntity(CoordinatorEntity[RemehaUpdateCoordinator], WaterH
 
         self._attr_extra_state_attributes["flow_temperature"] = zone.flow_temperature
         self._attr_extra_state_attributes["activity"] = (
-            activity.name if activity is not None else None
+            activity.name.lower() if activity is not None else None
         )
 
     @override

@@ -132,7 +132,7 @@ async def test_water_heater_type(
     assert state.attributes["current_temperature"] == 53.4
     assert state.attributes[ATTR_TEMPERATURE] == 25.0
     assert state.attributes[ATTR_AWAY_MODE] == STATE_OFF
-    assert state.attributes["activity"] == ClimateZoneActivity.ANTI_FROST.name
+    assert state.attributes["activity"] == ClimateZoneActivity.ANTI_FROST.name.lower()
 
 
 @WATER_HEATER_TYPES
@@ -161,12 +161,12 @@ async def test_water_heater_activity_translations(
         ".state_attributes.activity.state"
     )
     for activity in ClimateZoneActivity:
-        assert f"{prefix}.{activity.name}" in translations
+        assert f"{prefix}.{activity.name.lower()}" in translations
 
 
 @pytest.mark.parametrize(
     "activity",
-    [pytest.param(activity, id=activity.name) for activity in ClimateZoneActivity],
+    [pytest.param(activity, id=activity.name.lower()) for activity in ClimateZoneActivity],
 )
 async def test_water_heater_activity_update(
     hass: HomeAssistant,
@@ -186,7 +186,7 @@ async def test_water_heater_activity_update(
 
     state = hass.states.get(ENTITY_ID)
     assert state is not None
-    assert state.attributes["activity"] == activity.name
+    assert state.attributes["activity"] == activity.name.lower()
 
 
 async def test_water_heater_activity_unknown(
@@ -226,7 +226,7 @@ async def test_water_heater_activity_becomes_unknown(
 
     state = hass.states.get(ENTITY_ID)
     assert state is not None
-    assert state.attributes["activity"] == ClimateZoneActivity.ANTI_FROST.name
+    assert state.attributes["activity"] == ClimateZoneActivity.ANTI_FROST.name.lower()
 
     with patch.object(ClimateZone, "activity", new_callable=PropertyMock, return_value=None):
         coordinator.async_update_listeners()
