@@ -350,10 +350,10 @@
         "state_attributes": {
           "activity": {
             "state": {
-              "ANTI_FROST": "Frost protection",
-              "REDUCED": "Eco",
-              "COMFORT": "Comfort",
-              "LEGIONNEL": "Anti legionella"
+              "anti_frost": "Frost protection",
+              "reduced": "Eco",
+              "comfort": "comfort",
+              "legionnel": "Anti legionella"
             }
           },
           "operation_mode": {
@@ -369,10 +369,10 @@
         "state_attributes": {
           "activity": {
             "state": {
-              "ANTI_FROST": "Frost protection",
-              "REDUCED": "Eco",
-              "COMFORT": "Comfort",
-              "LEGIONNEL": "Anti legionella"
+              "anti_frost": "Frost protection",
+              "reduced": "Eco",
+              "comfort": "comfort",
+              "legionnel": "Anti legionella"
             }
           },
           "operation_mode": {
@@ -386,10 +386,10 @@
         "state_attributes": {
           "activity": {
             "state": {
-              "ANTI_FROST": "Frost protection",
-              "REDUCED": "Eco",
-              "COMFORT": "Comfort",
-              "LEGIONNEL": "Anti legionella"
+              "anti_frost": "Frost protection",
+              "reduced": "Eco",
+              "comfort": "comfort",
+              "legionnel": "Anti legionella"
             }
           },
           "operation_mode": {
@@ -405,10 +405,10 @@
         "state_attributes": {
           "activity": {
             "state": {
-              "ANTI_FROST": "Frost protection",
-              "REDUCED": "Eco",
-              "COMFORT": "Comfort",
-              "LEGIONNEL": "Anti legionella"
+              "anti_frost": "Frost protection",
+              "reduced": "Eco",
+              "comfort": "comfort",
+              "legionnel": "Anti legionella"
             }
           },
           "operation_mode": {
