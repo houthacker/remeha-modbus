@@ -245,29 +245,27 @@ class RemehaWaterHeaterEntity(CoordinatorEntity[RemehaUpdateCoordinator], WaterH
 
         return self._zone.dhw_tank_temperature_top
 
+    def _update_extra_state_attributes(self) -> None:
+        zone = self._zone
+        activity = zone.activity
+
+        self._attr_extra_state_attributes["flow_temperature"] = zone.flow_temperature
+        self._attr_extra_state_attributes["activity"] = (
+            activity.name if activity is not None else None
+        )
+
     @override
     async def async_added_to_hass(self) -> None:
         """Set extra attributes when being added to HA."""
 
-        zone = self._zone
-        self._attr_extra_state_attributes["flow_temperature"] = zone.flow_temperature
-
-        activity = zone.activity
-        if activity is not None:
-            self._attr_extra_state_attributes["activity"] = activity.name
-
+        self._update_extra_state_attributes()
         return await super().async_added_to_hass()
 
     @callback
     def _handle_coordinator_update(self) -> None:
-        """Set flow_temperature as an extra attribute."""
+        """Set flow_temperature and activity as extra attributes."""
 
-        zone = self._zone
-        self._attr_extra_state_attributes["flow_temperature"] = zone.flow_temperature
-
-        activity = zone.activity
-        if activity is not None:
-            self._attr_extra_state_attributes["activity"] = activity.name
+        self._update_extra_state_attributes()
         return super()._handle_coordinator_update()
 
     @override
