@@ -3,8 +3,10 @@
 from unittest.mock import MagicMock, PropertyMock, patch
 
 import pytest
+from aio_remeha_modbus.gtw08 import GTW08
 from aio_remeha_modbus.gtw08.climate_zone import (
     ClimateZone,
+    ClimateZoneActivity,
     ClimateZoneFunction,
     ClimateZoneRunningMode,
 )
@@ -35,8 +37,12 @@ from homeassistant.const import (
     STATE_UNAVAILABLE,
 )
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers.translation import async_get_translations
+from modbus_connection.mock import MockModbusUnit
+from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.remeha_modbus.const import (
+    DOMAIN,
     REMEHA_PRESET_SCHEDULE_1,
     WATER_HEATER_STATE_OIL,
 )
@@ -126,6 +132,109 @@ async def test_water_heater_type(
     assert state.attributes["current_temperature"] == 53.4
     assert state.attributes[ATTR_TEMPERATURE] == 25.0
     assert state.attributes[ATTR_AWAY_MODE] == STATE_OFF
+    assert state.attributes["activity"] == ClimateZoneActivity.ANTI_FROST.name
+
+
+@WATER_HEATER_TYPES
+@pytest.mark.parametrize("language", ["en", "nl", "de"])
+async def test_water_heater_activity_translations(
+    hass: HomeAssistant,
+    *,
+    remeha_api: GTW08,
+    mock_config_entry: MockConfigEntry,
+    remeha_modbus_unit: MockModbusUnit,
+    entity_type: type[RemehaWaterHeaterEntity],
+    manual_operation: str,
+    language: str,
+) -> None:
+    """Test that every zone activity has a state attribute translation for each water heater type."""
+
+    coordinator = await _setup(hass, remeha_api, mock_config_entry, remeha_modbus_unit)
+    entity = RemehaWaterHeaterEntity.create_instance(
+        remeha_api, coordinator, _dhw_zone(coordinator).id
+    )
+    assert type(entity) is entity_type
+
+    translations = await async_get_translations(hass, language, "entity", {DOMAIN})
+    prefix = (
+        f"component.{DOMAIN}.entity.water_heater.{entity.translation_key}"
+        ".state_attributes.activity.state"
+    )
+    for activity in ClimateZoneActivity:
+        assert f"{prefix}.{activity.name}" in translations
+
+
+@pytest.mark.parametrize(
+    "activity",
+    [pytest.param(activity, id=activity.name) for activity in ClimateZoneActivity],
+)
+async def test_water_heater_activity_update(
+    hass: HomeAssistant,
+    *,
+    remeha_api: GTW08,
+    mock_config_entry: MockConfigEntry,
+    remeha_modbus_unit: MockModbusUnit,
+    activity: ClimateZoneActivity,
+) -> None:
+    """Test that a coordinator update reports the current zone activity."""
+
+    coordinator = await _setup(hass, remeha_api, mock_config_entry, remeha_modbus_unit)
+
+    with patch.object(ClimateZone, "activity", new_callable=PropertyMock, return_value=activity):
+        coordinator.async_update_listeners()
+        await hass.async_block_till_done()
+
+    state = hass.states.get(ENTITY_ID)
+    assert state is not None
+    assert state.attributes["activity"] == activity.name
+
+
+async def test_water_heater_activity_unknown(
+    hass: HomeAssistant,
+    *,
+    remeha_api: GTW08,
+    mock_config_entry: MockConfigEntry,
+    remeha_modbus_unit: MockModbusUnit,
+) -> None:
+    """Test that the activity attribute is None while the zone activity is unknown."""
+
+    with patch.object(ClimateZone, "activity", new_callable=PropertyMock, return_value=None):
+        coordinator = await _setup(hass, remeha_api, mock_config_entry, remeha_modbus_unit)
+
+        state = hass.states.get(ENTITY_ID)
+        assert state is not None
+        assert state.attributes["activity"] is None
+
+        coordinator.async_update_listeners()
+        await hass.async_block_till_done()
+
+        state = hass.states.get(ENTITY_ID)
+        assert state is not None
+        assert state.attributes["activity"] is None
+
+
+async def test_water_heater_activity_becomes_unknown(
+    hass: HomeAssistant,
+    *,
+    remeha_api: GTW08,
+    mock_config_entry: MockConfigEntry,
+    remeha_modbus_unit: MockModbusUnit,
+) -> None:
+    """Test that a previously known activity is cleared once the zone activity becomes unknown."""
+
+    coordinator = await _setup(hass, remeha_api, mock_config_entry, remeha_modbus_unit)
+
+    state = hass.states.get(ENTITY_ID)
+    assert state is not None
+    assert state.attributes["activity"] == ClimateZoneActivity.ANTI_FROST.name
+
+    with patch.object(ClimateZone, "activity", new_callable=PropertyMock, return_value=None):
+        coordinator.async_update_listeners()
+        await hass.async_block_till_done()
+
+    state = hass.states.get(ENTITY_ID)
+    assert state is not None
+    assert state.attributes["activity"] is None
 
 
 @WATER_HEATER_TYPES
