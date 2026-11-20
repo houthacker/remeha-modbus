@@ -50,7 +50,7 @@ dev = [
   "modbus-connection[tmodbus]==4.12.4",
   "mutagen",
   "pre-commit",
-  "prek>=0.5.4",
+  "prek>=0.5.10",
   "propcache",
   "PyTurboJPEG",
   "pycares",
