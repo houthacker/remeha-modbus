@@ -347,6 +347,14 @@
     "water_heater": {
       "heat_pump_boiler": {
         "state_attributes": {
+          "activity": {
+            "state": {
+              "ANTI_FROST": "Vorstbeveiliging",
+              "REDUCED": "Eco",
+              "COMFORT": "Comfort",
+              "LEGIONNEL": "Antilegionella"
+            }
+          },
           "operation_mode": {
             "state": {
               "schedule_1": "Programma 1",
@@ -358,6 +366,14 @@
       },
       "water_heater_electric": {
         "state_attributes": {
+          "activity": {
+            "state": {
+              "ANTI_FROST": "Vorstbeveiliging",
+              "REDUCED": "Eco",
+              "COMFORT": "Comfort",
+              "LEGIONNEL": "Antilegionella"
+            }
+          },
           "operation_mode": {
             "state": {
               "schedule_1": "Programma 1"
@@ -367,6 +383,14 @@
       },
       "water_heater_gas": {
         "state_attributes": {
+          "activity": {
+            "state": {
+              "ANTI_FROST": "Vorstbeveiliging",
+              "REDUCED": "Eco",
+              "COMFORT": "Comfort",
+              "LEGIONNEL": "Antilegionella"
+            }
+          },
           "operation_mode": {
             "state": {
               "schedule_1": "Programma 1",
@@ -378,6 +402,14 @@
       },
       "water_heater_oil": {
         "state_attributes": {
+          "activity": {
+            "state": {
+              "ANTI_FROST": "Vorstbeveiliging",
+              "REDUCED": "Eco",
+              "COMFORT": "Comfort",
+              "LEGIONNEL": "Antilegionella"
+            }
+          },
           "operation_mode": {
             "state": {
               "schedule_1": "Programma 1",
