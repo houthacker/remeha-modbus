@@ -12,7 +12,7 @@ classifiers = [
     "Operating System :: OS Independent"
 ]
 dependencies = [
-  "aio-remeha-modbus==4.14.1",
+  "aio-remeha-modbus==4.15.0",
   "serialx",
 ]
 
