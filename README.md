@@ -8,7 +8,7 @@
 ![GitHub License](https://img.shields.io/github/license/houthacker/remeha-modbus)
 [![Hassfest](https://github.com/houthacker/remeha-modbus/actions/workflows/hassfest.yaml/badge.svg)](https://github.com/houthacker/remeha-modbus/actions/workflows/hassfest.yaml)
 [![Validate HACS](https://github.com/houthacker/remeha-modbus/actions/workflows/hacs.yaml/badge.svg)](https://github.com/houthacker/remeha-modbus/actions/workflows/hacs.yaml)
-[![pytest](https://github.com/houthacker/remeha-modbus/actions/workflows/pytest.yaml/badge.svg)](https://github.com/houthacker/remeha-modbus/actions/workflows/pytest.yaml)
+[![ci](https://github.com/houthacker/remeha-modbus/actions/workflows/ci.yaml/badge.svg)](https://github.com/houthacker/remeha-modbus/actions/workflows/ci.yaml)
 [![badge](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/houthacker/ff0da84bf72a3d20fb68db8cb9d3e38e/raw/coverage_badge.json)](https://github.com/houthacker/remeha-modbus/actions/workflows/coverage.yaml)
 [![GitHub Release](https://img.shields.io/github/v/release/houthacker/remeha-modbus)](https://github.com/houthacker/remeha-modbus/releases/latest)
 [![Static Badge](https://img.shields.io/badge/donate-Buy_me_a_coffee-yellow?style=flat&logo=buymeacoffee&logoColor=000000&labelColor=ffdd00&color=green)](https://buymeacoffee.com/houthacker)
