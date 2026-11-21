@@ -194,6 +194,56 @@
           "level_2": "Stufe 2"
         }
       },
+      "blocking_input_1_logic": {
+        "name": "Konfiguration Kontakt BL1",
+        "state": {
+          "open": "Eingang aktiv bei Kontakt offen",
+          "closed": "Eingang aktiv bei Kontakt geschlossen"
+        }
+      },
+      "blocking_input_1_configuration": {
+        "name": "Funktion BL1",
+        "state": {
+          "not_used": "Nicht verwendet",
+          "full_blocking": "Vollständig gesperrt",
+          "partial_blocking": "Teilweise gesperrt",
+          "user_reset_locking": "Nutzer-Reset-Verriegelung",
+          "backup_relieved": "Zusatzerzeuger entlastet",
+          "generator_relieved": "Wärmepumpe entlastet",
+          "generator_and_backup_relieved": "Wärmepumpe & Zusatzerzeuger entlastet",
+          "high_low_tariff": "Hoch-/Niedertarif",
+          "pv_only": "Nur PV-Wärmepumpe",
+          "pv_and_backup": "PV-Wärmepumpe und Zusatzerzeuger",
+          "smart_grid_ready": "Smart Grid ready",
+          "heat_cool": "Heizen/Kühlen",
+          "ch_blocking": "Sperre Heizung"
+        }
+      },
+      "blocking_input_2_logic": {
+        "name": "Konfiguration Kontakt BL2",
+        "state": {
+          "open": "Eingang aktiv bei Kontakt offen",
+          "closed": "Eingang aktiv bei Kontakt geschlossen"
+        }
+      },
+      "blocking_input_2_configuration": {
+        "name": "Funktion BL2",
+        "state": {
+          "not_used": "Nicht verwendet",
+          "full_blocking": "Vollständig gesperrt",
+          "partial_blocking": "Teilweise gesperrt",
+          "user_reset_locking": "Nutzer-Reset-Verriegelung",
+          "backup_relieved": "Zusatzerzeuger entlastet",
+          "generator_relieved": "Wärmepumpe entlastet",
+          "generator_and_backup_relieved": "Wärmepumpe & Zusatzerzeuger entlastet",
+          "high_low_tariff": "Hoch-/Niedertarif",
+          "pv_only": "Nur PV-Wärmepumpe",
+          "pv_and_backup": "PV-Wärmepumpe und Zusatzerzeuger",
+          "smart_grid_ready": "Smart Grid ready",
+          "heat_cool": "Heizen/Kühlen",
+          "ch_blocking": "Sperre Heizung"
+        }
+      },
       "digital_input_1_configuration": {
         "name": "Digitaleingang 1",
         "state": {

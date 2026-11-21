@@ -194,6 +194,56 @@
           "level_2": "Level 2"
         }
       },
+      "blocking_input_1_logic": {
+        "name": "BL1 contact configuration",
+        "state": {
+          "open": "Open",
+          "closed": "Closed"
+        }
+      },
+      "blocking_input_1_configuration": {
+        "name": "BL1 function",
+        "state": {
+          "not_used": "Not used",
+          "full_blocking": "Full blocking",
+          "partial_blocking": "Partial blocking",
+          "user_reset_locking": "User reset locking",
+          "backup_relieved": "Backup relieved",
+          "generator_relieved": "Generator relieved",
+          "generator_and_backup_relieved": "Generator & backup relieved",
+          "high_low_tariff": "High, low tariff",
+          "pv_only": "Photovoltaic HP only",
+          "pv_and_backup": "Photovoltaic HP and backup",
+          "smart_grid_ready": "Smart Grid ready",
+          "heat_cool": "Heating/cooling",
+          "ch_blocking": "CH blocking"
+        }
+      },
+      "blocking_input_2_logic": {
+        "name": "BL2 contact configuration",
+        "state": {
+          "open": "Open",
+          "closed": "Closed"
+        }
+      },
+      "blocking_input_2_configuration": {
+        "name": "BL2 function",
+        "state": {
+          "not_used": "Not used",
+          "full_blocking": "Full blocking",
+          "partial_blocking": "Partial blocking",
+          "user_reset_locking": "User reset locking",
+          "backup_relieved": "Backup relieved",
+          "generator_relieved": "Generator relieved",
+          "generator_and_backup_relieved": "Generator & backup relieved",
+          "high_low_tariff": "High, low tariff",
+          "pv_only": "Photovoltaic HP only",
+          "pv_and_backup": "Photovoltaic HP and backup",
+          "smart_grid_ready": "Smart Grid ready",
+          "heat_cool": "Heating/cooling",
+          "ch_blocking": "CH blocking"
+        }
+      },
       "digital_input_1_configuration": {
         "name": "Digital input 1",
         "state": {
