@@ -17,7 +17,6 @@ from aio_remeha_modbus.gtw08.system_discovery_table import (
 )
 from homeassistant.components.water_heater.const import (
     ATTR_AWAY_MODE,
-    ATTR_OPERATION_MODE,
     SERVICE_SET_AWAY_MODE,
     SERVICE_SET_OPERATION_MODE,
     SERVICE_SET_TEMPERATURE,
@@ -25,13 +24,12 @@ from homeassistant.components.water_heater.const import (
     STATE_GAS,
     STATE_HEAT_PUMP,
     WaterHeaterCapabilityAttribute,
+    WaterHeaterServiceArgument,
+    WaterHeaterStateAttribute,
 )
-from homeassistant.components.water_heater.const import (
-    DOMAIN as WaterHeaterDomain,
-)
+from homeassistant.components.water_heater.const import DOMAIN as WaterHeaterDomain
 from homeassistant.const import (
     ATTR_ENTITY_ID,
-    ATTR_TEMPERATURE,
     STATE_OFF,
     STATE_ON,
     STATE_UNAVAILABLE,
@@ -57,6 +55,8 @@ from custom_components.remeha_modbus.water_heater import (
 )
 
 from .conftest import setup_platform
+
+ATTR_NATIVE_TARGET_TEMPERATURE = "target_temperature"
 
 ENTITY_ID = "water_heater.remeha_modbus_test_hub_dhw"
 
@@ -127,11 +127,11 @@ async def test_water_heater_type(
     operation_list = state.attributes[WaterHeaterCapabilityAttribute.OPERATION_LIST]
     assert operation_list == entity.operation_list
     assert operation_list[0] == manual_operation
-    assert state.attributes["min_temp"] == 10.0
-    assert state.attributes["max_temp"] == 65.0
-    assert state.attributes["current_temperature"] == 53.4
-    assert state.attributes[ATTR_TEMPERATURE] == 25.0
-    assert state.attributes[ATTR_AWAY_MODE] == STATE_OFF
+    assert state.attributes[WaterHeaterCapabilityAttribute.MIN_TEMP] == 10.0
+    assert state.attributes[WaterHeaterCapabilityAttribute.MAX_TEMP] == 65.0
+    assert state.attributes[WaterHeaterStateAttribute.CURRENT_TEMPERATURE] == 53.4
+    assert state.attributes[WaterHeaterStateAttribute.TARGET_TEMPERATURE] == 25.0
+    assert state.attributes[WaterHeaterStateAttribute.AWAY_MODE] == STATE_OFF
     assert state.attributes["activity"] == ClimateZoneActivity.ANTI_FROST.name.lower()
 
 
@@ -258,7 +258,11 @@ async def test_water_heater_set_operation_mode(
 
     # Reverse, so the initially active schedule_1 is not the first mode to be set.
     for operation_mode in reversed(entity.operation_list):
-        await _call(hass, SERVICE_SET_OPERATION_MODE, **{ATTR_OPERATION_MODE: operation_mode})
+        await _call(
+            hass,
+            SERVICE_SET_OPERATION_MODE,
+            **{WaterHeaterServiceArgument.OPERATION_MODE: operation_mode},
+        )
 
         state = hass.states.get(ENTITY_ID)
         assert state is not None
@@ -280,13 +284,17 @@ async def test_water_heater_set_temperature(
     await _setup(hass, remeha_api, mock_config_entry, remeha_modbus_unit)
 
     # DHW setpoints cannot be overridden while scheduling, so switch to manual operation first.
-    await _call(hass, SERVICE_SET_OPERATION_MODE, **{ATTR_OPERATION_MODE: manual_operation})
-    await _call(hass, SERVICE_SET_TEMPERATURE, **{ATTR_TEMPERATURE: 60.0})
+    await _call(
+        hass,
+        SERVICE_SET_OPERATION_MODE,
+        **{WaterHeaterServiceArgument.OPERATION_MODE: manual_operation},
+    )
+    await _call(hass, SERVICE_SET_TEMPERATURE, **{WaterHeaterServiceArgument.TEMPERATURE: 60.0})
 
     state = hass.states.get(ENTITY_ID)
     assert state is not None
     assert state.state == manual_operation
-    assert state.attributes[ATTR_TEMPERATURE] == 60.0
+    assert state.attributes[WaterHeaterStateAttribute.TARGET_TEMPERATURE] == 60.0
 
 
 @WATER_HEATER_TYPES
@@ -307,27 +315,37 @@ async def test_water_heater_set_temperature_with_operation_mode(
     await _call(
         hass,
         SERVICE_SET_TEMPERATURE,
-        **{ATTR_TEMPERATURE: 60.0, ATTR_OPERATION_MODE: manual_operation},
+        **{
+            WaterHeaterServiceArgument.TEMPERATURE: 60.0,
+            WaterHeaterServiceArgument.OPERATION_MODE: manual_operation,
+        },
     )
     state = hass.states.get(ENTITY_ID)
     assert state is not None
     assert state.state == manual_operation
-    assert state.attributes[ATTR_TEMPERATURE] != 60.0
+    assert state.attributes[WaterHeaterStateAttribute.TARGET_TEMPERATURE] != 60.0
 
     # In manual operation, the setpoint is stored as the manual setpoint before switching to eco.
     await _call(
         hass,
         SERVICE_SET_TEMPERATURE,
-        **{ATTR_TEMPERATURE: 60.0, ATTR_OPERATION_MODE: STATE_ECO},
+        **{
+            WaterHeaterServiceArgument.TEMPERATURE: 60.0,
+            WaterHeaterServiceArgument.OPERATION_MODE: STATE_ECO,
+        },
     )
     state = hass.states.get(ENTITY_ID)
     assert state is not None
     assert state.state == STATE_ECO
 
-    await _call(hass, SERVICE_SET_OPERATION_MODE, **{ATTR_OPERATION_MODE: manual_operation})
+    await _call(
+        hass,
+        SERVICE_SET_OPERATION_MODE,
+        **{WaterHeaterServiceArgument.OPERATION_MODE: manual_operation},
+    )
     state = hass.states.get(ENTITY_ID)
     assert state is not None
-    assert state.attributes[ATTR_TEMPERATURE] == 60.0
+    assert state.attributes[WaterHeaterStateAttribute.TARGET_TEMPERATURE] == 60.0
 
 
 async def test_water_heater_away_mode(
@@ -347,7 +365,7 @@ async def test_water_heater_away_mode(
             return_value=ClimateZoneRunningMode.HOLIDAY,
         ),
     ):
-        await _call(hass, SERVICE_SET_AWAY_MODE, **{ATTR_AWAY_MODE: True})
+        await _call(hass, SERVICE_SET_AWAY_MODE, **{WaterHeaterServiceArgument.AWAY_MODE: True})
 
         enable_holiday_mode.assert_awaited_once()
         assert enable_holiday_mode.await_args is not None
@@ -356,7 +374,7 @@ async def test_water_heater_away_mode(
 
         state = hass.states.get(ENTITY_ID)
         assert state is not None
-        assert state.attributes[ATTR_AWAY_MODE] == STATE_ON
+        assert state.attributes[WaterHeaterStateAttribute.AWAY_MODE] == STATE_ON
 
     with patch.object(ClimateZone, "async_disable_holiday_mode") as disable_holiday_mode:
         await _call(hass, SERVICE_SET_AWAY_MODE, **{ATTR_AWAY_MODE: False})
@@ -365,7 +383,7 @@ async def test_water_heater_away_mode(
 
         state = hass.states.get(ENTITY_ID)
         assert state is not None
-        assert state.attributes[ATTR_AWAY_MODE] == STATE_OFF
+        assert state.attributes[WaterHeaterStateAttribute.AWAY_MODE] == STATE_OFF
 
     assert zone.running_mode is not ClimateZoneRunningMode.HOLIDAY
 
