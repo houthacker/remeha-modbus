@@ -193,6 +193,56 @@
           "level_2": "Level 2"
         }
       },
+      "blocking_input_1_logic": {
+        "name": "Contact BL1",
+        "state": {
+          "open": "Open contact",
+          "closed": "Gesloten contact"
+        }
+      },
+      "blocking_input_1_configuration": {
+        "name": "Functie contact BL1",
+        "state": {
+          "not_used": "Niet gebruikt",
+          "full_blocking": "Volledig geblokkeerd",
+          "partial_blocking": "Gedeeltelijke blokkering",
+          "user_reset_locking": "Resetvergrendeling gebruiker",
+          "backup_relieved": "Backup vrijgegeven",
+          "generator_relieved": "Generator vrijgegeven",
+          "generator_and_backup_relieved": "Generator & backup vrijgegeven",
+          "high_low_tariff": "Hoog, laag tarief",
+          "pv_only": "PV alleen warmtepomp",
+          "pv_and_backup": "PV backup & warmtepomp",
+          "smart_grid_ready": "SG-Ready",
+          "heat_cool": "Verwarming/koeling",
+          "ch_blocking": "CV blokkering"
+        }
+      },
+      "blocking_input_2_logic": {
+        "name": "Contact BL2",
+        "state": {
+          "open": "Open contact",
+          "closed": "Gesloten contact"
+        }
+      },
+      "blocking_input_2_configuration": {
+        "name": "Functie contact BL2",
+        "state": {
+          "not_used": "Niet gebruikt",
+          "full_blocking": "Volledig geblokkeerd",
+          "partial_blocking": "Gedeeltelijke blokkering",
+          "user_reset_locking": "Resetvergrendeling gebruiker",
+          "backup_relieved": "Backup vrijgegeven",
+          "generator_relieved": "Generator vrijgegeven",
+          "generator_and_backup_relieved": "Generator & backup vrijgegeven",
+          "high_low_tariff": "Hoog, laag tarief",
+          "pv_only": "PV alleen warmtepomp",
+          "pv_and_backup": "PV backup & warmtepomp",
+          "smart_grid_ready": "SG-Ready",
+          "heat_cool": "Verwarming/koeling",
+          "ch_blocking": "CV blokkering"
+        }
+      },
       "digital_input_1_configuration": {
         "name": "Digitale ingang 1",
         "state": {

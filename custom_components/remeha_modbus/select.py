@@ -9,6 +9,8 @@ from typing import Any, override
 
 from aio_remeha_modbus.gtw08 import GTW08
 from aio_remeha_modbus.gtw08.appliance import (
+    BlockingInputActivation,
+    BlockingInputSetting,
     DIContactLogicConfiguration,
     DigitalInputConfiguration,
     SilentMode,
@@ -47,7 +49,43 @@ async def async_setup_entry(
             options=SilentMode,
             get_current_option_func=lambda a: a.appliance.silent_mode,
             set_current_option_func=api.appliance.async_set_silent_mode,
-        )
+        ),
+        RemehaSelectEntity(
+            api=api,
+            coordinator=coordinator,
+            parent_device_id=parent_device_id,
+            name="blocking_input_1_logic",
+            options=BlockingInputActivation,
+            get_current_option_func=lambda a: a.appliance.blocking_input_1_activation,
+            set_current_option_func=api.appliance.async_set_blocking_input_1_activation,
+        ),
+        RemehaSelectEntity(
+            api=api,
+            coordinator=coordinator,
+            parent_device_id=parent_device_id,
+            name="blocking_input_1_configuration",
+            options=BlockingInputSetting,
+            get_current_option_func=lambda a: a.appliance.blocking_input_1_setting,
+            set_current_option_func=api.appliance.async_set_blocking_input_1_setting,
+        ),
+        RemehaSelectEntity(
+            api=api,
+            coordinator=coordinator,
+            parent_device_id=parent_device_id,
+            name="blocking_input_2_logic",
+            options=BlockingInputActivation,
+            get_current_option_func=lambda a: a.appliance.blocking_input_2_activation,
+            set_current_option_func=api.appliance.async_set_blocking_input_2_activation,
+        ),
+        RemehaSelectEntity(
+            api=api,
+            coordinator=coordinator,
+            parent_device_id=parent_device_id,
+            name="blocking_input_2_configuration",
+            options=BlockingInputSetting,
+            get_current_option_func=lambda a: a.appliance.blocking_input_2_setting,
+            set_current_option_func=api.appliance.async_set_blocking_input_2_setting,
+        ),
     ]
 
     # Add select entities that are only available on CU_HW boards
@@ -148,7 +186,6 @@ class RemehaSelectEntity[E: Enum](CoordinatorEntity[RemehaUpdateCoordinator], Se
         value = self._enum_type[option.upper()]
         await self._setter(value)
 
-        # TODO Update current data to reflect changes immediately
         self.async_write_ha_state()
 
     @cached_property
