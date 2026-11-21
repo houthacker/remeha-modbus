@@ -196,7 +196,7 @@ class RemehaWaterHeaterEntity(CoordinatorEntity[RemehaUpdateCoordinator], WaterH
         return self._zone.current_temparature
 
     @property
-    def natvie_target_temperature(self) -> float | None:
+    def native_target_temperature(self) -> float | None:
         """The current temperature setpoint."""
 
         return self._zone.current_setpoint
