@@ -24,7 +24,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResultType, InvalidData
 from homeassistant.helpers.entity_component import EntityComponent
 from modbus_connection.mock import MockModbusUnit
-from pytest_homeassistant_custom_component.common import MockConfigEntry
+from pytest_homeassistant.common import MockConfigEntry
 
 from custom_components.remeha_modbus.const import (
     AUTO_SCHEDULE_SELECTED_SCHEDULE,
@@ -526,9 +526,11 @@ async def test_reconfigure_socket_to_serial(
         assert result.get("step_id") == "modbus_serial"
 
         # The socket port must not leak into the serial port default.
+        data_schema = result.get("data_schema")
+        assert data_schema is not None
         defaults = {
             str(key): key.default() if callable(key.default) else key.default
-            for key in result["data_schema"].schema
+            for key in data_schema.schema
         }
         assert defaults == {
             CONF_BAUDRATE: 115200,
@@ -610,7 +612,9 @@ async def test_reconfigure_serial_to_socket(
         assert result.get("step_id") == "modbus_socket"
 
         # The serial port must not leak into the socket port default.
-        assert {str(key): key.default for key in result["data_schema"].schema} == {
+        data_schema = result.get("data_schema")
+        assert data_schema is not None
+        assert {str(key): key.default for key in data_schema.schema} == {
             CONF_HOST: probatio.UNDEFINED,
             CONF_PORT: probatio.UNDEFINED,
         }

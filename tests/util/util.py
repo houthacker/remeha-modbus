@@ -12,7 +12,15 @@ import attr
 import probatio
 from homeassistant.components.switch.const import DOMAIN as SchedulerEntityPlatform
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import ATTR_ENTITY_ID
+from homeassistant.const import (
+    ATTR_ENTITY_ID,
+    ATTR_NAME,
+    ATTR_SERVICE,
+    ATTR_SERVICE_DATA,
+    CONF_ATTRIBUTE,
+    CONF_CONDITIONS,
+    WEEKDAYS,
+)
 from homeassistant.core import (
     HassJob,
     HomeAssistant,
@@ -28,22 +36,135 @@ from homeassistant.helpers.entity import Entity
 from homeassistant.helpers.entity_platform import EntityPlatform
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from homeassistant.util import slugify
-from pytest_homeassistant_custom_component.common import MockConfigEntry
+from pytest_homeassistant.common import MockConfigEntry
 
 from custom_components.remeha_modbus.const import DOMAIN
 from custom_components.scheduler.const import (
-    ADD_SCHEDULE_SCHEMA,
+    ATTR_ACTIONS,
+    ATTR_CONDITION_TYPE,
+    ATTR_END_DATE,
+    ATTR_MATCH_TYPE,
+    ATTR_REPEAT_TYPE,
+    ATTR_START,
+    ATTR_START_DATE,
+    ATTR_STOP,
     ATTR_TAGS,
-    EDIT_SCHEDULE_SCHEMA,
+    ATTR_TIMESLOTS,
+    ATTR_TRACK_CONDITIONS,
+    ATTR_VALUE,
+    ATTR_WEEKDAYS,
+    CONDITION_TYPE_AND,
+    CONDITION_TYPE_OR,
+    DAY_TYPE_DAILY,
+    DAY_TYPE_WEEKEND,
+    DAY_TYPE_WORKDAY,
     EVENT_ITEM_UPDATED,
+    MATCH_TYPE_ABOVE,
+    MATCH_TYPE_BELOW,
+    MATCH_TYPE_EQUAL,
+    MATCH_TYPE_UNEQUAL,
+    REPEAT_TYPE_PAUSE,
+    REPEAT_TYPE_REPEAT,
+    REPEAT_TYPE_SINGLE,
     SERVICE_ADD,
     SERVICE_EDIT,
+    validate_date,
+    validate_time,
 )
 from custom_components.scheduler.const import DOMAIN as SchedulerDomain
 from custom_components.scheduler.store import ScheduleEntry, parse_schedule_data
 from custom_components.scheduler.switch import ScheduleEntity
 
 _LOGGER = logging.getLogger(__name__)
+
+_CONDITION_SCHEMA = probatio.Schema(
+    {
+        probatio.Required(ATTR_ENTITY_ID): cv.entity_id,
+        probatio.Required(ATTR_VALUE): probatio.Any(int, float, str),
+        probatio.Optional(CONF_ATTRIBUTE): cv.string,
+        probatio.Required(ATTR_MATCH_TYPE): probatio.In(
+            [MATCH_TYPE_EQUAL, MATCH_TYPE_UNEQUAL, MATCH_TYPE_BELOW, MATCH_TYPE_ABOVE]
+        ),
+    }
+)
+
+_ACTION_SCHEMA = probatio.Schema(
+    {
+        probatio.Optional(ATTR_ENTITY_ID): cv.entity_id,
+        probatio.Required(ATTR_SERVICE): cv.entity_id,
+        probatio.Optional(ATTR_SERVICE_DATA): dict,
+    }
+)
+
+_TIMESLOT_SCHEMA = probatio.Schema(
+    {
+        probatio.Required(ATTR_START): validate_time,
+        probatio.Optional(ATTR_STOP): validate_time,
+        probatio.Optional(CONF_CONDITIONS): probatio.All(
+            cv.ensure_list, probatio.Length(min=1), [_CONDITION_SCHEMA]
+        ),
+        probatio.Optional(ATTR_CONDITION_TYPE): probatio.In(
+            [
+                CONDITION_TYPE_AND,
+                CONDITION_TYPE_OR,
+            ]
+        ),
+        probatio.Optional(ATTR_TRACK_CONDITIONS): cv.boolean,
+        probatio.Required(ATTR_ACTIONS): probatio.All(
+            cv.ensure_list, probatio.Length(min=1), [_ACTION_SCHEMA]
+        ),
+    }
+)
+
+_ADD_SCHEDULE_SCHEMA = probatio.Schema(
+    {
+        probatio.Optional(ATTR_WEEKDAYS, default=[DAY_TYPE_DAILY]): probatio.All(
+            cv.ensure_list,
+            probatio.Unique(),
+            probatio.Length(min=1),
+            [probatio.In([*WEEKDAYS, DAY_TYPE_WORKDAY, DAY_TYPE_WEEKEND, DAY_TYPE_DAILY])],
+        ),
+        probatio.Optional(ATTR_START_DATE, default=None): validate_date,
+        probatio.Optional(ATTR_END_DATE, default=None): validate_date,
+        probatio.Required(ATTR_TIMESLOTS): probatio.All(
+            cv.ensure_list, probatio.Length(min=1), [_TIMESLOT_SCHEMA]
+        ),
+        probatio.Required(ATTR_REPEAT_TYPE): probatio.In(
+            [
+                REPEAT_TYPE_REPEAT,
+                REPEAT_TYPE_SINGLE,
+                REPEAT_TYPE_PAUSE,
+            ]
+        ),
+        probatio.Optional(ATTR_NAME): probatio.Any(cv.string, None),
+        probatio.Optional(ATTR_TAGS): probatio.All(cv.ensure_list, probatio.Unique(), [cv.string]),
+    }
+)
+
+_EDIT_SCHEDULE_SCHEMA = probatio.Schema(
+    {
+        probatio.Optional(ATTR_WEEKDAYS): probatio.All(
+            cv.ensure_list,
+            probatio.Unique(),
+            probatio.Length(min=1),
+            [probatio.In([*WEEKDAYS, DAY_TYPE_WORKDAY, DAY_TYPE_WEEKEND, DAY_TYPE_DAILY])],
+        ),
+        probatio.Optional(ATTR_START_DATE, default=None): validate_date,
+        probatio.Optional(ATTR_END_DATE, default=None): validate_date,
+        probatio.Optional(ATTR_TIMESLOTS): probatio.All(
+            cv.ensure_list, probatio.Length(min=1), [_TIMESLOT_SCHEMA]
+        ),
+        probatio.Optional(ATTR_REPEAT_TYPE): probatio.In(
+            [
+                REPEAT_TYPE_REPEAT,
+                REPEAT_TYPE_SINGLE,
+                REPEAT_TYPE_PAUSE,
+            ]
+        ),
+        probatio.Optional(ATTR_NAME): probatio.Any(cv.string, None),
+        probatio.Optional(ATTR_TAGS): probatio.All(cv.ensure_list, probatio.Unique(), [cv.string]),
+    }
+)
 
 
 def get_entity_id(
@@ -402,14 +523,14 @@ class SchedulerPlatformStub:
             SERVICE_ADD: async_add_mock_service(
                 hass=hass,
                 domain=SchedulerDomain,
-                schema=ADD_SCHEDULE_SCHEMA,
+                schema=_ADD_SCHEDULE_SCHEMA,
                 service=SERVICE_ADD,
                 user_callback=_async_add_callback,
             ),
             SERVICE_EDIT: async_add_mock_service(
                 hass=hass,
                 domain=SchedulerDomain,
-                schema=EDIT_SCHEDULE_SCHEMA.extend({probatio.Required(ATTR_ENTITY_ID): cv.string}),
+                schema=_EDIT_SCHEDULE_SCHEMA.extend({probatio.Required(ATTR_ENTITY_ID): cv.string}),
                 service=SERVICE_EDIT,
                 user_callback=lambda call: self._coordinator.edit_schedule(
                     call=call, user_callback=self._user_callbacks.get(SERVICE_EDIT)

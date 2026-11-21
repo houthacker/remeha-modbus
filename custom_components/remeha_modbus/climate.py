@@ -134,7 +134,7 @@ class RemehaClimateEntity(CoordinatorEntity, ClimateEntity):
     _attr_precision = PRECISION_TENTHS
     _attr_should_poll: bool = False
     _attr_target_temperature_step: float | None = TEMPERATURE_STEP
-    _attr_temperature_unit = UnitOfTemperature.CELSIUS
+    _attr_native_temperature_unit = UnitOfTemperature.CELSIUS
     _attr_translation_key = DOMAIN
 
     def __init__(self, api: GTW08, coordinator: RemehaUpdateCoordinator, climate_zone_id: int):
@@ -218,7 +218,7 @@ class RemehaClimateEntity(CoordinatorEntity, ClimateEntity):
         return super().available and self._zone.function is not ClimateZoneFunction.DISABLED
 
     @property
-    def current_temperature(self) -> float | None:
+    def native_current_temperature(self) -> float | None:
         """Return the current zone temperature."""
 
         return self._zone.current_temparature
@@ -273,7 +273,7 @@ class RemehaClimateEntity(CoordinatorEntity, ClimateEntity):
         return self._zone.short_name
 
     @property
-    def target_temperature(self) -> float | None:
+    def native_target_temperature(self) -> float | None:
         """The current temperature setpoint."""
 
         return self._zone.current_setpoint

@@ -6,7 +6,7 @@ from uuid import uuid4
 import pytest
 from aio_remeha_modbus.gtw08.const import ClimateZoneScheduleId, Weekday
 from homeassistant.core import HomeAssistant, State
-from pytest_homeassistant_custom_component.common import MockEntity
+from pytest_homeassistant.common import MockEntity
 
 from custom_components.remeha_modbus.blend.scheduler.scenarios.scheduler_schedule_added import (
     SchedulerScheduleAdded,
