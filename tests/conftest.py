@@ -37,7 +37,7 @@ from homeassistant.helpers.entity_component import EntityComponent
 from homeassistant.util import dt
 from homeassistant.util.json import JsonValueType
 from modbus_connection.mock import MockModbusUnit
-from pytest_homeassistant_custom_component.common import (
+from pytest_homeassistant.common import (
     MockConfigEntry,
     MockEntity,
     load_json_value_fixture,

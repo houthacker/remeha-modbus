@@ -77,7 +77,7 @@ class RemehaWaterHeaterEntity(CoordinatorEntity[RemehaUpdateCoordinator], WaterH
         | WaterHeaterEntityFeature.AWAY_MODE
     )
     _attr_target_temperature_step: float | None = TEMPERATURE_STEP
-    _attr_temperature_unit = UnitOfTemperature.CELSIUS
+    _attr_native_temperature_unit = UnitOfTemperature.CELSIUS
 
     def __init__(self, api: GTW08, coordinator: RemehaUpdateCoordinator, climate_zone_id: int):
         """Create a new climate entity."""
@@ -190,13 +190,13 @@ class RemehaWaterHeaterEntity(CoordinatorEntity[RemehaUpdateCoordinator], WaterH
         )
 
     @property
-    def current_temperature(self) -> float | None:
+    def native_current_temperature(self) -> float | None:
         """Return the current water temperature."""
 
         return self._zone.current_temparature
 
     @property
-    def target_temperature(self) -> float | None:
+    def natvie_target_temperature(self) -> float | None:
         """The current temperature setpoint."""
 
         return self._zone.current_setpoint
