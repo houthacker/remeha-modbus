@@ -19,6 +19,14 @@ from .conftest import setup_platform
 # Entities are looked up by unique id, since their entity id depends on the translated name.
 SILENT_MODE = "appliance_silent_mode"
 
+BLOCKING_INPUT_SELECTS = [
+    "blocking_input_1_logic",
+    "blocking_input_1_configuration",
+    "blocking_input_2_logic",
+    "blocking_input_2_configuration",
+]
+COMMON_SELECTS = [SILENT_MODE, *BLOCKING_INPUT_SELECTS]
+
 CU_HW_SELECTS = [
     "digital_input_1_configuration",
     "digital_input_2_configuration",
@@ -44,7 +52,8 @@ def _assert_cu_hw_selects(hass: HomeAssistant, expect_cu_hw_selects: bool):
 
     entity_registry = er.async_get(hass)
 
-    assert hass.states.get(_entity_id(hass, SILENT_MODE)) is not None
+    for unique_id in COMMON_SELECTS:
+        assert hass.states.get(_entity_id(hass, unique_id)) is not None
 
     for unique_id in CU_HW_SELECTS:
         entity_id = entity_registry.async_get_entity_id(SelectDomain, DOMAIN, unique_id)
@@ -74,7 +83,7 @@ async def test_cu_hw_selects_not_added(
         assert mainboard.board_category is not None
         assert mainboard.board_category.type is not DeviceBoardType.CU_HW
 
-        assert len(hass.states.async_all(domain_filter=SelectDomain)) == 1
+        assert len(hass.states.async_all(domain_filter=SelectDomain)) == len(COMMON_SELECTS)
         _assert_cu_hw_selects(hass, expect_cu_hw_selects=False)
 
 
@@ -110,7 +119,9 @@ async def test_cu_hw_selects_not_added_without_mainboard_category(
         )
         await hass.async_block_till_done()
 
-        assert len(hass.states.async_all(domain_filter=SelectDomain)) == (1 if mainboards else 0)
+        assert len(hass.states.async_all(domain_filter=SelectDomain)) == (
+            len(COMMON_SELECTS) if mainboards else 0
+        )
         if mainboards:
             # No entities are added if no mainboard exists
             _assert_cu_hw_selects(hass, expect_cu_hw_selects=False)
@@ -136,7 +147,9 @@ async def test_cu_hw_selects(
         assert mainboard.board_category is not None
         assert mainboard.board_category.type is DeviceBoardType.CU_HW
 
-        assert len(hass.states.async_all(domain_filter=SelectDomain)) == 5
+        assert len(hass.states.async_all(domain_filter=SelectDomain)) == len(COMMON_SELECTS) + len(
+            CU_HW_SELECTS
+        )
         _assert_cu_hw_selects(hass, expect_cu_hw_selects=True)
 
         # Registers 9009 and 9010 are 0 in the fixture, registers 9011 and 9012 are NaN (0xff).
@@ -159,6 +172,10 @@ async def test_cu_hw_selects(
         (CU_HW_SELECTS[1], "release_backup"),
         (CU_HW_SELECTS[2], "normally_closed"),
         (CU_HW_SELECTS[3], "normally_open"),
+        (BLOCKING_INPUT_SELECTS[0], "closed"),
+        (BLOCKING_INPUT_SELECTS[1], "smart_grid_ready"),
+        (BLOCKING_INPUT_SELECTS[2], "closed"),
+        (BLOCKING_INPUT_SELECTS[3], "ch_blocking"),
     ],
 )
 @pytest.mark.parametrize("remeha_modbus_unit", ["azorra_ace_store.json"], indirect=True)
@@ -234,7 +251,7 @@ async def test_cu_hw_select_invalid_option(
         assert state.state == "off"
 
 
-@pytest.mark.parametrize("language", ["en", "nl"])
+@pytest.mark.parametrize("language", ["en", "de", "nl"])
 @pytest.mark.parametrize("remeha_modbus_unit", ["azorra_ace_store.json"], indirect=True)
 async def test_select_translations(
     hass: HomeAssistant, remeha_api, mock_config_entry, remeha_modbus_unit, language: str
@@ -256,7 +273,7 @@ async def test_select_translations(
         entity_registry = er.async_get(hass)
 
         missing: list[str] = []
-        for unique_id in [SILENT_MODE, *CU_HW_SELECTS]:
+        for unique_id in [*COMMON_SELECTS, *CU_HW_SELECTS]:
             entity_id = _entity_id(hass, unique_id)
             entry = entity_registry.async_get(entity_id)
             state = hass.states.get(entity_id)
