@@ -275,39 +275,15 @@ modbus_bridge:
 
 The entities described here require some extra attention.
 
-### `climate.remeha_modbus_*`
-
-The climates exposed by this integration are unavailable if their zone function (CP020, modbus base register 641)
-is `0: Disabled`. If a zone is enabled in your Remeha appliance, Home Assistant must be restarted or this integration
-disabled and then enabled to see those changes.
-
-### `number.compressor_min_temperature`
-
-This entity depicts the minimum _outside_ temperature at which the heat pump compressor will work. Below that temperature
-the compressor will stop and a backup power generator will take over (like mains power).
-
-### `switch.heatpump_managed_schedules`
-
-This entity is switched on by default, and is unavailable if the `scheduler-component` integration is not installed.
-If it's available though, switching this switch to 'off' causes the `scheduler-component` to execute the actions
-listed in synchronized zone schedules directly, instead of letting the Remeha appliance handle schedule execution.
-
-This might be undesirable, because:
-
-- It might lead to conflicts: if your climate zone is still in scheduling mode, both the Remeha appliance
-  _and_ the `scheduler-component` will attempt to control the heat pump state.
-  To prevent that, the affected climate zone is put in eco mode once this entity is switched off.
-- It prevents the heat pump from heating/cooling efficiently because it doesn't know what preset
-  changes are coming up. This might lead to higher energy usage.
-
-To ensure that you have been warned about this, a persistent notification is triggered as well.
-
-### `switch.enable_schedule_sync`
-
-The entity named `switch.enable_schedule_sync` is switched off by default, and is unavailable if the
-`scheduler-component` integration is not installed. If it's available though, switching this switch
-to 'on' causes the DHW time zone schedules from your Remeha appliance to be synchronized with the `scheduler-component`
-integration, allowing you to edit them in Home Assistant as well.
+| &lt;`domain`&gt;.&lt;`unique_id`&gt;| Description |
+|-|-|
+| `climate.*` | `climate` entities are added only if their zone function (CP020, modbus base register 641) is not `0: Disabled`. If a zone is enabled in your Remeha appliance after installing this integration, Home Assistant must be restarted or this integration disabled and then enabled to see those changes. |
+| `water_heater.*` | Idem |
+| `number.compressor_min_temperature` | This entity depicts the minimum _outside_ temperature at which the heat pump compressor will work. Below that temperature the compressor will stop and a backup power generator will take over (like mains power). |
+| `select.blocking_input_*_configuration` | Configure the function of blocking inputs on your appliance. The following options are available:<ul><li>`not_used`: Not used.</li><li>`full_blocking`: Completely shuts down the heat pump and any backup heat generators. Frost protection might get disabled too.</li><li>`partial_blocking`: Blocks CH and DHW while maintaining frost protection.</li><li>`user_reset_locking`: Reset active blocking errors on the appliance.</li><li>`backup_relieved`: Allow the backup heater to operate when the contact is active. Block it otherwise.</li><li>`generator_relieved`: Allow the heat pump generator to operate when the contact is active. Block it otherwise.</li><li>`generator_and_backup_relieved`: Combination of both previous options.</li><li>`high_low_tariff`: Optimizes energy costs using parameters `HP062` and `HP063` during peak and off-peak hours.</li><li>`pv_only`: Store surplus PV power using the heat pump only. Uses parameters `HP091` and `HP092` for offsets.</li><li>`pv_and_backup`: Same as `pv_only`, but also allows the backup heater to operate.</li><li>`smart_grid_ready`: Combines `BL1` and `BL2` to interpret 4-state SG Ready utility signals (block, normal, boosted, forced).</li><li>`heat_cool`: Switch the heat pump to heating mode when the contact is active. Switch it to cool otherwise.</li><li>`ch_blocking`: Blocks CH while allowing DHW (only available on newer models).</li></ul>|
+| `select.blocking_input_*_logic` | Define when a blocking input is active: <ul><li>`open`: The configured function triggers when the electrical circuit between the contact terminals is broken (normally closed / NC logic).</li><li>`closed`: The configured function triggers when the electrical circuit between the BL1 terminals is bridged/closed (normally open / NO logic).</li></ul> |
+| `switch.heatpump_managed_schedules` | This entity is switched on by default, and is unavailable if the `scheduler-component` integration is not installed. If it's available though, switching this switch to 'off' causes the `scheduler-component` to execute the actions listed in synchronized zone schedules directly, instead of letting the Remeha appliance handle schedule execution. This might be undesirable, because:<br><br><ul><li>It might lead to conflicts: if your climate zone is still in scheduling mode, both the Remeha appliance _and_ the `scheduler-component` will attempt to control the heat pump state. To prevent that, the affected climate zone is put in eco mode once this entity is switched off.</li><li>It prevents the heat pump from heating/cooling efficiently because it doesn't know what preset changes are coming up. This might lead to higher energy usage. To ensure that you have been warned about this, an additional persistent notification is triggered.</li></ul> |
+| `switch.enable_schedule_sync` | Switched off by default, and is unavailable if the `scheduler-component` integration is not installed. If it's available though, switching this switch to 'on' causes the DHW time zone schedules from your Remeha appliance to be synchronized with the `scheduler-component` integration, allowing you to edit them in Home Assistant as well. |
 
 ## Services / actions
 
