@@ -47,7 +47,7 @@ dev = [
   "home-assistant-frontend",
   "home-assistant-intents",
   "homeassistant==2026.11.2",
-  "modbus-connection[tmodbus]==4.12.4",
+  "modbus-connection[tmodbus]==4.12.7",
   "mutagen",
   "pre-commit",
   "prek>=0.5.4",
