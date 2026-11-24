@@ -45,7 +45,7 @@ jobs:
     if: ${{ github.ref == 'refs/heads/main' && success() }}
     steps:
       - name: Create the badge
-        uses: schneegans/dynamic-badges-action@v1.7.0
+        uses: schneegans/dynamic-badges-action@v1.9.0
         with:
           auth: ${{ secrets.GIST_SECRET }}
           gistID: ff0da84bf72a3d20fb68db8cb9d3e38e
